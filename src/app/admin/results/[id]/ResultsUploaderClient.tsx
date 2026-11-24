@@ -295,14 +295,14 @@ export default function ResultsUploaderClient({
       </div>
 
       {error && (
-        <div className="bg-red-500/10 border border-red-500/50 p-4 rounded-panel flex items-center gap-3 text-[var(--status-danger)]">
+        <div className="bg-[var(--status-danger)]/10 border border-[var(--status-danger)]/50 p-4 rounded-panel flex items-center gap-3 text-[var(--status-danger)]">
           <AlertCircle size={20} className="shrink-0" />
           <p className="text-sm min-w-0 [overflow-wrap:anywhere]">{error}</p>
         </div>
       )}
 
       {success && (
-        <div className="bg-green-500/10 border border-green-500/50 p-4 rounded-panel flex items-center gap-3 text-[var(--status-success)]">
+        <div className="bg-[var(--status-success)]/10 border border-[var(--status-success)]/50 p-4 rounded-panel flex items-center gap-3 text-[var(--status-success)]">
           <CheckCircle2 size={20} className="shrink-0" />
           <p className="text-sm min-w-0 [overflow-wrap:anywhere]">{success}</p>
         </div>

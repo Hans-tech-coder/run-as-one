@@ -69,7 +69,7 @@ export default function RegistrantDetailModal({
   return (
       // Below `sm` a full-height sheet (.admin-modal-sheet): the sections
       // stack, and the footer at the bottom edge carries every way onward.
-      <div className="fixed inset-0 bg-[var(--dash-scrim)] backdrop-blur-sm z-50 flex items-center justify-center p-4 max-sm:p-0">
+      <div className="fixed inset-0 bg-[var(--dash-scrim)] z-50 flex items-center justify-center p-4 max-sm:p-0">
         <div
           role="dialog"
           aria-modal="true"
@@ -90,7 +90,7 @@ export default function RegistrantDetailModal({
           <div className="admin-modal-body p-6 max-sm:p-4 overflow-y-auto flex-1">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-4">
-                <h4 className="text-sm font-semibold text-secondary uppercase tracking-wider">Runner Info</h4>
+                <h4 className="text-sm font-semibold text-secondary">Runner Info</h4>
                 <div className="space-y-2 text-sm">
                   <p className="flex flex-col">
                     <span className="text-[var(--text-muted)]">Name</span>
@@ -120,7 +120,7 @@ export default function RegistrantDetailModal({
               </div>
 
               <div className="space-y-4">
-                <h4 className="text-sm font-semibold text-secondary uppercase tracking-wider">Race Details</h4>
+                <h4 className="text-sm font-semibold text-secondary">Race Details</h4>
                 <div className="space-y-2 text-sm">
                   <p className="flex flex-col"><span className="text-[var(--text-muted)]">Category</span> <span className="text-primary font-medium"><CategoryWithChange runner={runner} detailed /></span></p>
                   {/* Fun-run packages have none, and a blank row reads like
@@ -152,7 +152,7 @@ export default function RegistrantDetailModal({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8 pt-8 border-t border-[var(--dash-border)]">
               <div className="space-y-4">
-                <h4 className="text-sm font-semibold text-secondary uppercase tracking-wider">Home Address</h4>
+                <h4 className="text-sm font-semibold text-secondary">Home Address</h4>
                 <div className="text-sm text-primary font-medium">
                   {runner.homeAddress || (
                     <span className="text-[var(--text-muted)] font-normal">Not on file (registered before addresses were collected)</span>
@@ -161,7 +161,7 @@ export default function RegistrantDetailModal({
               </div>
 
               <div className="space-y-4">
-                <h4 className="text-sm font-semibold text-secondary uppercase tracking-wider">Emergency Contact</h4>
+                <h4 className="text-sm font-semibold text-secondary">Emergency Contact</h4>
                 <div className="space-y-2 text-sm">
                   <p className="flex flex-col"><span className="text-[var(--text-muted)]">Name</span> <span className="text-primary font-medium">{runner.emergencyContactName}</span></p>
                   <p className="flex flex-col"><span className="text-[var(--text-muted)]">Phone</span> <span className="text-primary font-medium">{runner.emergencyContactPhone}</span></p>
@@ -169,17 +169,17 @@ export default function RegistrantDetailModal({
               </div>
 
               <div className="space-y-4">
-                <h4 className="text-sm font-semibold text-secondary uppercase tracking-wider">Medical Info</h4>
+                <h4 className="text-sm font-semibold text-secondary">Medical Info</h4>
                 <div className="text-sm text-primary font-medium whitespace-pre-wrap">{runner.medicalConditions || 'None provided'}</div>
               </div>
               <div className="space-y-4">
-                <h4 className="text-sm font-semibold text-secondary uppercase tracking-wider">Running Community</h4>
+                <h4 className="text-sm font-semibold text-secondary">Running Community</h4>
                 <div className="text-sm text-primary font-medium">{runner.runningCommunity || 'Independent Runner'}</div>
               </div>
             </div>
 
             <div className="mt-8 pt-8 border-t border-[var(--dash-border)] space-y-4">
-              <h4 className="text-sm font-semibold text-secondary uppercase tracking-wider">Transaction Details</h4>
+              <h4 className="text-sm font-semibold text-secondary">Transaction Details</h4>
               <RegistrantTransactionFields
                 runner={runner}
                 orderRunners={orderRunners}

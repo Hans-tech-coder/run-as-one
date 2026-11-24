@@ -37,8 +37,8 @@ export const ALERT_VARIANTS: Record<
 > = {
   error: {
     Icon: AlertCircle,
-    panel: "border-red-500/20",
-    badge: "bg-red-500/10 text-red-500",
+    panel: "border-[var(--status-danger)]/20",
+    badge: "bg-[var(--status-danger)]/10 text-[var(--status-danger)]",
     confirmBtn:
       "bg-[var(--ink-05)] hover:bg-[var(--ink-10)] border border-[var(--dash-border)] text-primary",
     title: "Action Failed",
@@ -46,24 +46,24 @@ export const ALERT_VARIANTS: Record<
   },
   danger: {
     Icon: AlertCircle,
-    panel: "border-red-500/20",
-    badge: "bg-red-500/10 text-red-500",
-    confirmBtn: "bg-red-500 hover:bg-red-600 text-white",
+    panel: "border-[var(--status-danger)]/20",
+    badge: "bg-[var(--status-danger)]/10 text-[var(--status-danger)]",
+    confirmBtn: "bg-[var(--status-danger)] hover:bg-[var(--paper-danger-strong)] text-[var(--paper-on-status)]",
     title: "Are You Sure?",
     confirmLabel: "Confirm",
   },
   success: {
     Icon: CheckCircle,
-    panel: "border-green-500/20",
-    badge: "bg-green-500/10 text-green-500",
-    confirmBtn: "bg-green-500 hover:bg-green-600 text-white",
+    panel: "border-[var(--status-success)]/20",
+    badge: "bg-[var(--status-success)]/10 text-[var(--status-success)]",
+    confirmBtn: "bg-[var(--status-success)] hover:bg-[var(--paper-success-strong)] text-[var(--paper-on-status)]",
     title: "Success",
     confirmLabel: "Continue",
   },
   info: {
     Icon: Info,
     panel: "border-accent-blue/20",
-    badge: "bg-accent-blue/10 text-accent-blue",
+    badge: "bg-accent-blue/10 text-accent-blue-ink",
     confirmBtn:
       "bg-[var(--ink-05)] hover:bg-[var(--ink-10)] border border-[var(--dash-border)] text-primary",
     title: "Heads Up",

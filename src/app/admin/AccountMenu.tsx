@@ -8,7 +8,7 @@ import { ChevronDown, Globe, IdCard, LogOut, Moon, ShieldCheck, Sun, UserRound, 
 import LinkPending from '@/components/ui/LinkPending';
 import BusyLabel from '@/components/ui/BusyLabel';
 import type { SettingsSection, SettingsSectionKey } from './settings/sections';
-import type { DashboardTheme } from './dashboard-theme';
+import { useColorTheme } from '@/components/useColorTheme';
 import { cssDurationMs } from '@/lib/css-duration';
 
 /**
@@ -77,15 +77,11 @@ function Avatar({ user }: { user: AccountMenuUser }) {
 export default function AccountMenu({
   user,
   settingsSections,
-  theme,
-  onThemeChange,
   onLogout,
 }: {
   user: AccountMenuUser;
   /** The settings pages this person may open, in menu order. */
   settingsSections: SettingsSection[];
-  theme: DashboardTheme;
-  onThemeChange: (theme: DashboardTheme) => void;
   onLogout: () => Promise<void> | void;
 }) {
   const pathname = usePathname();
@@ -95,6 +91,9 @@ export default function AccountMenu({
   const [leaving, setLeaving] = useState(false);
   // Set on the first press, so the switch does not play its "off" bounce as the menu opens.
   const [switchTouched, setSwitchTouched] = useState(false);
+  // The app's one light/dark choice (lib/color-theme.ts), shared with the
+  // public navbar's switch; setTheme saves it and cross-fades the page.
+  const { theme, setTheme } = useColorTheme();
   const isDark = theme === 'dark';
   const themeLabel = (dark: boolean) => (dark ? 'Dark Mode' : 'Light Mode');
   const [shownLabel, setShownLabel] = useState(() => themeLabel(isDark));
@@ -125,6 +124,9 @@ export default function AccountMenu({
     // the theme is; left marked from an earlier press, it would replay that
     // press's bounce (Dark sliding to Light) as the menu appears.
     setSwitchTouched(false);
+    // The label is state (it swaps in two steps), first set before hydration
+    // knew the theme, so it is put right each time the menu opens.
+    setShownLabel(themeLabel(isDark));
     setOpenOn(pathname);
   };
 
@@ -250,7 +252,7 @@ export default function AccountMenu({
             className="action-dropdown-item account-dropdown-item"
             onClick={() => {
               setSwitchTouched(true);
-              onThemeChange(isDark ? 'light' : 'dark');
+              setTheme(isDark ? 'light' : 'dark');
               swapLabel(themeLabel(!isDark));
             }}
           >

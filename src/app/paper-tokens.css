@@ -7,9 +7,10 @@
 
    The switch: `<html data-color-theme="dark">`, written before paint by the
    inline script in the root layout (lib/color-theme.ts). It only turns a
-   frame dark when that frame opts in with `data-follows-theme` — today the
-   public frame (ClientLayoutWrapper). The dashboard and the sign-in screens
-   carry no marker yet, so they stay exactly as they are.
+   frame dark when that frame opts in with `data-follows-theme`: the public
+   frame (ClientLayoutWrapper), the dashboard (DashboardShell, mapped in
+   admin/admin-paper.css) and the sign-in screens (AuthPaperFrame). The print
+   copies carry no marker and stay light.
 
    Contrast, measured (WCAG 2.x):
    Light — ink #14192b on the ground 15.8:1; muted #5d606c 5.6:1 (6.2:1 on a
@@ -42,6 +43,8 @@
   --paper-accent-text: #a8460a;
   --paper-blue-text: #0057c2;     /* Focus / Link Blue */
   --paper-focus: #0057c2;
+  --paper-track: #1d6fe8;         /* Track Blue: a blue fill (chart bar, count dot), white on it 4.7:1 */
+  --paper-violet: #6b3fc8;        /* the one non-brand data hue (notification tone), 6.3:1 on a card */
 
   /* Status */
   --paper-success: #2f7d0f;
@@ -85,6 +88,8 @@
   --paper-accent-text: #e05a00;   /* Blaze: the brand's dark-UI accent */
   --paper-blue-text: #388bfd;     /* the favicon badge's lifted blue */
   --paper-focus: #388bfd;
+  --paper-track: #1d6fe8;
+  --paper-violet: #b9a3ff;        /* 8.4:1 on a card */
 
   --paper-success: #52c41a;
   --paper-warning: #faad14;
@@ -114,7 +119,8 @@ html:has([data-follows-theme]) {
 /* The switch itself repaints a whole page; a short cross-fade on the big
    grounds reads as one change instead of a flicker. Only while switching
    (`data-theme-switching`, set by ThemeToggle for one frame's worth). */
-:root[data-theme-switching] :is(body, .site-paper, .site-nav, .site-footer, .site-card) {
+:root[data-theme-switching] :is(body, .site-paper, .site-nav, .site-footer, .site-card,
+  .admin-layout, .admin-sidebar, .admin-header, .glass-panel, .admin-main) {
   transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease;
 }
 @media (prefers-reduced-motion: reduce) {

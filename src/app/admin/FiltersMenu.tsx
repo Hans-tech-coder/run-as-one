@@ -88,7 +88,7 @@ export default function FiltersMenu({
           )}
           {groups.map(group => group.options.length > 0 && (
             <div key={group.label} role="menu" aria-label={group.label} className="pb-1">
-              <p className="m-0 px-2 pt-1 pb-1 text-xs font-semibold uppercase tracking-wider text-secondary">
+              <p className="m-0 px-2 pt-1 pb-1 text-xs font-semibold text-secondary">
                 {group.label}
               </p>
               <FilterOptions

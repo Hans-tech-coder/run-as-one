@@ -200,7 +200,7 @@ export default function RunnerRefundModal({ runner, onClose }: { runner: Registr
   return (
     <>
       <div
-        className={`fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-0 bg-[var(--dash-scrim)] backdrop-blur-sm transition-opacity duration-200 ${
+        className={`fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-0 bg-[var(--dash-scrim)] transition-opacity duration-200 ${
           visible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
       >

@@ -37,10 +37,10 @@ export function statusTone(status: string): string {
 
 /** The same three tones as Tailwind classes, for the detail modal's pill. */
 export function statusPillClass(status: string): string {
-  if (status === 'PAID') return 'bg-green-500/20 text-[var(--status-success)] border border-green-500/20';
+  if (status === 'PAID') return 'bg-[var(--status-success)]/20 text-[var(--status-success)] border border-[var(--status-success)]/20';
   if (status === FOR_VALIDATION) return 'bg-[color-mix(in_srgb,var(--accent-blue-ink)_12%,transparent)] text-accent-blue-ink border border-[color-mix(in_srgb,var(--accent-blue-ink)_25%,transparent)]';
   if (status === 'EXPIRED') return 'bg-[var(--ink-10)] text-[var(--ink-85)] border border-[var(--dash-border)]';
-  return 'bg-orange-500/20 text-[var(--status-warning)] border border-orange-500/20';
+  return 'bg-[var(--status-warning)]/20 text-[var(--status-warning)] border border-[var(--status-warning)]/20';
 }
 
 /**

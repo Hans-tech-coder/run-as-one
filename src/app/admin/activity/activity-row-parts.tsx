@@ -113,7 +113,7 @@ export function EntryDetails({ row }: { row: ActivityRow }) {
   return (
     <div className="flex flex-col gap-4 text-sm">
       <div>
-        <p className="m-0 mb-2 text-xs font-semibold uppercase tracking-wider text-secondary">What Changed</p>
+        <p className="m-0 mb-2 text-xs font-semibold text-secondary">What Changed</p>
         {lines.length > 0 ? (
           <dl className="m-0 grid gap-2">
             {lines.map(line => (

@@ -55,7 +55,7 @@ export default function ActivityTable({
                 <TableRow className="border-b border-[var(--dash-hairline)] hover:bg-transparent">
                   <TableCell
                     colSpan={columnCount}
-                    className="py-2 px-4 pl-8 bg-[var(--ink-03)] text-xs font-semibold uppercase tracking-wider text-secondary"
+                    className="py-2 px-4 pl-8 bg-[var(--ink-03)] text-xs font-semibold text-secondary"
                   >
                     {formatTrailDayHeading(group.day, now)}
                   </TableCell>

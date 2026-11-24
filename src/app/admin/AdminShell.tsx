@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   BookOpen,
@@ -26,8 +26,8 @@ import { DashboardNavProvider } from './dashboard-nav';
 import { isBarePath } from './bare-paths';
 import { isInquiryPath } from '@/lib/site-look';
 import AuthPaperFrame from './AuthPaperFrame';
-import { rememberDashboardTheme, type DashboardTheme } from './dashboard-theme';
 import './Admin.css';
+import './admin-paper.css';
 
 /**
  * The dashboard's frame. What is only true of `/admin` lives here: which links
@@ -46,24 +46,14 @@ import './Admin.css';
 export default function AdminShell({
   user,
   initialCollapsed,
-  initialTheme,
   children,
 }: {
   user: SignedInUser | null;
   initialCollapsed: boolean;
-  /** Read from the theme cookie by the layout (dashboard-theme.ts). */
-  initialTheme: DashboardTheme;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [theme, setTheme] = useState(initialTheme);
-
-  const changeTheme = (next: DashboardTheme) => {
-    setTheme(next);
-    rememberDashboardTheme(next);
-  };
-
   // The sign-in pages, drawn without the sidebar (bare-paths.ts, which
   // `admin/loading.tsx` reads too so the wait matches the page), on the
   // public site's Paper ground (AuthPaperFrame). The Our Services inquiry is
@@ -183,7 +173,6 @@ export default function AdminShell({
         navGroups={navGroups}
         quickJumpExtras={quickJumpExtras}
         initialCollapsed={initialCollapsed}
-        theme={theme}
         // Everyone signed in gets the bell; what it lists is their
         // permissions' business (lib/notification-store.ts). The account
         // menu is always there, so Log Out can never be out of reach.
@@ -200,8 +189,6 @@ export default function AdminShell({
               settingsSections={SETTINGS_SECTIONS.filter(
                 section => !section.platformOnly || user?.nav.platform,
               )}
-              theme={theme}
-              onThemeChange={changeTheme}
               onLogout={handleLogout}
             />
           </>

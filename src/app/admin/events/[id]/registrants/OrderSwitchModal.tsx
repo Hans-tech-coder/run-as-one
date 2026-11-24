@@ -147,7 +147,7 @@ export default function OrderSwitchModal({
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-0 bg-[var(--dash-scrim)] backdrop-blur-sm transition-opacity duration-200 ${
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-0 bg-[var(--dash-scrim)] transition-opacity duration-200 ${
         isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
       }`}
     >
@@ -220,7 +220,7 @@ export default function OrderSwitchModal({
           )}
 
           <div>
-            <p className="m-0 text-xs font-semibold uppercase tracking-wider text-secondary">Switch History</p>
+            <p className="m-0 text-xs font-semibold text-secondary">Switch History</p>
             <SwitchHistoryList
               changes={receipt.logisticsChanges}
               onViewProof={permissions.proof ? setProofOf : undefined}

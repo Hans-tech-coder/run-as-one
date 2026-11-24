@@ -43,7 +43,7 @@ function ordersEmptiedBy(runners: RegistrantRow[], removedIds: string[]) {
 function EmptiedOrdersNote({ pending, paid, single }: ReturnType<typeof ordersEmptiedBy> & { single: boolean }) {
   if (pending.length === 0 && paid.length === 0) return null;
   return (
-    <div className="flex flex-col gap-1.5 rounded-panel border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm leading-relaxed text-primary [overflow-wrap:anywhere]">
+    <div className="flex flex-col gap-1.5 rounded-panel border border-[var(--status-warning)]/30 bg-[var(--status-warning)]/10 px-3 py-2 text-sm leading-relaxed text-primary [overflow-wrap:anywhere]">
       {pending.length > 0 && (
         <p>
           {single
@@ -141,7 +141,7 @@ export function DeleteRegistrantModal({
 }: ReturnType<typeof useDeleteRegistrantModal>['modalProps']) {
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--dash-scrim)] backdrop-blur-sm transition-opacity duration-200 ${
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--dash-scrim)] transition-opacity duration-200 ${
         isDeleteOpen && !isDeleteClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
       }`}
     >
@@ -149,7 +149,7 @@ export function DeleteRegistrantModal({
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="delete-registrant-title"
-        className={`t-modal admin-modal-panel w-full max-w-md bg-[var(--dash-panel-solid)] border border-red-500/20 rounded-panel shadow-2xl p-6 max-sm:p-4 flex flex-col gap-6 ${isDeleteOpen ? 'is-open' : ''} ${isDeleteClosing ? 'is-closing' : ''}`}
+        className={`t-modal admin-modal-panel w-full max-w-md bg-[var(--dash-panel-solid)] border border-[var(--status-danger)]/20 rounded-panel shadow-2xl p-6 max-sm:p-4 flex flex-col gap-6 ${isDeleteOpen ? 'is-open' : ''} ${isDeleteClosing ? 'is-closing' : ''}`}
       >
         <div className="admin-modal-body flex flex-col gap-2">
           <h3 id="delete-registrant-title" className="text-xl font-semibold text-primary">Delete Registrant</h3>
@@ -158,7 +158,7 @@ export function DeleteRegistrantModal({
           </p>
           <EmptiedOrdersNote {...emptied} single />
           {deletingRunner?.status === 'PAID' && (
-            <p className="m-0 rounded-panel border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm leading-relaxed text-primary">
+            <p className="m-0 rounded-panel border border-[var(--status-warning)]/30 bg-[var(--status-warning)]/10 px-3 py-2 text-sm leading-relaxed text-primary">
               This runner paid. Deleting keeps their money in the revenue while the count falls. To give the money back, use Refund Runner instead.
             </p>
           )}
@@ -176,7 +176,7 @@ export function DeleteRegistrantModal({
             type="button"
             onClick={handleDeleteConfirm}
             disabled={isDeleting}
-            className="px-5 py-2 bg-red-500 hover:bg-red-600 text-white rounded-control text-sm font-medium transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
+            className="px-5 py-2 bg-[var(--status-danger)] hover:bg-[var(--paper-danger-strong)] text-[var(--paper-on-status)] rounded-control text-sm font-medium transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
           >
             {isDeleting ? <BusyLabel>Deleting</BusyLabel> : 'Delete'}
           </button>
@@ -265,7 +265,7 @@ export function BulkDeleteModal({
 }: ReturnType<typeof useBulkDeleteModal>['modalProps']) {
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--dash-scrim)] backdrop-blur-sm transition-opacity duration-200 ${
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--dash-scrim)] transition-opacity duration-200 ${
         isBulkDeleteOpen && !isBulkDeleteClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
       }`}
     >
@@ -273,7 +273,7 @@ export function BulkDeleteModal({
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="bulk-delete-registrants-title"
-        className={`t-modal admin-modal-panel w-full max-w-md bg-[var(--dash-panel-solid)] border border-red-500/20 rounded-panel shadow-2xl p-6 max-sm:p-4 flex flex-col gap-6 ${isBulkDeleteOpen ? 'is-open' : ''} ${isBulkDeleteClosing ? 'is-closing' : ''}`}
+        className={`t-modal admin-modal-panel w-full max-w-md bg-[var(--dash-panel-solid)] border border-[var(--status-danger)]/20 rounded-panel shadow-2xl p-6 max-sm:p-4 flex flex-col gap-6 ${isBulkDeleteOpen ? 'is-open' : ''} ${isBulkDeleteClosing ? 'is-closing' : ''}`}
       >
         <div className="admin-modal-body flex flex-col gap-2">
           <h3 id="bulk-delete-registrants-title" className="text-xl font-semibold text-primary">Delete Selected Registrants</h3>
@@ -295,7 +295,7 @@ export function BulkDeleteModal({
             type="button"
             onClick={handleBulkDeleteConfirm}
             disabled={isBulkDeleting}
-            className="px-5 py-2 bg-red-500 hover:bg-red-600 text-white rounded-control text-sm font-medium transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
+            className="px-5 py-2 bg-[var(--status-danger)] hover:bg-[var(--paper-danger-strong)] text-[var(--paper-on-status)] rounded-control text-sm font-medium transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
           >
             {isBulkDeleting ? <BusyLabel>Deleting</BusyLabel> : 'Delete Selected'}
           </button>

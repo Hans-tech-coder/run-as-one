@@ -71,7 +71,7 @@ export default function MessageDetail({
 
       <dl className="mt-4 grid grid-cols-1 gap-3 border-t border-[var(--dash-hairline)] pt-4 text-xs sm:grid-cols-2">
         <div className="min-w-0">
-          <dt className="mb-1 font-bold uppercase tracking-wider text-secondary">
+          <dt className="mb-1 font-bold text-secondary">
             Page They Were On
           </dt>
           <dd className="m-0 break-all font-mono text-[var(--ink-85)]">
@@ -79,7 +79,7 @@ export default function MessageDetail({
           </dd>
         </div>
         <div className="min-w-0">
-          <dt className="mb-1 font-bold uppercase tracking-wider text-secondary">
+          <dt className="mb-1 font-bold text-secondary">
             Browser
           </dt>
           <dd className="m-0 break-all text-[var(--ink-85)]">

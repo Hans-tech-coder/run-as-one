@@ -33,7 +33,7 @@ export default function ActivityCards({
         <div className="flex flex-col gap-4">
           {days.map(group => (
             <section key={group.day} className="flex flex-col gap-3">
-              <h2 className="m-0 text-xs font-semibold uppercase tracking-wider text-secondary">
+              <h2 className="m-0 text-xs font-semibold text-secondary">
                 {formatTrailDayHeading(group.day, now)}
               </h2>
               <AdminCardList

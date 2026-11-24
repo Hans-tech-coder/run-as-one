@@ -279,7 +279,8 @@ src/
                             #   workspace ([id]) and Add Results (new); a
                             #   results-only race lives only there,
                             #   dashboard-sidebar.ts — the collapsed-rail cookie,
-                            #   dashboard-theme.ts — the Dark Mode cookie,
+                            #   useDashboardTheme — the app's light/dark choice on the frame,
+                            #   admin-paper.css — every dashboard name on --paper-*,
                             #   AdminCardList — what every table becomes below lg,
                             #   AdminDataTable — the events table's lg-up frame,
                             #   View chip and No. counter, shared by clients,

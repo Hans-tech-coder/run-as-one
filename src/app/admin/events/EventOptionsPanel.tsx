@@ -183,7 +183,7 @@ export default function EventOptionsPanel({
           {options.map((row, idx) => (
             <div key={idx} className="rounded-panel border border-[var(--dash-border)] bg-[var(--ink-02)] p-4 sm:p-5">
               <div className="flex items-center justify-between mb-4">
-                <span className="text-sm font-medium text-secondary uppercase tracking-wider">
+                <span className="text-sm font-medium text-secondary">
                   {words.rowLabel} {idx + 1}
                 </span>
                 {options.length > 1 && (

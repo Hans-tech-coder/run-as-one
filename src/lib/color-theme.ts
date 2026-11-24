@@ -7,16 +7,20 @@
  * layout's <head>, before the first paint, and writes the resolved theme onto
  * `<html data-color-theme="light|dark">`. `src/app/paper-tokens.css` flips the
  * Paper palette on that attribute, but only for a frame that opts in with
- * `data-follows-theme` (today the public frame, ClientLayoutWrapper; the
- * dashboard opts in when it moves onto Paper). A frame without the marker
- * stays light Paper whatever the attribute says.
+ * `data-follows-theme`: the public frame (ClientLayoutWrapper), the dashboard
+ * (DashboardShell) and the sign-in screens (AuthPaperFrame). A frame without
+ * the marker — the print copies — stays light Paper whatever it says.
  *
  * localStorage, not a cookie: a cookie read in the root layout would make
  * every route dynamic (layout.tsx, "No request API here"), and the inline
  * script already draws the right theme on the first paint without the server.
  *
- * The dashboard's own switch (`app/admin/dashboard-theme.ts`, cookie
- * `dash_theme`) is separate until the admin Paper pass folds it in here.
+ * **One switch for the whole app** (2026-11-24): the public navbar's
+ * ThemeToggle and the dashboard account menu's Dark Mode row both write this
+ * one choice. The dashboard's old cookie (`dash_theme`) is gone: nothing the
+ * server draws depends on the theme any more — every hue is a `--paper-*`
+ * name flipped by the attribute above — so there is nothing to render ahead
+ * of the script, and the admin layout reads no theme cookie.
  */
 
 export type ColorThemeChoice = 'light' | 'dark' | 'system';
@@ -63,4 +67,20 @@ export function setColorThemeChoice(choice: ColorThemeChoice) {
 /** The theme currently drawn, read from <html> (client only). */
 export function currentColorTheme(): ColorTheme {
   return document.documentElement.getAttribute(COLOR_THEME_ATTR) === 'dark' ? 'dark' : 'light';
+}
+
+/** How long the page cross-fades while switching (paper-tokens.css). */
+const SWITCH_FADE_MS = 260;
+
+/**
+ * Client only: the switch as a person presses it — save the choice, and mark
+ * `<html data-theme-switching>` for one beat so the big grounds cross-fade
+ * (paper-tokens.css) instead of snapping. ThemeToggle and the account menu
+ * both press it here, so the two switches cannot feel different.
+ */
+export function switchColorTheme(next: ColorTheme) {
+  const root = document.documentElement;
+  root.setAttribute('data-theme-switching', '');
+  setColorThemeChoice(next);
+  window.setTimeout(() => root.removeAttribute('data-theme-switching'), SWITCH_FADE_MS);
 }

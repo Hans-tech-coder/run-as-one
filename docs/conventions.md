@@ -965,8 +965,9 @@
     (`/admin/register`, `isInquiryPath`), which renders `SiteFrame` itself.
     `ClientLayoutWrapper` puts `.site-paper` on the frame, with `data-theme`
     set to the visitor's theme and the `data-follows-theme` marker.
-  - **Light/dark Paper (2026-11-24).** Public pages follow a light/dark switch;
-    the dashboard and sign-in screens do not yet (they carry no marker).
+  - **Light/dark Paper (2026-11-24).** The whole app follows one light/dark
+    switch: the public pages, the sign-in screens and (since its Paper pass the
+    same day) the dashboard. Only the print copies stay light.
     - **One palette, two themes:** `src/app/paper-tokens.css` (imported by the
       root layout) names every Paper hue once as `--paper-*` — light on
       `:root`, dark under `:root[data-color-theme="dark"]:has([data-follows-theme])`
@@ -985,11 +986,44 @@
       frame's `data-theme` follows after hydration (`useColorTheme`), which
       switches globals.css's older `[data-theme="light"]` leftovers (date-field
       glyphs, select chevron). `ThemeToggle` sits in the navbar (desktop and
-      phone): one 44px icon button naming the theme it switches to.
-    - **Admin pass, later:** give the dashboard frame `data-follows-theme`,
-      point its `--dash-*` names at `--paper-*`, and fold `dash_theme`
-      (`admin/dashboard-theme.ts`) into `lib/color-theme.ts`. Nothing in the
-      public files needs to change for that.
+      phone): one 44px icon button naming the theme it switches to. The
+      dashboard account menu's Dark Mode row writes **the same choice**
+      (`useColorTheme`); both press `switchColorTheme`, which cross-fades the
+      grounds for one beat (`data-theme-switching`).
+    - **The dashboard on Paper (2026-11-24, `ui-ux-pro-max` leading).**
+      `DashboardShell` marks `.admin-layout` with `data-follows-theme` and
+      Archivo's variable; **`admin/admin-paper.css`** (imported by AdminShell
+      after Admin.css) points every name the dashboard paints with —
+      `--dash-*`, `--ink` (so the whole `--ink-*` ramp), `--bg-*`, `--text-*`,
+      `--status-*`, `--accent-*` (fills: `--accent-orange` = Action Orange,
+      `--accent-blue` = Track Blue `--paper-track`; words: the `-text`/`-ink`
+      pair), `--tone-*` (violet = `--paper-violet`), `--logo-*`, the fonts —
+      at `--paper-*`, on the frame **and on `:root:has(.admin-layout)`** so
+      what portals to `<body>` follows too (the body gets Archivo's class from
+      `useDashboardTheme`). Its selectors outrank globals.css's
+      `[data-theme="light"]` and ink-ramp blocks, so the old zinc light half no
+      longer reaches the dashboard. Light = Warm Paper ground and sidebar,
+      `#fffdf9` card sheets, Race Navy ink; dark = Carbon, `#111114` cards,
+      Warm Paper ink, Blaze accent text. **No theme cookie:** `dash_theme` and
+      `admin/dashboard-theme.ts` are gone. Every hue flips on
+      `<html data-color-theme>` before paint, so the admin layout reads no
+      theme and nothing flashes; the frame's `data-theme` follows on hydration
+      (`useDashboardTheme`, mirrored onto `<html>` while mounted) and steers
+      only globals.css leftovers. Anything that must be right before
+      hydration keys on `:root[data-color-theme]` instead (the select
+      chevron in Admin.css, Google's button in auth-paper.css).
+      Brand rules applied: `.btn-light` is the one solid action
+      (`--paper-action`, white, 600); fields have the Field Edge
+      (`--paper-field-line`, 3.5:1) and a `--paper-focus` ring; cards are
+      hairline-framed with no shadow, and only floating layers (modals,
+      popovers, row menus) keep one soft shadow, set in admin-paper.css over
+      Tailwind's `shadow-2xl`; no `backdrop-filter` anywhere; no CSS
+      uppercase on chrome (section kickers, table heads, badges read their
+      Title Case source); the active menu row is a Warm Surface band in ink.
+      Danger / success buttons and tints read `--status-*` with
+      `--paper-*-strong` hovers and `--paper-on-status` text, never
+      Tailwind's `red-500` / `green-500` palette. Page and section titles are
+      Archivo 500 at 110% width.
   - **The sign-in pages are Paper too** (2026-11-22): sign in, two-step,
     forgot / reset password, the invitation, and `AuthRouteLoading`.
     `AdminShell` draws `admin/AuthPaperFrame.tsx` round every bare path
@@ -1005,8 +1039,10 @@
     ink focus ring, red invalid edge), messages a box with one even 1px edge in the
     light status colours (`--status-danger` #c8282b, 5.5:1) — **no thicker
     left rule on a box**, owner 2026-11-22; *Back to Run As One* is the
-    last line inside the card, with no rule above it, Google's **light**
-    button, the keep box on tokens. Only the dashboard keeps the dark look.
+    last line inside the card, with no rule above it, Google's own button
+    (its light set on light Paper, its dark set on Carbon), the keep box on
+    tokens. Since 2026-11-24 the frame follows the app's light/dark switch
+    (`data-follows-theme`, `data-theme` from `useColorTheme`).
   - **The last pages (2026-11-21):** the legal pages (`LegalPage`: one
     centred column set, `.legal-shell` — the text measure alone below `lg`,
     the 15rem jump-list rail plus the 40rem text from `lg` — so the header,
@@ -1290,12 +1326,16 @@
   site tokens so the logo cannot drift from the accents beside it. A
   `[data-theme="light"]` block (any element, not only the root) holds the light values, with the
   two accents deepened (`#d95f00`, `#0062d6`) because brand orange on white is
-  2.8:1 and a thin stroke at that contrast reads as a smudge. **The
-  dashboard's Dark Mode switch sets `data-theme`** (on its frame and on the
-  root) — the component does not change. A logo on an unusual surface can likewise be
+  2.8:1 and a thin stroke at that contrast reads as a smudge. On a Paper
+  frame (public, sign-in, dashboard) the four names read `--paper-logo-*`
+  instead, which follow the app's light/dark switch — the component does not
+  change. A logo on an unusual surface can likewise be
   re-tinted by setting `--logo-ink` on its container.
 - **The dashboard is themed through tokens, never `dark:` branches**
-  (`LIGHT_THEME_PLAN.md`). `globals.css` `:root` holds the dark values and
+  (`LIGHT_THEME_PLAN.md`). Since the Paper pass (2026-11-24) the values come
+  from `paper-tokens.css` through `admin/admin-paper.css` (above); the
+  globals.css blocks described here are now only the fallback a frame without
+  `data-follows-theme` gets. `globals.css` `:root` holds the dark values and
   `[data-theme="light"]` the light ones: `--bg-dark` (the ground, which the
   frame always read and which was never defined until then), `--dash-surface`,
   `--dash-sunken`, `--dash-field(-focus)`, `--dash-chrome`, `--dash-header`,
@@ -1369,8 +1409,13 @@
   hairlines, Warm Paper ink, a solid Action Orange `#C2530A` button with 6px
   corners (no gradient), Blaze `#E05A00` section eyebrows and total, a 4px
   status chip in Title Case with the dark status inks (`#FAAD14` pending,
-  `#52C41A` done), and `#388BFD` links. Archivo is named first in the font
-  stack for clients that have it, Helvetica/Arial otherwise. Labels are Title
+  `#52C41A` done), and `#388BFD` links. **Archivo is loaded from Google Fonts**
+  in the email `<head>` and named first in the stack: Apple Mail, iOS Mail,
+  Outlook for Mac, Samsung Email and Thunderbird show it; Gmail, Yahoo and
+  Outlook on Windows and the web drop web fonts and fall through to
+  Helvetica/Arial. The `<link>` is hidden from Outlook desktop and an `mso`
+  style pins it to Arial, because Outlook falls back to Times New Roman
+  whenever a web font is declared. Labels are Title
   Case in the source; nothing is uppercased by CSS.
 
   **A re-cut email logo also needs its URL bumped and a deploy to `main`.**

@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-51 pages · 101 API routes · 176 modules in `src/lib` · 738 files · 126,992 lines
+51 pages · 101 API routes · 176 modules in `src/lib` · 737 files · 126,912 lines
 
 ---
 
@@ -23,7 +23,7 @@ The route, the server component behind it, and the client components beside it.
 
 | Route | Page | Beside it |
 | --- | --- | --- |
-| `/admin` | [`/admin/page.tsx`](../src/app/admin/page.tsx) | `AccountMenu.tsx` `AdminCardEdit.tsx` `AdminCardList.tsx` `AdminDataTable.tsx` `AdminDatePicker.tsx` `AdminNotFound.tsx` `AdminRouteLoading.tsx` `AdminSelect.tsx` `AdminShell.tsx` `AdminSwitch.tsx` `AdminTablePager.tsx` `AuthHomeLink.tsx` `AuthPaperFrame.tsx` `AuthRouteLoading.tsx` `bare-paths.ts` `dashboard-nav.tsx` `dashboard-sidebar.ts` `dashboard-theme.ts` `DashboardHeader.tsx` `DashboardQuickJump.tsx` `DashboardShell.tsx` `FilterOptions.tsx` `FiltersMenu.tsx` `forbidden.tsx` `MobileSortMenu.tsx` `NotificationsCenter.tsx` `overview-data.ts` `OverviewPanels.tsx` `PasswordField.tsx` `PastEventsGrid.tsx` `PrintableCopy.tsx` `route-loading-shape.ts` `row-menu-position.ts` `RowActionsMenu.tsx` `SmoothModalBody.tsx` `StepUpDialog.tsx` `TwoStepChip.tsx` `ViewerDashboard.tsx` |
+| `/admin` | [`/admin/page.tsx`](../src/app/admin/page.tsx) | `AccountMenu.tsx` `AdminCardEdit.tsx` `AdminCardList.tsx` `AdminDataTable.tsx` `AdminDatePicker.tsx` `AdminNotFound.tsx` `AdminRouteLoading.tsx` `AdminSelect.tsx` `AdminShell.tsx` `AdminSwitch.tsx` `AdminTablePager.tsx` `AuthHomeLink.tsx` `AuthPaperFrame.tsx` `AuthRouteLoading.tsx` `bare-paths.ts` `dashboard-nav.tsx` `dashboard-sidebar.ts` `DashboardHeader.tsx` `DashboardQuickJump.tsx` `DashboardShell.tsx` `FilterOptions.tsx` `FiltersMenu.tsx` `forbidden.tsx` `MobileSortMenu.tsx` `NotificationsCenter.tsx` `overview-data.ts` `OverviewPanels.tsx` `PasswordField.tsx` `PastEventsGrid.tsx` `PrintableCopy.tsx` `route-loading-shape.ts` `row-menu-position.ts` `RowActionsMenu.tsx` `SmoothModalBody.tsx` `StepUpDialog.tsx` `TwoStepChip.tsx` `useDashboardTheme.ts` `ViewerDashboard.tsx` |
 | `/admin/[...missing]` | [`/admin/[...missing]/page.tsx`](../src/app/admin/[...missing]/page.tsx) | — |
 | `/admin/activity` | [`/admin/activity/page.tsx`](../src/app/admin/activity/page.tsx) | `activity-row-parts.tsx` `ActivityCards.tsx` `ActivityClient.tsx` `ActivityTable.tsx` |
 | `/admin/certificate-guide` | [`/admin/certificate-guide/page.tsx`](../src/app/admin/certificate-guide/page.tsx) | `GuideChecklist.tsx` `GuideDiagram.tsx` `GuideDocument.tsx` `GuideToc.tsx` |
@@ -388,7 +388,7 @@ when a task touches one, split it before editing rather than after.
 | 1017 | [`src/app/admin/team/TeamClient.tsx`](../src/app/admin/team/TeamClient.tsx) |
 | 736 | [`src/lib/pending-expiry.ts`](../src/lib/pending-expiry.ts) |
 | 693 | [`src/app/admin/AdminDatePicker.tsx`](../src/app/admin/AdminDatePicker.tsx) |
-| 620 | [`src/lib/email-document.ts`](../src/lib/email-document.ts) |
+| 648 | [`src/lib/email-document.ts`](../src/lib/email-document.ts) |
 | 616 | [`src/app/api/checkout/route.ts`](../src/app/api/checkout/route.ts) |
 | 614 | [`src/app/admin/feedback/FeedbackClient.tsx`](../src/app/admin/feedback/FeedbackClient.tsx) |
 | 591 | [`src/lib/registration-gate.ts`](../src/lib/registration-gate.ts) |
@@ -396,9 +396,9 @@ when a task touches one, split it before editing rather than after.
 | 570 | [`src/app/admin/events/[id]/registrants/PaymentCorrectionModal.tsx`](../src/app/admin/events/[id]/registrants/PaymentCorrectionModal.tsx) |
 | 567 | [`src/app/admin/NotificationsCenter.tsx`](../src/app/admin/NotificationsCenter.tsx) |
 | 550 | [`src/app/api/admin/events/[id]/update-event.ts`](../src/app/api/admin/events/[id]/update-event.ts) |
-| 528 | [`src/app/admin/DashboardShell.tsx`](../src/app/admin/DashboardShell.tsx) |
 | 520 | [`src/lib/promo-input.ts`](../src/lib/promo-input.ts) |
 | 520 | [`src/lib/refund-store.ts`](../src/lib/refund-store.ts) |
+| 518 | [`src/app/admin/DashboardShell.tsx`](../src/app/admin/DashboardShell.tsx) |
 | 511 | [`src/app/api/checkout/manual/route.ts`](../src/app/api/checkout/manual/route.ts) |
 | 509 | [`src/app/admin/communities/CommunitiesClient.tsx`](../src/app/admin/communities/CommunitiesClient.tsx) |
 | 500 | [`src/app/admin/events/[id]/registrants/ProofLightbox.tsx`](../src/app/admin/events/[id]/registrants/ProofLightbox.tsx) |

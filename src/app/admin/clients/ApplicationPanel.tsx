@@ -51,7 +51,7 @@ export default function ApplicationPanel({
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-0 bg-[var(--dash-scrim)] backdrop-blur-sm transition-opacity duration-200 ${
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-0 bg-[var(--dash-scrim)] transition-opacity duration-200 ${
         open && !closing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
       }`}
       onMouseDown={e => {
@@ -111,7 +111,7 @@ export default function ApplicationPanel({
           {!hasDetails && (
             // One honest sentence instead of fifteen blanks: these accounts
             // were never asked any of it.
-            <p className="text-sm text-[var(--tone-amber)] bg-amber-400/10 border border-amber-400/20 rounded-panel px-4 py-3 m-0">
+            <p className="text-sm text-[var(--tone-amber)] bg-[var(--status-warning)]/10 border border-[var(--status-warning)]/20 rounded-panel px-4 py-3 m-0">
               This submission came from an account created before the application form existed,
               so there are no application details to show. The address below is all it was asked
               for.

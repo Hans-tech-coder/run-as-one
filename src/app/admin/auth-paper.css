@@ -182,10 +182,10 @@
   color: var(--site-muted);
 }
 
-/* ── Messages: the light frame's status colours, read left to right ─
-   The dark look's #ff4d4f on paper is 3.3:1; --status-danger here is the
-   light block's #c8282b (5.5:1 on white, 5.1:1 on the tint), and the success
-   green #2f7d0f (5.2:1). One even 1px edge all round, no thicker left rule
+/* ── Messages: Paper's status colours, read left to right ─
+   --status-danger is --paper-danger (site.css): #c8282b on light Paper (5.5:1
+   on white, 5.1:1 on the tint), the brand's #ff4d4f on Carbon; the success
+   green likewise (#2f7d0f / #52c41a). One even 1px edge all round, no thicker left rule
    (owner, 2026-11-22); the text carries the colour, the fill only hints. */
 .site-paper.auth-paper .auth-message {
   margin-bottom: 1.5rem;
@@ -209,9 +209,11 @@
   color: var(--status-success);
 }
 
-/* ── "Continue with Google": Google's light-theme button ──────────
-   The colours are Google's (#FFFFFF fill, #747775 edge, #1F1F1F text), not
-   ours, and the light set is the one for a light card. */
+/* ── "Continue with Google": Google's own button, light or dark ────
+   The colours are Google's, not ours (its sign-in branding guidelines), so
+   they stay literals: the light set (#FFFFFF fill, #747775 edge, #1F1F1F
+   text) on light Paper, the dark set (#131314, #8E918F, #E3E3E3) on Carbon,
+   keyed on <html data-color-theme>, right from the first paint. */
 .site-paper.auth-paper .google-sign-in {
   background: #ffffff;
   border-color: #747775;
@@ -221,6 +223,16 @@
 
 .site-paper.auth-paper .google-sign-in:hover {
   background: #f2f2f2;
+}
+
+:root[data-color-theme="dark"] .site-paper.auth-paper .google-sign-in {
+  background: #131314;
+  border-color: #8e918f;
+  color: #e3e3e3;
+}
+
+:root[data-color-theme="dark"] .site-paper.auth-paper .google-sign-in:hover {
+  background: #1f1f21;
 }
 
 .site-paper.auth-paper .google-sign-in:focus-visible {

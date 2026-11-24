@@ -117,7 +117,7 @@ export default function CategoryChangeModal({
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-0 bg-[var(--dash-scrim)] backdrop-blur-sm transition-opacity duration-200 ${
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-0 bg-[var(--dash-scrim)] transition-opacity duration-200 ${
         isOpen && !isClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
       }`}
     >
@@ -155,7 +155,7 @@ export default function CategoryChangeModal({
           )}
 
           {preview && refused && (
-            <div role="alert" className="flex gap-3 rounded-panel border border-orange-500/30 bg-orange-500/10 p-3 text-primary">
+            <div role="alert" className="flex gap-3 rounded-panel border border-[var(--status-warning)]/30 bg-[var(--status-warning)]/10 p-3 text-primary">
               <TriangleAlert size={18} className="shrink-0 text-[var(--status-warning)]" aria-hidden="true" />
               <p className="m-0">{refused.message}</p>
             </div>
@@ -238,7 +238,7 @@ export default function CategoryChangeModal({
               )}
 
               {downgradeHeld && (
-                <div role="alert" className="flex gap-3 rounded-panel border border-orange-500/30 bg-orange-500/10 p-3 text-primary">
+                <div role="alert" className="flex gap-3 rounded-panel border border-[var(--status-warning)]/30 bg-[var(--status-warning)]/10 p-3 text-primary">
                   <TriangleAlert size={18} className="shrink-0 text-[var(--status-warning)]" aria-hidden="true" />
                   <p className="m-0">{DOWNGRADE_ON_HOLD_COPY}</p>
                 </div>

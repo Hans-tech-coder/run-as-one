@@ -298,7 +298,7 @@ export default function ProofLightbox({
       tools, then the order it has to agree with and Validate at the bottom.
     */
     <div
-      className="fixed inset-0 z-[60] bg-[var(--dash-scrim)] backdrop-blur-sm flex items-center justify-center p-0 sm:p-6"
+      className="fixed inset-0 z-[60] bg-[var(--dash-scrim)] flex items-center justify-center p-0 sm:p-6"
       onMouseDown={e => { if (e.target === e.currentTarget) requestClose(); }}
     >
       <div

@@ -1,0 +1,122 @@
+/* The dashboard on Paper (docs/conventions.md §9, admin pass 2026-11-24) — the
+   rule this file owns: every name the dashboard paints with (`--dash-*`, the
+   ink ramp's `--ink`, the text and status names, the accents, the logo inks,
+   the type) reads a `--paper-*` hue from paper-tokens.css, so the dashboard is
+   light Paper or Carbon dark by the same switch as the public site and never
+   carries a hex of its own. Brand source: brand/brand-guide.md §3–§5.
+
+   Where it applies: the frame `DashboardShell` draws (`.admin-layout`, marked
+   `data-follows-theme`) and, while it is mounted, `<html>` itself — what the
+   dashboard portals to `<body>` (row menus, modals, the date picker, the
+   notifications modal, lightboxes) sits outside the frame and reads these
+   names from the root. The selectors outrank globals.css's
+   `[data-theme="light"]` block (0,1,0) and its ink-ramp block, so the old zinc
+   light half and the old dark half both stop reaching the dashboard; which
+   theme shows is decided by `<html data-color-theme>` alone, written before
+   paint, so there is no flash and no theme cookie.
+
+   Not here: the print copies (`PrintableCopy`, data-theme="light", portalled
+   outside the frame) keep globals.css's white paper in either theme, and the
+   sign-in screens are AuthPaperFrame's (site.css + auth-paper.css). */
+
+.admin-layout[data-follows-theme],
+:root:has(.admin-layout[data-follows-theme]) {
+  /* Ground, sheets, ink. The ground is Warm Paper / Carbon; the sidebar and
+     header sit on it, separated by hairlines, and every panel is a card sheet
+     on a hairline — no glass, nothing translucent over the page. */
+  --bg-dark: var(--paper-bg);
+  --bg-primary: var(--paper-bg);
+  --bg-secondary: color-mix(in srgb, var(--paper-ink) 3%, transparent);
+  --ink: var(--paper-ink);
+  --text-primary: var(--paper-ink);
+  --text-secondary: var(--paper-muted);
+  --text-muted: var(--paper-muted);
+  --glass-bg: var(--paper-card);
+  --glass-border: var(--paper-line);
+  --glass-blur: none;
+
+  --dash-surface: var(--paper-card);        /* panel, card, metric */
+  --dash-sunken: var(--paper-surface);      /* table heads, drop zones */
+  --dash-field: var(--paper-card);          /* inputs at rest */
+  --dash-field-focus: var(--paper-card);    /* inputs being typed in */
+  --dash-chrome: var(--paper-bg);           /* the sidebar */
+  --dash-header: var(--paper-bg);           /* the page header */
+  --dash-panel: var(--paper-card);          /* dropdowns, modals, anything floating */
+  --dash-panel-solid: var(--paper-card);
+  --dash-popover: var(--paper-card);
+  --dash-scrim: var(--paper-scrim);
+  --dash-shadow: rgb(var(--paper-shadow-rgb) / 0.16);
+  /* The rail's tooltip and anything drawn inverse: ink plate, paper words. */
+  --dash-inverse-bg: var(--paper-ink);
+  --dash-inverse-fg: var(--paper-bg);
+  --dash-inverse-hover: var(--paper-ink);
+  /* Hairlines over shadows: the Paper Hairline frames cards and divides rows,
+     the Strong Line marks an emphasised edge; a hover is the Warm Surface. */
+  --dash-hairline: var(--paper-line);
+  --dash-border: var(--paper-line);
+  --dash-hover: color-mix(in srgb, var(--paper-surface) 80%, transparent);
+  --color-scheme: var(--paper-scheme);
+  color-scheme: var(--paper-scheme);
+
+  /* Status inks: the light Paper set, the brand's dark set on Carbon. */
+  --status-success: var(--paper-success);
+  --status-warning: var(--paper-warning);
+  --status-danger: var(--paper-danger);
+
+  /* Accents. The fills are the brand's: Action Orange for the one solid
+     action (and anything else that is an orange fill), Track Blue for a blue
+     fill. Words wear the text pair, deepened on Paper, lifted on Carbon. */
+  --accent-orange: var(--paper-action);
+  --accent-blue: var(--paper-track);
+  --accent-orange-text: var(--paper-accent-text);
+  --accent-blue-text: var(--paper-blue-text);
+  --accent-orange-ink: var(--paper-accent-text);
+  --accent-blue-ink: var(--paper-blue-text);
+  --tone-amber: var(--paper-warning);
+  --tone-green: var(--paper-success);
+  --tone-red: var(--paper-danger);
+  --tone-violet: var(--paper-violet);
+
+  /* The lockup inks (`horizontal-light` on Paper, `horizontal-dark` on Carbon). */
+  --logo-ink: var(--paper-logo-ink);
+  --logo-mid: var(--paper-logo-mid);
+  --logo-accent: var(--paper-logo-accent);
+  --logo-muted: var(--paper-logo-muted);
+
+  /* Built from the names above, so declared again where they now resolve. */
+  --runner-far: color-mix(in srgb, var(--accent-blue) 55%, var(--bg-dark));
+  --shimmer-base: var(--text-secondary);
+  --shimmer-highlight: var(--text-primary);
+  --tabs-pill-bg: var(--paper-card);
+  --tabs-pill-shadow: inset 0 0 0 1px var(--paper-line-strong);
+}
+
+/* Archivo, Paper's one typeface. `--font-archivo` comes from the frame's
+   class (archivo-font.ts) and, for portals, from <body>, which
+   useDashboardTheme gives the same class while the dashboard is mounted. The
+   body is named because next/font's own classes declare `--font-sans` /
+   `--font-body` there, which would shadow the root for anything portalled. */
+.admin-layout[data-follows-theme],
+body:has(.admin-layout[data-follows-theme]) {
+  --font-sans: var(--font-archivo), system-ui, sans-serif;
+  --font-body: var(--font-archivo), system-ui, sans-serif;
+  font-family: var(--font-body);
+}
+
+/* The page and section titles: Archivo Medium at its 110% width, the brand's
+   heading voice (brand-guide §4.1), instead of a heavy weight. */
+.admin-layout :is(.admin-header-title, .admin-content h1, .admin-content h2) {
+  font-stretch: 110%;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+/* Hairlines over shadows (brand-guide §5.3). What floats — a modal, a
+   toolbar's popover, a row menu — keeps one soft shadow so it reads as above
+   the page, and its hairline does the framing; the old `shadow-2xl` glow is
+   overruled here rather than in each modal's class list (this file is
+   unlayered, so it outranks Tailwind's utilities layer). In-page cards carry
+   no shadow at all. */
+:root:has(.admin-layout[data-follows-theme]) :is(.admin-modal-panel, .toolbar-popover, .action-dropdown-menu) {
+  box-shadow: 0 18px 40px -24px var(--dash-shadow);
+}

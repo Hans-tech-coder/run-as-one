@@ -210,7 +210,7 @@ export default function AddOnFormModal({
   const sold = addOn?.sold ?? 0;
 
   return createPortal(
-    <div className="fixed inset-0 bg-[var(--dash-scrim)] backdrop-blur-sm z-50 flex items-center justify-center p-4 max-sm:p-3">
+    <div className="fixed inset-0 bg-[var(--dash-scrim)] z-50 flex items-center justify-center p-4 max-sm:p-3">
       <div
         role="dialog"
         aria-modal="true"

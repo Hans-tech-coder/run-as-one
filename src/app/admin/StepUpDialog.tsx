@@ -182,7 +182,7 @@ function StepUpPanel({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--dash-scrim)] backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--dash-scrim)]">
       <div
         role="dialog"
         aria-modal="true"
@@ -191,7 +191,7 @@ function StepUpPanel({
       >
         <form onSubmit={submit} noValidate className="flex flex-col gap-5 min-h-0">
           <div className="flex items-start gap-4">
-            <div className="p-3 bg-blue-500/10 rounded-control text-accent-blue-ink shrink-0 mt-1">
+            <div className="p-3 bg-accent-blue/10 rounded-control text-accent-blue-ink shrink-0 mt-1">
               <ShieldCheck size={24} strokeWidth={2} aria-hidden="true" />
             </div>
             <div className="flex flex-col gap-1 min-w-0 flex-1">

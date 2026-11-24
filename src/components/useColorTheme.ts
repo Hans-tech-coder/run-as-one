@@ -6,7 +6,7 @@ import {
   COLOR_THEME_STORAGE_KEY,
   currentColorTheme,
   readColorThemeChoice,
-  setColorThemeChoice,
+  switchColorTheme,
   COLOR_THEME_ATTR,
   systemColorTheme,
   type ColorTheme,
@@ -49,8 +49,9 @@ function subscribe(onChange: () => void) {
 
 const getServerSnapshot = (): ColorTheme => 'light';
 
+/** `setTheme` cross-fades the page for one beat (lib/color-theme.ts, `switchColorTheme`). */
 export function useColorTheme() {
   const theme = useSyncExternalStore(subscribe, currentColorTheme, getServerSnapshot);
-  const setTheme = useCallback((next: ColorTheme) => setColorThemeChoice(next), []);
+  const setTheme = useCallback((next: ColorTheme) => switchColorTheme(next), []);
   return { theme, setTheme };
 }

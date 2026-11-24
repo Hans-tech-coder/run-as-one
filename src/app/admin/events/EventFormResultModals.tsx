@@ -62,17 +62,17 @@ export default function EventFormResultModals({
   return (
     <>
       <div
-        className={`fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-3 bg-[var(--dash-scrim)] backdrop-blur-sm transition-opacity duration-200 ${
+        className={`fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-3 bg-[var(--dash-scrim)] transition-opacity duration-200 ${
           error && !isClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
         style={{ zIndex: 100 }}
       >
         <div
-          className={`t-modal admin-modal-panel w-full max-w-md bg-[var(--dash-panel-solid)] border border-red-500/20 rounded-panel shadow-2xl p-6 flex flex-col gap-6 ${isOpen ? 'is-open' : ''} ${isClosing ? 'is-closing' : ''}`}
+          className={`t-modal admin-modal-panel w-full max-w-md bg-[var(--dash-panel-solid)] border border-[var(--status-danger)]/20 rounded-panel shadow-2xl p-6 flex flex-col gap-6 ${isOpen ? 'is-open' : ''} ${isClosing ? 'is-closing' : ''}`}
           role="dialog"
         >
           <div className="admin-modal-body flex items-start gap-4">
-            <div className="p-3 bg-red-500/10 rounded-control text-[var(--status-danger)] shrink-0 mt-1">
+            <div className="p-3 bg-[var(--status-danger)]/10 rounded-control text-[var(--status-danger)] shrink-0 mt-1">
               <AlertCircle size={24} strokeWidth={2} />
             </div>
             <div className="flex min-w-0 flex-col gap-2">
@@ -94,17 +94,17 @@ export default function EventFormResultModals({
 
       {/* Success Modal */}
       <div
-        className={`fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-3 bg-[var(--dash-scrim)] backdrop-blur-sm transition-opacity duration-200 ${
+        className={`fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-3 bg-[var(--dash-scrim)] transition-opacity duration-200 ${
           successMsg && !isSuccessClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
         style={{ zIndex: 100 }}
       >
         <div
-          className={`t-modal admin-modal-panel w-full max-w-md bg-[var(--dash-panel-solid)] border border-green-500/20 rounded-panel shadow-2xl p-6 flex flex-col gap-6 ${isSuccessOpen ? 'is-open' : ''} ${isSuccessClosing ? 'is-closing' : ''}`}
+          className={`t-modal admin-modal-panel w-full max-w-md bg-[var(--dash-panel-solid)] border border-[var(--status-success)]/20 rounded-panel shadow-2xl p-6 flex flex-col gap-6 ${isSuccessOpen ? 'is-open' : ''} ${isSuccessClosing ? 'is-closing' : ''}`}
           role="dialog"
         >
           <div className="admin-modal-body flex items-start gap-4">
-            <div className="p-3 bg-green-500/10 rounded-control text-[var(--status-success)] shrink-0 mt-1">
+            <div className="p-3 bg-[var(--status-success)]/10 rounded-control text-[var(--status-success)] shrink-0 mt-1">
               <CheckCircle size={24} strokeWidth={2} />
             </div>
             <div className="flex min-w-0 flex-col gap-2">
@@ -116,7 +116,7 @@ export default function EventFormResultModals({
             <button
               type="button"
               onClick={closeSuccessModal}
-              className="px-5 py-2 bg-green-500 hover:bg-green-600 rounded-control text-sm font-medium text-white transition-colors"
+              className="px-5 py-2 bg-[var(--status-success)] hover:bg-[var(--paper-success-strong)] rounded-control text-sm font-medium text-[var(--paper-on-status)] transition-colors"
             >
               Continue
             </button>

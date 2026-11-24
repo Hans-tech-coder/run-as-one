@@ -478,6 +478,17 @@ function renderHtml(doc: EmailDocument, contactEmail: string): string {
   <head>
     <meta name="color-scheme" content="dark" />
     <meta name="supported-color-schemes" content="dark" />
+    <!-- Archivo for the clients that load web fonts (Apple Mail, iOS Mail,
+         Outlook for Mac, Samsung Email, Thunderbird). Gmail, Yahoo and Outlook
+         on Windows and the web drop it and fall through FONT to Helvetica or
+         Arial. Hidden from Outlook desktop, which otherwise falls back to Times
+         New Roman whenever a web font is declared; the mso style pins it to
+         Arial. -->
+    <!--[if !mso]><!-->
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&amp;display=swap" rel="stylesheet" />
+    <!--<![endif]-->
+    <!--[if mso]><style>body, table, td, p, a, span, div { font-family: Arial, Helvetica, sans-serif !important; }</style><![endif]-->
   </head>
   <body style="margin: 0; padding: 0; background-color: ${CARBON};">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: ${CARBON};">

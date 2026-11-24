@@ -84,7 +84,7 @@ export default function AfterRacePanel({
                   return (
                     <div key={idx} className="rounded-panel border border-[var(--dash-border)] bg-[var(--ink-02)] p-4 sm:p-5">
                       <div className="flex items-center justify-between mb-4">
-                        <span className="text-sm font-medium text-secondary uppercase tracking-wider">
+                        <span className="text-sm font-medium text-secondary">
                           Album {idx + 1}
                         </span>
                         <button

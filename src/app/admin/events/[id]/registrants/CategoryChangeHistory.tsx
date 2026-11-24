@@ -170,7 +170,7 @@ export default function CategoryChangeHistory({
 
   return (
     <div>
-      <p className="m-0 mb-2 text-xs font-semibold uppercase tracking-wider text-secondary">{title}</p>
+      <p className="m-0 mb-2 text-xs font-semibold text-secondary">{title}</p>
       <ol className="m-0 p-0 list-none flex flex-col gap-3">
         {newestFirst.map(change => {
           const status = asCategoryChangeStatus(change.status);

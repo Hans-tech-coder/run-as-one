@@ -21,7 +21,7 @@ export default function RegistrantGuardianConsent({ runner, eventId }: { runner:
   return (
     <div className="mt-8 pt-8 border-t border-[var(--dash-border)] space-y-4">
       <div className="flex items-center justify-between gap-4">
-        <h4 className="text-sm font-semibold text-secondary uppercase tracking-wider m-0">Parent/Guardian Consent</h4>
+        <h4 className="text-sm font-semibold text-secondary m-0">Parent/Guardian Consent</h4>
         {/* A new tab, so the list and this modal are still where
             the organizer left them after printing. */}
         <Link

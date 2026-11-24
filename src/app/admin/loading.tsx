@@ -8,6 +8,7 @@ import { isInquiryPath } from '@/lib/site-look';
 import RunnerLoader from '@/components/ui/RunnerLoader';
 import { useDashboardNav } from './dashboard-nav';
 import { routeShape } from './route-loading-shape';
+import { useColorTheme } from '@/components/useColorTheme';
 
 /**
  * Covers /admin and every page nested under it — events, registrants,
@@ -28,12 +29,13 @@ import { routeShape } from './route-loading-shape';
 export default function Loading() {
   const pathname = usePathname();
   const nav = useDashboardNav();
+  const { theme } = useColorTheme();
 
   // The Our Services inquiry is a public Paper page (lib/site-look.ts): its
   // wait is the paper ground and the runner, never the dark sign-in card.
   if (isInquiryPath(pathname)) {
     return (
-      <div className="site-paper flex items-center justify-center" data-theme="light">
+      <div className="site-paper flex items-center justify-center" data-theme={theme} data-follows-theme="">
         <RunnerLoader size="lg" />
       </div>
     );

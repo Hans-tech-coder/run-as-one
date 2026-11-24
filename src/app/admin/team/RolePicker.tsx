@@ -140,7 +140,7 @@ export default function RolePicker() {
 
       <div role="tabpanel" id={`${baseId}-panel`} aria-labelledby={`${baseId}-tab-${role}`}>
         <p className="m-0 text-sm text-secondary">{ROLE_HINTS[role]}</p>
-        <p className="m-0 mt-3 text-xs font-semibold uppercase tracking-wider text-secondary">
+        <p className="m-0 mt-3 text-xs font-semibold text-secondary">
           {`Allowed ${allowed} of ${MATRIX_PERMISSIONS.length}`}
         </p>
 

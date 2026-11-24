@@ -17,8 +17,6 @@
      logout under them. dvh is the height actually visible. */
   height: 100dvh;
   z-index: 50;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
 }
 
 /* 21px on the left centres the 38px mark in the 80px collapsed rail, so the
@@ -89,8 +87,7 @@
 .admin-menu-label {
   font-size: 0.6875rem;
   font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
   color: var(--text-secondary);
 }
 
@@ -120,18 +117,20 @@
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-control);
-  color: #fff;
-  background: var(--accent-blue);
+  color: var(--text-primary);
+  background: var(--paper-card);
+  border: 1px solid var(--paper-field-line);
   /* The ring in the page's own colour cuts the knob out of the sidebar's
-     border line, so it reads as sitting on the edge rather than behind it. */
-  box-shadow: 0 0 0 3px var(--bg-dark), 0 4px 12px var(--dash-shadow);
+     border line, so it reads as sitting on the edge rather than behind it.
+     A hairline-framed tile, no drop shadow (Paper: hairlines over shadows). */
+  box-shadow: 0 0 0 3px var(--bg-dark);
   transition:
     transform        var(--resize-dur) var(--resize-ease),
     background-color var(--duration-quick) ease;
 }
 
 .admin-collapse-toggle:hover .admin-collapse-knob {
-  background: color-mix(in srgb, var(--accent-blue) 80%, #fff);
+  background: var(--paper-surface);
 }
 
 .admin-collapse-toggle:focus-visible {
@@ -169,9 +168,8 @@
   overflow: hidden;
   font-size: 0.625rem;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.01em;
   line-height: 20px;
-  text-transform: uppercase;
   color: var(--text-secondary);
   white-space: nowrap;
   transition:
@@ -228,10 +226,10 @@
    the light one): --accent-blue itself on its own tint falls short of 4.5:1 on
    either. The bar keeps the true brand blue. */
 .admin-nav-item.active {
-  background: color-mix(in srgb, var(--accent-blue) 14%, transparent);
-  color: var(--accent-blue-text);
+  background: var(--paper-surface);
+  color: var(--text-primary);
   font-weight: 600;
-  box-shadow: inset -4px 0 0 var(--accent-blue);
+  box-shadow: inset -3px 0 0 var(--accent-blue);
 }
 
 /* The collapsed rail's tooltip: transitions.dev's tooltip (17-tooltip),
@@ -267,10 +265,7 @@
   font-weight: 500;
   line-height: 1.3;
   white-space: nowrap;
-  box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.06),
-    0 2px 6px 0 rgba(0, 0, 0, 0.05),
-    0 8px 28px 0 var(--dash-shadow);
+  box-shadow: 0 6px 18px -8px var(--dash-shadow);
   pointer-events: none;
   animation: dash-rail-tip-in var(--tt-in-dur) var(--tt-in-ease) var(--tt-delay) backwards;
 }
@@ -316,8 +311,8 @@
   z-index: 100;
   padding: 10px 16px;
   border-radius: var(--radius-control);
-  background: var(--accent-blue);
-  color: #fff;
+  background: var(--paper-action);
+  color: var(--paper-action-ink);
   font-family: var(--font-body);
   font-size: 0.875rem;
   font-weight: 600;
@@ -395,8 +390,6 @@
   justify-content: center;
   padding: 12vh var(--space-md) var(--space-md);
   background: var(--dash-scrim);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
   opacity: 0;
   transition: opacity var(--modal-open-dur) var(--modal-ease);
 }
@@ -469,8 +462,7 @@
   padding: 10px 10px 4px;
   font-size: 0.625rem;
   font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
   color: var(--text-secondary);
 }
 
@@ -687,10 +679,10 @@
   gap: var(--space-md);
   padding: 0 var(--space-xl);
   background: var(--dash-header);
+  border-bottom: 1px solid var(--dash-hairline);
   position: sticky;
   top: 0;
   z-index: 45;
-  backdrop-filter: blur(20px);
 }
 
 .admin-header-lead {
@@ -818,8 +810,8 @@
 }
 
 .metric-icon {
-  color: var(--accent-blue);
-  background: rgba(43, 192, 255, 0.1);
+  color: var(--accent-blue-text);
+  background: color-mix(in srgb, var(--accent-blue) 10%, transparent);
   padding: 8px;
   border-radius: var(--radius-control);
 }
@@ -1129,10 +1121,9 @@
 .data-table th {
   font-size: 0.75rem;
   font-weight: 600;
-  text-transform: uppercase;
   color: var(--text-secondary);
   background: var(--dash-sunken);
-  letter-spacing: 0.05em;
+  letter-spacing: 0.01em;
 }
 
 .data-table td {
@@ -1156,7 +1147,6 @@
   border-radius: var(--radius-chip);
   font-size: 0.75rem;
   font-weight: 600;
-  text-transform: uppercase;
 }
 
 .status-badge.success {
@@ -1292,10 +1282,7 @@ a.reg-count-trigger {
   font-size: 0.8125rem;
   font-weight: 500;
   white-space: nowrap;
-  box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.06),
-    0 2px 6px 0 rgba(0, 0, 0, 0.05),
-    0 8px 28px 0 var(--dash-shadow);
+  box-shadow: 0 6px 18px -8px var(--dash-shadow);
   transform: scale(var(--tt-scale));
   transform-origin: 0% 100%;
   opacity: 0;
@@ -1506,8 +1493,7 @@ a.reg-count-trigger {
   margin-bottom: 2px;
   font-size: 0.75rem;
   font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
   color: var(--text-secondary);
 }
 
@@ -1557,8 +1543,7 @@ a.reg-count-trigger {
   min-width: 0;
   font-size: 0.75rem;
   font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
   color: var(--text-secondary);
 }
 
@@ -2019,7 +2004,7 @@ a.reg-count-trigger {
   width: 100%;
   padding: var(--space-md);
   background: var(--dash-field);
-  border: 1px solid var(--dash-border);
+  border: 1px solid var(--paper-field-line);
   border-radius: var(--radius-control);
   color: var(--text-primary);
   font-family: var(--font-body);
@@ -2030,8 +2015,8 @@ a.reg-count-trigger {
 
 .form-input:focus {
   background: var(--dash-field-focus);
-  border-color: var(--accent-blue);
-  box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.15);
+  border-color: var(--paper-focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--paper-focus) 22%, transparent);
 }
 
 .form-input::placeholder {
@@ -2048,13 +2033,13 @@ a.reg-count-trigger {
    wizard does it, so the red border and the thing a screen reader announces
    can never drift apart — one attribute sets both. */
 .form-input[aria-invalid="true"] {
-  border-color: rgba(239, 68, 68, 0.7);
-  background: rgba(239, 68, 68, 0.06);
+  border-color: var(--status-danger);
+  background: color-mix(in srgb, var(--status-danger) 5%, var(--dash-field));
 }
 
 .form-input[aria-invalid="true"]:focus {
-  border-color: rgba(239, 68, 68, 0.9);
-  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.2);
+  border-color: var(--status-danger);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--status-danger) 22%, transparent);
 }
 
 select.form-input {
@@ -2066,9 +2051,12 @@ select.form-input {
   background-size: 1rem;
 }
 
-/* A data URI cannot read a variable, so the light theme swaps the chevron. */
-[data-theme="light"] select.form-input {
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2352525b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+/* A data URI cannot read a variable, so the light theme swaps the chevron —
+   keyed on <html data-color-theme>, which is right from the first paint
+   (lib/color-theme.ts); the frame's data-theme only lands on hydration. The
+   stroke is Paper's muted ink (#5d606c); the dark default above is white 50%. */
+:root:not([data-color-theme="dark"]) select.form-input {
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235d606c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
 }
 
 textarea.form-input {
@@ -2090,8 +2078,8 @@ textarea.form-input {
 .inclusion-chip {
   padding: 0.25rem 0.625rem;
   border-radius: var(--radius-chip);
-  background: rgba(0, 122, 255, 0.12);
-  border: 1px solid rgba(0, 122, 255, 0.3);
+  background: color-mix(in srgb, var(--accent-blue) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-blue) 30%, transparent);
   color: var(--ink-85);
   font-size: 0.75rem;
   line-height: 1.4;
@@ -2171,8 +2159,8 @@ textarea.form-input {
   place-items: center;
   overflow: hidden;
   border-radius: 999px;
-  background: var(--accent-orange);
-  color: #fff;
+  background: var(--paper-action);
+  color: var(--paper-action-ink);
   font-size: 2.25rem;
   font-weight: 700;
 }
@@ -2590,8 +2578,6 @@ textarea.form-input {
     margin-inline: calc(-1 * var(--space-md));
     padding: 12px var(--space-md) calc(12px + env(safe-area-inset-bottom));
     background: var(--dash-panel);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
   }
 
   .admin-form > .form-actions > :is(a, button) {
@@ -2659,9 +2645,9 @@ textarea.form-input {
 }
 
 .search-input:focus {
-  border-color: var(--accent-blue);
+  border-color: var(--paper-focus);
   background: var(--dash-field-focus);
-  box-shadow: 0 0 0 2px rgba(43, 192, 255, 0.1);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--paper-focus) 22%, transparent);
 }
 
 .search-input::placeholder {
@@ -2749,10 +2735,10 @@ textarea.form-input {
      theme, zinc-50 on zinc-900 in the light one, so the page's primary action
      is the highest-contrast thing on either. The icons are lucide, drawn in
      currentColor, so they follow the label rather than needing their own rule. */
-  color: var(--dash-inverse-fg);
-  background: var(--dash-inverse-bg);
+  color: var(--paper-action-ink);
+  background: var(--paper-action);
   font-size: 0.875rem;
-  font-weight: 500;
+  font-weight: 600;
   font-family: var(--font-body);
   text-decoration: none;
   cursor: pointer;
@@ -2764,14 +2750,14 @@ textarea.form-input {
    the light one — the same "stronger on hover" reading the quiet controls get
    from --ink-05. */
 .btn-light:hover {
-  background: var(--dash-inverse-hover);
+  background: var(--paper-action-hover);
 }
 
 /* A button that cannot be pressed must not answer the mouse as though it can. */
 .btn-light:disabled,
 .btn-light:disabled:hover {
   opacity: 0.45;
-  background: var(--dash-inverse-bg);
+  background: var(--paper-action);
   cursor: not-allowed;
 }
 
@@ -2975,8 +2961,6 @@ textarea.form-input {
     padding: 0;
     border: 0;
     background: var(--dash-scrim);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
@@ -3347,10 +3331,8 @@ textarea.form-input {
 }
 
 .file-upload-wrapper:hover, .file-upload-wrapper:focus-within {
-  border-color: var(--accent-blue);
-  background: rgba(43, 192, 255, 0.03);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  border-color: var(--paper-focus);
+  background: var(--dash-hover);
 }
 
 .file-upload-input {
@@ -3376,9 +3358,9 @@ textarea.form-input {
 .file-upload-icon {
   width: 64px;
   height: 64px;
-  color: var(--accent-blue);
-  background: rgba(43, 192, 255, 0.1);
-  border-radius: var(--radius-panel);
+  color: var(--accent-blue-text);
+  background: color-mix(in srgb, var(--accent-blue) 10%, transparent);
+  border-radius: var(--radius-control);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3388,7 +3370,7 @@ textarea.form-input {
 
 .file-upload-wrapper:hover .file-upload-icon {
   transform: scale(1.05);
-  background: rgba(43, 192, 255, 0.15);
+  background: color-mix(in srgb, var(--accent-blue) 15%, transparent);
 }
 
 .file-upload-title {
@@ -3409,7 +3391,6 @@ textarea.form-input {
   border-radius: var(--radius-panel);
   overflow: hidden;
   border: 1px solid var(--dash-border);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
   background: var(--dash-sunken);
 }
 
@@ -3423,8 +3404,7 @@ textarea.form-input {
 .file-preview-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0,0,0,0.6);
-  backdrop-filter: blur(4px);
+  background: var(--dash-scrim);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -3616,9 +3596,8 @@ textarea.form-input {
   border-radius: var(--radius-chip);
   font-size: 0.75rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--paper-action-ink);
   background: var(--accent-blue);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -3710,11 +3689,11 @@ textarea.form-input {
 }
 
 .icon-btn.primary {
-  color: var(--accent-blue);
+  color: var(--accent-blue-text);
 }
 
 .icon-btn.primary:hover {
-  background: rgba(43, 192, 255, 0.1);
+  background: color-mix(in srgb, var(--accent-blue) 10%, transparent);
 }
 
 .icon-btn.success {
@@ -3738,8 +3717,6 @@ textarea.form-input {
   position: fixed;
   inset: 0;
   background: var(--dash-scrim);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3821,8 +3798,7 @@ textarea.form-input {
 .modal-section-title {
   font-size: 0.75rem;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.01em;
   color: var(--text-secondary);
   margin-bottom: 0.75rem;
   padding-bottom: 0.5rem;
@@ -3961,8 +3937,6 @@ textarea.form-input {
      there. */
   width: 210px;
   z-index: 50;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
   padding: 0.25rem 0;
   overflow: hidden;
 }
@@ -4274,8 +4248,7 @@ details[open] > summary .viewer-fold-chevron {
    link). The border turns the accent colour and the card rises a little, so
    the pointer finds out at once that the card opens something. */
 .viewer-event-card:has(.viewer-event-open:hover) {
-  border-color: color-mix(in srgb, var(--accent-blue) 55%, transparent);
-  box-shadow: 0 12px 32px -12px color-mix(in srgb, var(--accent-blue) 35%, transparent);
+  border-color: var(--paper-line-strong);
   transform: translateY(-2px);
 }
 
@@ -4359,7 +4332,7 @@ details[open] > summary .viewer-fold-chevron {
 .viewer-event-card:has(.viewer-event-open:hover) .viewer-event-open-arrow {
   transform: translateX(3px);
   background: var(--accent-blue);
-  color: #fff;
+  color: var(--paper-action-ink);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -4521,8 +4494,7 @@ details[open] > summary .viewer-fold-chevron {
   min-height: 44px;
   font-size: 0.75rem;
   font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
   color: var(--text-secondary);
   cursor: pointer;
   list-style: none;
@@ -4743,8 +4715,8 @@ details[open] > summary .viewer-fold-chevron {
   display: grid;
   place-items: center;
   border-radius: 999px;
-  background: var(--accent-orange);
-  color: #fff;
+  background: var(--paper-action);
+  color: var(--paper-action-ink);
   font-size: 0.9375rem;
   font-weight: 700;
   overflow: hidden;
@@ -4896,8 +4868,8 @@ details[open] > summary .viewer-fold-chevron {
   width: 16px;
   height: 16px;
   border-radius: 999px;
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  background: var(--paper-card);
+  box-shadow: 0 0 0 1px var(--paper-line-strong);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -5026,8 +4998,7 @@ details[open] > summary .viewer-fold-chevron {
   padding: 14px 20px 6px;
   font-size: 0.6875rem;
   font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
   color: var(--text-secondary);
 }
 
@@ -5047,11 +5018,11 @@ details[open] > summary .viewer-fold-chevron {
 }
 
 .notif-row.is-unread {
-  background: rgba(10, 132, 255, 0.05);
+  background: color-mix(in srgb, var(--accent-blue) 5%, transparent);
 }
 
 .notif-row.is-unread:hover {
-  background: rgba(10, 132, 255, 0.09);
+  background: color-mix(in srgb, var(--accent-blue) 9%, transparent);
 }
 
 .notif-kind {
@@ -5123,8 +5094,8 @@ details[open] > summary .viewer-fold-chevron {
   width: 8px;
   height: 8px;
   border-radius: 999px;
-  background: #0a84ff;
-  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.18);
+  background: var(--accent-blue);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-blue) 18%, transparent);
 }
 
 .notif-empty {
@@ -5289,8 +5260,8 @@ details[open] > summary .viewer-fold-chevron {
   width: 16px;
   height: 16px;
   border-radius: 999px;
-  background: #fff;
-  box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+  background: var(--paper-card);
+  box-shadow: 0 0 0 1px var(--paper-line-strong);
 }
 
 /* ── The Pacers screen (admin/events/[id]/pacers) ──────────────────────────
@@ -5409,8 +5380,8 @@ details[open] > summary .viewer-fold-chevron {
 
 .rich-editor:focus-within {
   background: var(--dash-field-focus);
-  border-color: var(--accent-blue);
-  box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.15);
+  border-color: var(--paper-focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--paper-focus) 22%, transparent);
 }
 
 .rich-editor-toolbar {

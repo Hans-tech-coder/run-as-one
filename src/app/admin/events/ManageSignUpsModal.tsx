@@ -110,7 +110,7 @@ export default function ManageSignUpsModal({
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--dash-scrim)] backdrop-blur-sm transition-opacity duration-200 ${
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--dash-scrim)] transition-opacity duration-200 ${
         isOpen && !isClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
       }`}
     >
@@ -212,7 +212,7 @@ export default function ManageSignUpsModal({
           {/* Apart from the settings above, and red: a closure is said now,
               not saved, and it tells runners the race is not coming back. */}
           <section
-            className="flex flex-col gap-3 rounded-panel border border-red-500/30 bg-red-500/5 p-4"
+            className="flex flex-col gap-3 rounded-panel border border-[var(--status-danger)]/30 bg-[var(--status-danger)]/5 p-4"
             aria-labelledby="manage-sign-ups-final"
           >
             <h4 id="manage-sign-ups-final" className="flex items-center gap-2 text-base font-semibold text-primary m-0">
@@ -236,7 +236,7 @@ export default function ManageSignUpsModal({
                 className={
                   closed
                     ? 'btn-light'
-                    : 'min-h-11 px-5 py-2 bg-red-500 hover:bg-red-600 text-white rounded-control text-sm font-medium transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2'
+                    : 'min-h-11 px-5 py-2 bg-[var(--status-danger)] hover:bg-[var(--paper-danger-strong)] text-[var(--paper-on-status)] rounded-control text-sm font-medium transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2'
                 }
               >
                 {closed ? 'Reopen Sign-Ups' : 'Close Sign-Ups'}

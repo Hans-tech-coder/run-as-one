@@ -78,11 +78,11 @@ const KIND_ICONS: Record<NotificationKind, React.ComponentType<{ size?: number }
 };
 
 const TONE_CLASSES: Record<NotificationTone, string> = {
-  amber: 'bg-amber-400/10 text-[var(--tone-amber)] border-amber-400/20',
-  green: 'bg-emerald-400/10 text-[var(--tone-green)] border-emerald-400/20',
-  red: 'bg-red-400/10 text-[var(--tone-red)] border-red-400/20',
+  amber: 'bg-[var(--status-warning)]/10 text-[var(--tone-amber)] border-[var(--status-warning)]/20',
+  green: 'bg-[var(--status-success)]/10 text-[var(--tone-green)] border-[var(--status-success)]/20',
+  red: 'bg-[var(--status-danger)]/10 text-[var(--tone-red)] border-[var(--status-danger)]/20',
   blue: 'bg-accent-blue/10 text-[var(--accent-blue-text)] border-accent-blue/25',
-  violet: 'bg-violet-400/10 text-[var(--tone-violet)] border-violet-400/20',
+  violet: 'bg-[var(--tone-violet)]/10 text-[var(--tone-violet)] border-[var(--tone-violet)]/20',
 };
 
 function readStored(key: string | null): NotificationReadState {

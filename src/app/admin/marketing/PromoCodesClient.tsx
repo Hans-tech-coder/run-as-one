@@ -432,7 +432,7 @@ function VoucherCodes({
   return (
     <>
       <div className="flex items-center justify-between gap-3 mb-3">
-        <span className="min-w-0 text-xs uppercase tracking-wider text-secondary [overflow-wrap:anywhere]">
+        <span className="min-w-0 text-xs text-secondary [overflow-wrap:anywhere]">
           Vouchers in {group.batchLabel}
         </span>
         {/* 44px only where it is a card's (below `lg`); the table's row keeps
@@ -1419,7 +1419,7 @@ export default function PromoCodesClient({
         rather than a hunt through a table of a thousand runners.
       */}
       <div
-        className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--dash-scrim)] backdrop-blur-sm transition-opacity duration-200 ${
+        className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--dash-scrim)] transition-opacity duration-200 ${
           isRedemptionsOpen && !isRedemptionsClosing
             ? 'opacity-100 pointer-events-auto'
             : 'opacity-0 pointer-events-none'
@@ -1553,7 +1553,7 @@ export default function PromoCodesClient({
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-[var(--dash-scrim)] backdrop-blur-sm z-50 flex items-center justify-center p-4 max-sm:p-3">
+        <div className="fixed inset-0 bg-[var(--dash-scrim)] z-50 flex items-center justify-center p-4 max-sm:p-3">
           {/* On the dashboard's modal frame (.admin-modal-panel): the panel
               never grows past the viewport, the form scrolls inside it, and
               the submit waits in the footer. It used to be a page-long panel

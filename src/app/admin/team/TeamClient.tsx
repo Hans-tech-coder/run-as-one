@@ -815,7 +815,7 @@ export default function TeamClient({
           the one .btn-light — because a new control copies an existing one. */}
       {modalMounted && draft && (
         <div
-          className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--dash-scrim)] backdrop-blur-sm transition-opacity duration-200 ${
+          className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--dash-scrim)] transition-opacity duration-200 ${
             isModalOpen && !isModalClosing ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
           }`}
           onMouseDown={e => {

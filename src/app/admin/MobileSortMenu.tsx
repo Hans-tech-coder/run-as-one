@@ -103,7 +103,7 @@ export default function MobileSortMenu<T>({
           aria-label="Sort the list"
           className="toolbar-popover absolute left-0 mt-2 w-72 bg-[var(--dash-popover)] border border-[var(--dash-border)] rounded-control p-2 z-50 shadow-2xl"
         >
-          <p className="m-0 px-2 pt-1 pb-2 text-xs font-semibold uppercase tracking-wider text-secondary">
+          <p className="m-0 px-2 pt-1 pb-2 text-xs font-semibold text-secondary">
             Sort By
           </p>
           <ul className="m-0 p-0 list-none flex flex-col">

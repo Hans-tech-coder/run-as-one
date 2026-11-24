@@ -221,12 +221,14 @@ a moon and *Dark Mode*, or a sun and *Light Mode*, the icons crossing over
 with the icon swap (09, `.t-icon-swap`) and the words with the text swap
 (04, `.t-text-swap` in `globals.css`, its three phases driven by
 `swapLabel`). Its accessible name stays *Dark Mode* whatever it shows, since a
-switch's name is what it turns on and `aria-checked` says whether. The choice is the `dash_theme` cookie
-(`admin/dashboard-theme.ts`, dark unless it says `light`), which the admin
-layout reads so `DashboardShell` draws `data-theme` on `.admin-layout` on the
-server's first paint; once mounted it mirrors the value onto `<html>` so
-portals follow, and deletes it on unmount so the
-public site never inherits it. The bare sign-in pages are not themed.
+switch's name is what it turns on and `aria-checked` says whether. The choice is
+**the app's one light/dark choice** (`lib/color-theme.ts`, localStorage
+`rao-color-theme`, the system setting until someone picks), the same one the
+public navbar's sun/moon writes; the `dash_theme` cookie is gone (2026-11-24).
+The colours are right before paint (`<html data-color-theme>`, Paper tokens via
+`admin-paper.css`); `useDashboardTheme` puts `data-theme` on `.admin-layout`
+after hydration and mirrors it onto `<html>` so portals follow, deleting it on
+unmount. The bare sign-in pages follow the same switch.
 **The light palette is tokens** (`LIGHT_THEME_PLAN.md` Batches 1–2): the frame,
 sidebar, header, this menu, dropdowns, modals, badges, buttons, form
 controls, the shared table primitives and toolbar popovers, the bell and the

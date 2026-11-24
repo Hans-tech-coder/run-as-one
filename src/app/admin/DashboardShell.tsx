@@ -7,7 +7,8 @@ import { ChevronLeft, ExternalLink, Search } from 'lucide-react';
 import { RunAsOneLogo } from '@/components/RunAsOneLogo';
 import LinkPending from '@/components/ui/LinkPending';
 import { rememberSidebar } from './dashboard-sidebar';
-import type { DashboardTheme } from './dashboard-theme';
+import { useDashboardTheme } from './useDashboardTheme';
+import { archivo } from '@/app/archivo-font';
 import { HeaderToolsProvider } from './DashboardHeader';
 import DashboardQuickJump, { useModifierLabel, type QuickJumpTarget } from './DashboardQuickJump';
 import './Admin.css';
@@ -131,7 +132,6 @@ type RailTip = { text: string; hint?: string; top: number; left: number };
 export default function DashboardShell({
   navGroups,
   initialCollapsed = false,
-  theme = 'dark',
   headerAccessory,
   quickJumpExtras = [],
   children,
@@ -139,14 +139,6 @@ export default function DashboardShell({
   navGroups: DashboardNavGroup[];
   /** Read from the sidebar cookie by the layout, so the desktop's first paint is already right. */
   initialCollapsed?: boolean;
-  /**
-   * The account menu's Dark Mode choice (dashboard-theme.ts). It is drawn on
-   * the frame from the server's first paint, and mirrored onto `<html>` once
-   * mounted so what portals to `<body>` — row menus, lightboxes, the
-   * notifications modal — follow it too. The mirror is
-   * removed on the way out, so the public site never inherits the choice.
-   */
-  theme?: DashboardTheme;
   /**
    * What sits at the right end of every page's header — the notification
    * bell and the account menu. Handed down through context to
@@ -176,13 +168,8 @@ export default function DashboardShell({
   const [openOn, setOpenOn] = useState<string | null>(null);
   const isOpen = openOn === pathname;
 
-  useEffect(() => {
-    const root = document.documentElement;
-    root.dataset.theme = theme;
-    return () => {
-      delete root.dataset.theme;
-    };
-  }, [theme]);
+  // The app's one light/dark choice (useDashboardTheme.ts, lib/color-theme.ts).
+  const theme = useDashboardTheme();
 
   const toggleRef = useRef<HTMLButtonElement>(null);
   const jumpRef = useRef<HTMLButtonElement>(null);
@@ -379,7 +366,10 @@ export default function DashboardShell({
   };
 
   return (
-    <div className="admin-layout" data-theme={theme}>
+    // `data-follows-theme`: Paper's palette follows the app's light/dark
+    // choice here (paper-tokens.css), and admin-paper.css points every
+    // dashboard name at it. Archivo is Paper's one typeface.
+    <div className={`admin-layout ${archivo.variable}`} data-theme={theme} data-follows-theme="">
       {/* The keyboard's way past the menu. First in the DOM, so it is the
           first thing Tab reaches on any dashboard page; invisible until it
           has focus (Admin.css). */}

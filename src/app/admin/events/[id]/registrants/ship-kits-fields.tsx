@@ -74,7 +74,7 @@ function Tile({
 
 export function Warning({ children }: { children: React.ReactNode }) {
   return (
-    <div role="alert" className="flex gap-3 rounded-panel border border-orange-500/30 bg-orange-500/10 p-3 text-primary">
+    <div role="alert" className="flex gap-3 rounded-panel border border-[var(--status-warning)]/30 bg-[var(--status-warning)]/10 p-3 text-primary">
       <TriangleAlert size={18} className="shrink-0 text-[var(--status-warning)]" aria-hidden="true" />
       <p className="m-0">{children}</p>
     </div>
