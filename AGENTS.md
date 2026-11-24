@@ -50,7 +50,7 @@ oriented" is the most expensive possible way to start, and it is never necessary
 
 # Which skill for which task
 
-The project's own skills live flat in `.agents/skills/` (tracked in git,
+The project's own skills live flat in `.agents/skills/` (gitignored,
 junction-linked from `.claude/skills/` for Claude Code). Cross-project skills —
 `ui-ux-pro-max`, `design-taste-frontend`, `transitions-dev`, `gsap-*`, and
 companions — live globally in `~/.agents/skills/` (junction-linked from both

@@ -34,6 +34,7 @@ need to be read in full to start.
 | adds or changes a **page or an API route**, or asks what a screen already does | [`docs/routes.md`](docs/routes.md) — §6 | 79 KB |
 | changes **who may reach or see what** — auth, scopes, roles, gating | [`docs/security.md`](docs/security.md) — §7 | 13 KB |
 | writes **UI** — a table, a form field, a button, a badge, a loader, motion, the logo, theming | [`docs/conventions.md`](docs/conventions.md) — §9 | 67 KB |
+| designs **brand assets, event posters, social graphics, print/supplier files**, or checks the **official logo, palette, and typography** | [`brand/brand-guide.md`](brand/brand-guide.md) | 18 KB |
 | needs to know **what has shipped and what is still open** | [`docs/current-state.md`](docs/current-state.md) — §10 | 32 KB |
 | needs to find **which files a feature lives in** | [`docs/FEATURE-MAP.md`](docs/FEATURE-MAP.md) — generated | small |
 
@@ -315,7 +316,8 @@ src/
 prisma/schema.prisma        # the data model, heavily commented
 vercel.json                 # scheduled work (crons) — see §2
 scripts/                    # seed + one-off maintenance scripts
-.agents/skills/             # active project skills (linked from .claude/skills/) — task→skill table in AGENTS.md
+brand/                      # official brand guide + outlined SVG & high-res PNG logo kit (gitignored)
+.agents/skills/             # active project skills (gitignored, linked from .claude/skills/) — task→skill table in AGENTS.md
 ```
 
 ---

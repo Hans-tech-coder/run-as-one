@@ -49,6 +49,7 @@ next-env.d.ts
 public/uploads/
 
 # IDE and agent settings
+.agents/
 .claude/
 .windsurf/
 screenshot.png
@@ -69,3 +70,6 @@ __pycache__/
 
 # design-taste-frontend gate working folder (histories, build.json, shots)
 .taste-skill/
+
+# Official brand kit & high-res logo files (local checkout only)
+/brand/
