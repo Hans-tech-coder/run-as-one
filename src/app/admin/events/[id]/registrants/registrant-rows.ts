@@ -56,12 +56,16 @@ export type RegistrantsEvent = Prisma.EventGetPayload<{
   };
 }>;
 
+/** Another live order this runner is on, as the chip links to it. */
+export type DuplicateRef = { orderRef: string; status: string; href: string };
+
 export function buildRegistrantRows({
   event,
   statusRecords,
   changesByRunner,
   logisticsByOrder,
   correctionsByOrder,
+  duplicatesByRunner,
   shortInstant,
   csvInstant,
 }: {
@@ -73,6 +77,8 @@ export function buildRegistrantRows({
   logisticsByOrder: Map<string, LogisticsChangeView[]>;
   /** Each order's latest payment correction (activity-store's latestPaymentCorrections). */
   correctionsByOrder: Map<string, CorrectionRecord>;
+  /** Other live orders the same runner is on (lib/runner-match.ts), by runner id. */
+  duplicatesByRunner: Map<string, DuplicateRef[]>;
   shortInstant: (value: Date) => string;
   csvInstant: (value: Date) => string;
 }): Record<string, unknown>[] {
@@ -244,6 +250,9 @@ export function buildRegistrantRows({
         // The latest correction of those details, for the detail modal's
         // "Corrected … by …" line; null on nearly every order.
         paymentCorrection: correctionsByOrder.get(reg.id) ?? null,
+        // The same runner on another live order (DUPLICATE_ORDERS_PLAN.md):
+        // the Possible duplicate chip, empty on nearly every row.
+        duplicateOf: duplicatesByRunner.get(runner.id) ?? [],
         // A free pacer entry, read from the discount this order snapshotted
         // rather than from the promo code, which staff may since have paused
         // or deleted (PACER_DISCOUNT_PLAN.md Batch 3). Decided here for the

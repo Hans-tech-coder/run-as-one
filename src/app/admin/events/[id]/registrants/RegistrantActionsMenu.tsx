@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { MoreVertical, CheckCircle, Trash2, Edit, Eye, ArrowLeftRight, Truck, Store, Wallet, History, ReceiptText, Undo2 } from 'lucide-react';
+import { MoreVertical, CheckCircle, XCircle, Trash2, Edit, Eye, ArrowLeftRight, Truck, Store, Wallet, History, ReceiptText, Undo2 } from 'lucide-react';
 import { placeRowMenu, type RowMenuPlacement } from '../../../row-menu-position';
 import BusyLabel from '@/components/ui/BusyLabel';
 import { cssDurationMs } from '@/lib/css-duration';
@@ -62,6 +62,8 @@ interface RegistrantActionsMenuProps {
   /** Refund runner (REFUND_PLAN.md D4): owners and admins, a paid order only. */
   canRefund: boolean;
   onRefund: (runnerId: string) => void;
+  /** Cancel Order… on a pending bank transfer, with a required note (`CancelOrderModal`). */
+  onCancelOrder: (registrationId: string) => void;
 }
 
 /**
@@ -98,6 +100,7 @@ export default function RegistrantActionsMenu({
   canValidate,
   canRefund,
   onRefund,
+  onCancelOrder,
   canCorrectPayment,
   onCorrectPayment,
 }: RegistrantActionsMenuProps) {
@@ -343,6 +346,22 @@ export default function RegistrantActionsMenu({
           >
             <CheckCircle size={16} />
             {updatingId === registrationId ? <BusyLabel>Updating</BusyLabel> : 'Validate Payment'}
+          </button>
+        )}
+
+        {/* The other answer to a pending transfer: a duplicate, or money that
+            never came. Same permission as validating, since either one
+            settles the order. */}
+        {canValidate && status === 'PENDING' && isBankTransfer && (
+          <button
+            className="action-dropdown-item danger flex items-center gap-3 px-4 py-2 text-sm text-left"
+            role="menuitem"
+            onClick={() => {
+              onCancelOrder(registrationId);
+              closeMenu();
+            }}
+          >
+            <XCircle size={16} aria-hidden="true" /> Cancel Order…
           </button>
         )}
 

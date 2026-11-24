@@ -71,6 +71,8 @@ import {
   isReferenceIndexViolation,
   orderHoldsReference,
 } from '@/lib/payment-reference';
+import { findLiveMatches, type LiveMatch } from '@/lib/runner-match';
+import { lockEventForRegistration } from '@/lib/registration-gate';
 
 /**
  * The statuses an organizer may set from the admin. Guarded rather than
@@ -120,6 +122,20 @@ class HasRunnerRefunds extends Error {}
 /** Leaving PAID without a fresh, unspent confirmation for this order. */
 class StepUpRefused extends Error {}
 
+/**
+ * Moving into PAID while the same runners (lib/runner-match.ts M1) are already
+ * on another live order, without `confirmDuplicate: true`. The 20 Nov double
+ * registration attached the first order's QRPh receipt as its bank-transfer
+ * proof; validating it would have counted one payment twice. Staff may still
+ * go ahead (a genuine second entry, a family sharing a name), and the trail
+ * records that they did.
+ */
+class PossibleDuplicate extends Error {
+  constructor(readonly matches: LiveMatch[]) {
+    super('possibleDuplicate');
+  }
+}
+
 const STEP_UP_REFUSED = "Confirm it's you again. Moving a paid order out of paid needs a fresh confirmation.";
 
 export async function PATCH(
@@ -135,6 +151,7 @@ export async function PATCH(
     const { id } = await params;
     const body = await request.json();
     const { status, remarks, reason: rawReason, expectedStatus, stepUpToken, paidTo: rawPaidTo } = body;
+    const confirmDuplicate = body.confirmDuplicate === true;
 
     // Two independent edits down one route: a status change, a remark, or
     // both. Requiring one of them means an empty body cannot silently stamp a
@@ -159,6 +176,14 @@ export async function PATCH(
       return NextResponse.json({ error: 'The reason must be text.' }, { status: 400 });
     }
     const reason = (rawReason ?? '').trim();
+    // Every cancel says why (owner, 2026-11-24): the trail is where staff
+    // later look for it, and both Cancel Order… dialogs already require one.
+    if (wantsStatus && status === 'CANCELLED' && !reason) {
+      return NextResponse.json(
+        { error: 'Say why the order is being cancelled.', field: 'reason' },
+        { status: 400 }
+      );
+    }
     if (reason.length > REASON_MAX) {
       return NextResponse.json(
         { error: `Keep the reason to ${REASON_MAX} characters. It is ${reason.length} now.` },
@@ -269,6 +294,29 @@ export async function PATCH(
         }
       }
 
+      // Same runners already on another live order (PossibleDuplicate),
+      // whenever this move makes the order live (lib/runner-match.ts M2):
+      // validating, or reopening a bank transfer as PENDING. Under the event
+      // lock checkout takes, so a checkout and this validation for the same
+      // runner cannot both pass.
+      let duplicateOf: LiveMatch[] = [];
+      const from = lockedStatus ?? existing.status;
+      const becomesLive =
+        (status === 'PAID' && from !== 'PAID') ||
+        (status === 'PENDING' && from !== 'PENDING' && isBankTransfer(existing.paymentMethod));
+      if (wantsStatus && becomesLive) {
+        await lockEventForRegistration(tx, existing.eventId);
+        const runners = await tx.runner.findMany({
+          where: { registrationId: id, deletedAt: null },
+          select: { firstName: true, lastName: true, birthdate: true },
+        });
+        const matches = await findLiveMatches(tx, existing.eventId, runners, { excludeRegistrationId: id });
+        const seen = new Map<string, LiveMatch>();
+        for (const list of matches.values()) for (const m of list) seen.set(m.registrationId, m);
+        duplicateOf = [...seen.values()].sort((a, b) => a.orderRef.localeCompare(b.orderRef));
+        if (duplicateOf.length > 0 && !confirmDuplicate) throw new PossibleDuplicate(duplicateOf);
+      }
+
       // Back into a status that holds a reference (an expired or cancelled
       // order reopened): its Transaction No. must not be on another live
       // payment taken meanwhile (lib/payment-reference.ts R3). Claimed before
@@ -354,6 +402,10 @@ export async function PATCH(
                 : ` Paid to ${updated.paidTo}.`
               : ''
           }${
+            duplicateOf.length > 0
+              ? ` Confirmed despite the same runners on ${duplicateOf.map((m) => `${m.orderRef} (${m.status})`).join(', ')}.`
+              : ''
+          }${
             promoReleased
               ? ` Promo ${[existing.promoCode, existing.combinedPromoCode].filter(Boolean).join(' + ')} handed back.`
               : ''
@@ -362,6 +414,7 @@ export async function PATCH(
             status: [existing.status, updated.status],
             ...(reason ? { reason } : {}),
             ...(paidToChanged ? { paidTo: [existing.paidTo, updated.paidTo] } : {}),
+            ...(duplicateOf.length > 0 ? { confirmedDuplicateOf: duplicateOf.map((m) => m.orderRef).join(', ') } : {}),
           },
         });
       }
@@ -419,6 +472,17 @@ export async function PATCH(
 
     return NextResponse.json({ success: true, registration: updatedRegistration, statusChange });
   } catch (error: any) {
+    // Staff are asked first; the client re-sends with confirmDuplicate.
+    if (error instanceof PossibleDuplicate) {
+      return NextResponse.json(
+        {
+          error: `The same runners are on ${error.matches.map((m) => `${m.orderRef} (${m.status})`).join(', ')}.`,
+          code: 'possibleDuplicate',
+          matches: error.matches.map((m) => ({ orderRef: m.orderRef, status: m.status })),
+        },
+        { status: 409 }
+      );
+    }
     if (error instanceof StepUpRefused) {
       return NextResponse.json({ error: STEP_UP_REFUSED }, { status: 403 });
     }

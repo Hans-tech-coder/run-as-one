@@ -48,6 +48,7 @@ import { paymentCorrected, remarked, withEmailMark, withPaymentCorrection, withR
 import { usePaymentCorrection } from './usePaymentCorrection';
 import { paidToFilterFromUrl } from './paid-to';
 import { useRunnerRefund } from './RunnerRefundModal';
+import { useBankTransferCancel } from './CancelOrderModal';
 import CategoryChangeModal from './CategoryChangeModal';
 import { useCategoryChangeModal } from './useCategoryChangeModal';
 import CategoryChangeEmailModal from './CategoryChangeEmailModal';
@@ -226,6 +227,7 @@ export default function RegistrantsTable({
   // Refund runner (REFUND_PLAN.md): saving re-reads the page, which takes the
   // runner off this list.
   const refund = useRunnerRefund({ runners });
+  const cancelOrder = useBankTransferCancel({ runners });
 
   const queues = useRegistrantQueues(runners);
 
@@ -271,6 +273,7 @@ export default function RegistrantsTable({
     onLogisticsDetails: orderSwitch.showDetails,
     onCorrectPayment: correction.open,
     onRefund: refund.open,
+    onCancelOrder: cancelOrder.open,
   };
 
   const columns = useMemo(
@@ -414,6 +417,7 @@ export default function RegistrantsTable({
       {categoryChanges.element}
       {correction.element}
       {refund.element}
+      {cancelOrder.element}
       {categoryChange.changeEmail && (
         <CategoryChangeEmailModal
           key={categoryChange.changeEmail.changeId}

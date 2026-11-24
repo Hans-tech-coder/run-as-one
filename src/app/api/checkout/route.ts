@@ -63,6 +63,7 @@ import { discountParts } from '@/lib/promo-winner';
 import { openPaymongoPage } from '@/lib/paymongo-session';
 import { CHECKOUT_RULE, allowRequest, callerKey } from '@/lib/rate-limit';
 import { EMAIL_RUNNER_INCLUDE } from '@/lib/email';
+import { RunnerAlreadyRegisteredError, assertRunnersNotRegistered } from '@/lib/runner-match';
 
 export async function POST(request: Request) {
   // Before the body is read or a slot is touched: every order placed here holds
@@ -347,6 +348,10 @@ export async function POST(request: Request) {
     // reserveSlots, which locks the capped options first.
     const registration = await prisma.$transaction(async (tx) => {
       await lockEventForRegistration(tx, event.id);
+      // A runner already on a PAID order or a pending bank transfer here is
+      // not registered twice (lib/runner-match.ts). An abandoned QRPh order
+      // does not count, so retrying QRPh after walking away still works.
+      await assertRunnersNotRegistered(tx, event.id, participants);
       await reserveSlots(tx, event.categories, participants);
       // The add-ons' stock and cutoff, read again under their own row locks
       // (lib/add-on-stock.ts): two runners buying the last shirt cannot both
@@ -592,6 +597,10 @@ export async function POST(request: Request) {
     // already says what to do, so it goes back as it is.
     if (error instanceof PromoUnavailableError) {
       return NextResponse.json({ error: error.message }, { status: 409 });
+    }
+    // Names only the runner (M4): no order ref, no email.
+    if (error instanceof RunnerAlreadyRegisteredError) {
+      return NextResponse.json(error.runnerBody(), { status: 409 });
     }
     console.error('Checkout Error:', error);
     return NextResponse.json(

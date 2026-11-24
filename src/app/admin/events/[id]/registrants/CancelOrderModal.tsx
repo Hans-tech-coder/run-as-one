@@ -19,13 +19,25 @@
  *
  * Built on the follow-up modal's panel for that file's reason: a dialog
  * holding inputs must own their state.
+ *
+ * **A pending bank transfer can be cancelled too** (owner, 2026-11-24), from
+ * the registrants row menu (`useBankTransferCancel` below): a runner who
+ * registered twice, or whose transfer never arrived, sat PENDING with no way
+ * out but deleting its runners. There **a written note is required** beside
+ * the reason (owner's rule), because a bank transfer comes with proof of a
+ * payment, and whoever reads the trail later needs to know why it was set
+ * aside rather than validated. The trail line reads "Duplicate order: …".
  */
 
 import React, { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import BusyLabel from '@/components/ui/BusyLabel';
 import { useAlert } from '@/components/ui/AlertProvider';
-import type { UnpaidCheckout } from './UnpaidCheckoutsList';
+import type { RegistrantRow } from './RegistrantsTable';
+
+/** What the dialog needs of an order: an unpaid checkout, or one built from registrant rows. */
+export type CancellableOrder = { id: string; orderRef: string; contactName: string; runnerNames: string[] };
 
 /** Kept in step with the panel's closing transition (`.t-modal`). */
 const CLOSE_MS = 150;
@@ -35,11 +47,14 @@ const REASON_MAX = 200;
 
 const OTHER = 'Other';
 const REASONS = ['Runner declined', 'Duplicate order', 'Test order', OTHER] as const;
-type Reason = (typeof REASONS)[number];
+/** A bank transfer's own reasons: it is set aside, not abandoned. */
+const BANK_TRANSFER_REASONS = ['Duplicate order', 'Payment not received', 'Runner declined', OTHER] as const;
+type Reason = (typeof REASONS)[number] | (typeof BANK_TRANSFER_REASONS)[number];
 const REASON_LABELS: Record<Reason, string> = {
   'Runner declined': 'Runner Declined',
   'Duplicate order': 'Duplicate Order',
   'Test order': 'Test Order',
+  'Payment not received': 'Payment Not Received',
   Other: 'Other',
 };
 
@@ -49,10 +64,13 @@ const REASON_LABELS: Record<Reason, string> = {
  */
 export default function CancelOrderModal({
   order,
+  bankTransfer = false,
   onClose,
   onCancelled,
 }: {
-  order: UnpaidCheckout;
+  order: CancellableOrder;
+  /** A pending bank transfer: its own reasons, and a written note is required. */
+  bankTransfer?: boolean;
   onClose: () => void;
   onCancelled: () => void;
 }) {
@@ -82,12 +100,18 @@ export default function CancelOrderModal({
     return () => document.removeEventListener('keydown', onKey);
   });
 
-  const reason = choice === OTHER ? other.trim() : choice ?? '';
+  // Under Other the box is the reason; a bank transfer also needs it beside a tile.
+  const noteShown = choice === OTHER || (bankTransfer && choice !== null);
+  const note = other.trim();
+  const reason = choice === OTHER ? note : choice && bankTransfer ? `${choice}: ${note}` : choice ?? '';
   const missing = !choice
     ? 'Choose why the order is being cancelled first'
-    : !reason
-      ? 'Say why in the box under Other first'
+    : noteShown && !note
+      ? 'Write a note saying why first'
       : null;
+  const reasons = bankTransfer ? BANK_TRANSFER_REASONS : REASONS;
+  // Room for "Duplicate order: " in the route's limit.
+  const noteMax = choice && choice !== OTHER ? REASON_MAX - choice.length - 2 : REASON_MAX;
 
   const confirm = async () => {
     if (missing) return;
@@ -160,16 +184,24 @@ export default function CancelOrderModal({
 
         <div className="admin-modal-body p-6 max-sm:p-4 space-y-4">
           {/* No m-0: it would cancel the space-y gap below this line. */}
-          <p className="text-sm text-[var(--ink-85)]">
-            The {runners === 1 ? 'slot goes' : `${runners} slots go`} back now, and a promo code the
-            order used is handed back. If the runner pays later, the payment is not accepted on its
-            own; it is logged for a refund. Nothing is sent to the runner.
-          </p>
+          {bankTransfer ? (
+            <p className="text-sm text-[var(--ink-85)]">
+              The {runners === 1 ? 'slot goes' : `${runners} slots go`} back now, and a promo code the
+              order used is handed back. The runner sent proof of a transfer: if that money did
+              arrive, it is returned by hand. Nothing is sent to the runner.
+            </p>
+          ) : (
+            <p className="text-sm text-[var(--ink-85)]">
+              The {runners === 1 ? 'slot goes' : `${runners} slots go`} back now, and a promo code the
+              order used is handed back. If the runner pays later, the payment is not accepted on its
+              own; it is logged for a refund. Nothing is sent to the runner.
+            </p>
+          )}
 
           <fieldset className="p-0 border-none">
             <legend className="block text-sm text-secondary mb-2 p-0">Why Is It Being Cancelled?</legend>
             <div className="grid grid-cols-2 gap-2">
-              {REASONS.map(value => {
+              {reasons.map(value => {
                 const selected = choice === value;
                 return (
                   <label
@@ -201,24 +233,30 @@ export default function CancelOrderModal({
             </div>
           </fieldset>
 
-          {choice === OTHER && (
+          {noteShown && (
             <div className="space-y-2">
               <label htmlFor="cancel-order-other" className="block text-sm text-secondary">
-                The Reason
+                {choice === OTHER ? 'The Reason' : 'Note'} <span className="text-[var(--status-danger)]">(Required)</span>
               </label>
               <textarea
                 id="cancel-order-other"
                 value={other}
-                onChange={e => setOther(e.target.value)}
-                maxLength={REASON_MAX}
+                onChange={e => setOther(e.target.value.slice(0, noteMax))}
+                maxLength={noteMax}
                 rows={2}
                 autoFocus
-                placeholder="e.g. Runner moved to the 10K and registered again."
+                required
+                aria-required="true"
+                placeholder={
+                  bankTransfer
+                    ? 'e.g. Same 6 runners already paid by QRPh in RM-EAF0FBCA; proof is that payment.'
+                    : 'e.g. Runner moved to the 10K and registered again.'
+                }
                 className="w-full bg-[var(--dash-surface)] border border-[var(--dash-border)] rounded-control px-4 py-3 text-base text-primary placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--ink-30)] resize-y"
               />
               <p className="text-xs text-[var(--text-muted)] m-0 flex justify-between gap-3">
-                <span>Saved in the activity trail with the cancel.</span>
-                <span className="tabular-nums shrink-0">{other.length}/{REASON_MAX}</span>
+                <span>Saved in the activity trail with the cancel, and shown under the order&apos;s status.</span>
+                <span className="tabular-nums shrink-0">{other.length}/{noteMax}</span>
               </p>
             </div>
           )}
@@ -245,4 +283,34 @@ export default function CancelOrderModal({
       </div>
     </div>
   );
+}
+
+/**
+ * *Cancel Order…* on the registrants row menu, for a pending bank transfer.
+ * The order is built from its rows (every runner of an order is on the
+ * screen), and the page is read again once it is cancelled, as the Unpaid
+ * checkouts tab does, so the row and the counts show it as the server has it.
+ */
+export function useBankTransferCancel({ runners }: { runners: RegistrantRow[] }) {
+  const router = useRouter();
+  const [registrationId, setRegistrationId] = useState<string | null>(null);
+  const rows = registrationId ? runners.filter(r => r.registrationId === registrationId) : [];
+  const order: CancellableOrder | null = rows.length
+    ? {
+        id: rows[0].registrationId,
+        orderRef: rows[0].orderRef,
+        contactName: rows[0].name,
+        runnerNames: rows.map(r => r.name),
+      }
+    : null;
+  const element = order ? (
+    <CancelOrderModal
+      key={order.id}
+      order={order}
+      bankTransfer
+      onClose={() => setRegistrationId(null)}
+      onCancelled={() => router.refresh()}
+    />
+  ) : null;
+  return { open: setRegistrationId, element };
 }

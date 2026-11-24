@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-51 pages · 101 API routes · 176 modules in `src/lib` · 737 files · 126,912 lines
+51 pages · 101 API routes · 177 modules in `src/lib` · 738 files · 127,291 lines
 
 ---
 
@@ -334,6 +334,7 @@ the file itself.
 | [`resume-payment.ts`](../src/lib/resume-payment.ts) | The resume-payment link, a category change's and a delivery switch's (a second kind of the same token, `purpose: 'category-change-payment'`, subjec… |
 | [`rich-text.ts`](../src/lib/rich-text.ts) | The formatting an organizer may give "About This Event", and how it is read. |
 | [`runner-address.ts`](../src/lib/runner-address.ts) | Every runner's home address (`RUNNER_ADDRESS_PLAN.md` Batch 1). |
+| [`runner-match.ts`](../src/lib/runner-match.ts) | Who counts as the same runner within one event, and which of their other orders count (DUPLICATE_ORDERS_PLAN.md). |
 | [`runner-money.ts`](../src/lib/runner-money.ts) | One order's money, split across its runners, so the registrants export's per-runner columns sum to what the order paid (2026-10-26). |
 | [`running-community-store.ts`](../src/lib/running-community-store.ts) | — |
 | [`running-community.ts`](../src/lib/running-community.ts) | The running club a runner represents, and the shared list they pick it from. |
@@ -389,28 +390,29 @@ when a task touches one, split it before editing rather than after.
 | 736 | [`src/lib/pending-expiry.ts`](../src/lib/pending-expiry.ts) |
 | 693 | [`src/app/admin/AdminDatePicker.tsx`](../src/app/admin/AdminDatePicker.tsx) |
 | 648 | [`src/lib/email-document.ts`](../src/lib/email-document.ts) |
-| 616 | [`src/app/api/checkout/route.ts`](../src/app/api/checkout/route.ts) |
+| 625 | [`src/app/api/checkout/route.ts`](../src/app/api/checkout/route.ts) |
 | 614 | [`src/app/admin/feedback/FeedbackClient.tsx`](../src/app/admin/feedback/FeedbackClient.tsx) |
 | 591 | [`src/lib/registration-gate.ts`](../src/lib/registration-gate.ts) |
 | 571 | [`src/lib/add-ons.ts`](../src/lib/add-ons.ts) |
 | 570 | [`src/app/admin/events/[id]/registrants/PaymentCorrectionModal.tsx`](../src/app/admin/events/[id]/registrants/PaymentCorrectionModal.tsx) |
 | 567 | [`src/app/admin/NotificationsCenter.tsx`](../src/app/admin/NotificationsCenter.tsx) |
 | 550 | [`src/app/api/admin/events/[id]/update-event.ts`](../src/app/api/admin/events/[id]/update-event.ts) |
+| 523 | [`src/app/api/admin/registrations/[id]/status/route.ts`](../src/app/api/admin/registrations/[id]/status/route.ts) |
+| 520 | [`src/app/api/checkout/manual/route.ts`](../src/app/api/checkout/manual/route.ts) |
 | 520 | [`src/lib/promo-input.ts`](../src/lib/promo-input.ts) |
 | 520 | [`src/lib/refund-store.ts`](../src/lib/refund-store.ts) |
 | 518 | [`src/app/admin/DashboardShell.tsx`](../src/app/admin/DashboardShell.tsx) |
-| 511 | [`src/app/api/checkout/manual/route.ts`](../src/app/api/checkout/manual/route.ts) |
 | 509 | [`src/app/admin/communities/CommunitiesClient.tsx`](../src/app/admin/communities/CommunitiesClient.tsx) |
 | 500 | [`src/app/admin/events/[id]/registrants/ProofLightbox.tsx`](../src/app/admin/events/[id]/registrants/ProofLightbox.tsx) |
 | 499 | [`src/app/admin/AdminRouteLoading.tsx`](../src/app/admin/AdminRouteLoading.tsx) |
 | 478 | [`src/lib/settlement.ts`](../src/lib/settlement.ts) |
 | 477 | [`src/app/admin/events/AddOnFormModal.tsx`](../src/app/admin/events/AddOnFormModal.tsx) |
-| 476 | [`src/app/api/admin/registrations/[id]/status/route.ts`](../src/app/api/admin/registrations/[id]/status/route.ts) |
 | 472 | [`src/app/admin/settings/TwoFactorPanel.tsx`](../src/app/admin/settings/TwoFactorPanel.tsx) |
 | 472 | [`src/app/events/[slug]/register/BirthdatePicker.tsx`](../src/app/events/[slug]/register/BirthdatePicker.tsx) |
 | 470 | [`src/app/admin/events/[id]/registrants/RunnerEditModal.tsx`](../src/app/admin/events/[id]/registrants/RunnerEditModal.tsx) |
 | 452 | [`src/app/s/[site]/results/[slug]/full/FullResultsClient.tsx`](../src/app/s/[site]/results/[slug]/full/FullResultsClient.tsx) |
 | 441 | [`src/lib/actor.ts`](../src/lib/actor.ts) |
+| 438 | [`src/app/admin/events/[id]/registrants/UnpaidCheckoutsList.tsx`](../src/app/admin/events/[id]/registrants/UnpaidCheckoutsList.tsx) |
 | 436 | [`src/app/admin/events/[id]/edit/page.tsx`](../src/app/admin/events/[id]/edit/page.tsx) |
 | 431 | [`src/lib/activity.ts`](../src/lib/activity.ts) |
 | 428 | [`src/app/admin/events/[id]/registrants/RegistrantsTable.tsx`](../src/app/admin/events/[id]/registrants/RegistrantsTable.tsx) |
@@ -424,7 +426,6 @@ when a task touches one, split it before editing rather than after.
 | 416 | [`src/app/admin/events/[id]/registrants/RegistrantDetailModal.tsx`](../src/app/admin/events/[id]/registrants/RegistrantDetailModal.tsx) |
 | 416 | [`src/lib/notification-store.ts`](../src/lib/notification-store.ts) |
 | 413 | [`src/lib/category-change.ts`](../src/lib/category-change.ts) |
-| 407 | [`src/app/admin/events/[id]/registrants/UnpaidCheckoutsList.tsx`](../src/app/admin/events/[id]/registrants/UnpaidCheckoutsList.tsx) |
 | 407 | [`src/app/events/[slug]/register/RunnerCard.tsx`](../src/app/events/[slug]/register/RunnerCard.tsx) |
 | 406 | [`src/app/events/[slug]/register/validation.ts`](../src/app/events/[slug]/register/validation.ts) |
 | 405 | [`src/app/admin/remittances/[eventId]/RecordRemittanceDialog.tsx`](../src/app/admin/remittances/[eventId]/RecordRemittanceDialog.tsx) |

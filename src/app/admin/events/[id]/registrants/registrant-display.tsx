@@ -158,6 +158,33 @@ export function PacerBadge() {
 }
 
 /**
+ * *Possible duplicate · RM-…* (DUPLICATE_ORDERS_PLAN.md): the same runner —
+ * name and birthdate, lib/runner-match.ts — is on another PAID order or
+ * pending bank transfer. Checkout refuses that now; the chip is for what got
+ * through anyway (an online order paid late by the webhook, a validation
+ * staff confirmed) and for orders from before the rule. Red, as Email Unsent:
+ * money may be counted twice, and amber would read as PENDING. A link, so the other order is one
+ * click away.
+ */
+export function DuplicateBadges({ refs }: { refs?: { orderRef: string; status: string; href: string }[] }) {
+  if (!refs?.length) return null;
+  return (
+    <>
+      {refs.map(ref => (
+        <a
+          key={ref.orderRef}
+          href={ref.href}
+          className="status-badge danger hover:underline"
+          title={`The same runner (name and birthdate) is on ${ref.orderRef}, which is ${ref.status.toLowerCase()}. Open it to compare.`}
+        >
+          Possible Duplicate · {ref.orderRef}
+        </a>
+      ))}
+    </>
+  );
+}
+
+/**
  * The Status cell's badges: the payment status, and under it the one thing
  * that can be wrong about this row without the payment being wrong — the
  * email never went out. It sits in the Status cell rather than a column of
@@ -190,6 +217,7 @@ export function RegistrantStatusBadges({ runner }: { runner: RegistrantRow }) {
           record (PACER_DISCOUNT_PLAN.md Batch 3). Drawn here, so the table
           cell and the card's badge row carry it alike. */}
       {runner.isPacer && <PacerBadge />}
+      <DuplicateBadges refs={runner.duplicateOf} />
       {runner.emailPending && (
         /* The project's own badge rather than a new one (standing rule
            §8.2), in the danger tone: an unsent email is a failure, not a

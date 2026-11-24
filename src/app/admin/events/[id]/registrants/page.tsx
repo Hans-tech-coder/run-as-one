@@ -8,13 +8,14 @@ import { latestFollowUps, latestPaymentCorrections, latestStatusChanges } from '
 import { followUpAgo } from '@/lib/follow-up';
 import AdminNotFound from '../../../AdminNotFound';
 import { EVENT_NOT_FOUND } from '../../event-not-found';
-import { paymentMethodLabel } from '@/lib/registration-codes';
+import { isBankTransfer, paymentMethodLabel } from '@/lib/registration-codes';
 import { eventInstantParts, formatEventTime, formatInstantDay, today } from '@/lib/event-schedule';
 import { expiresBy, isCancelledCheckout, listedRegistrationWhere, unpaidFollowUpWhere } from '@/lib/pending-expiry';
 import { categoryChangesByRunner } from '@/lib/category-change-view';
 import { logisticsChangesByOrder } from '@/lib/logistics-change-view';
 import { readEventReceipts } from '@/lib/logistics-receipts';
-import { buildRegistrantRows } from './registrant-rows';
+import { buildRegistrantRows, type DuplicateRef } from './registrant-rows';
+import { coverage, findLiveMatches, runnerKey } from '@/lib/runner-match';
 import { ADD_ON_LINES_READ } from '@/lib/add-ons';
 import { FIRST_MOVE } from '@/lib/paid-runners';
 import { refundsForEvent } from '@/lib/refund-store';
@@ -143,28 +144,6 @@ export default async function RegistrantsPage({
     return `${day} ${time}`;
   };
 
-  // One row per live runner, built in registrant-rows.ts, with the category
-  // changes each has had (CATEGORY_CHANGE_PLAN.md) read in one query.
-  const runners = buildRegistrantRows({
-    event,
-    statusRecords,
-    changesByRunner: await categoryChangesByRunner(id),
-    // And each order's delivery switches (LOGISTICS_CHANGE_PLAN.md), in one more.
-    logisticsByOrder: await logisticsChangesByOrder(id),
-    // And each order's latest payment correction (PAYMENT_CORRECTION_PLAN.md
-    // Batch 2), in one more, for the detail modal's "Corrected" line.
-    correctionsByOrder: await latestPaymentCorrections(actor.orgId, id),
-    shortInstant,
-    csvInstant,
-  });
-
-  // What each receipt may do about pickup and delivery, and what the switch
-  // panels quote from (LOGISTICS_CHANGE_PLAN.md Revision 2). Read in full
-  // here so opening a switch fetches nothing; the store re-checks all of it
-  // under the event's locks on save.
-  const switching = await readEventReceipts(id, actor.orgId, { recordPaid: permissions.validate });
-  if (!switching) return <AdminNotFound {...EVENT_NOT_FOUND} />;
-
   // The Unpaid checkouts tab (UNPAID_ORDERS_PLAN.md Batch 3): online orders
   // never paid, which the list above leaves out by the owner's rule. A
   // separate query with its own filter, so these rows can never reach the
@@ -188,10 +167,56 @@ export default async function RegistrantsPage({
       runners: {
         where: { deletedAt: null },
         orderBy: { runnerNo: 'asc' },
-        select: { firstName: true, lastName: true, email: true, phone: true },
+        select: { firstName: true, lastName: true, email: true, phone: true, birthdate: true },
       },
     },
   });
+  // Who is on more than one live order (DUPLICATE_ORDERS_PLAN.md,
+  // lib/runner-match.ts), for both tabs in one query: the registrants' chip
+  // and the unpaid orders already covered by a payment elsewhere.
+  const liveRunners = event.registrations.flatMap(reg => reg.runners.filter(r => !r.deletedAt));
+  const matches = await findLiveMatches(prisma, id, [...liveRunners, ...unpaidOrders.flatMap(o => o.runners)]);
+  const registrantsHref = (orderRef: string) => `/admin/events/${id}/registrants?search=${encodeURIComponent(orderRef)}`;
+  const duplicatesByRunner = new Map<string, DuplicateRef[]>();
+  for (const reg of event.registrations) {
+    // Only a live order can double another one; a cancelled copy is no risk.
+    const live = reg.status === 'PAID' || (reg.status === 'PENDING' && isBankTransfer(reg.paymentMethod));
+    if (!live) continue;
+    for (const runner of reg.runners) {
+      const others = (matches.get(runnerKey(runner)) ?? []).filter(m => m.registrationId !== reg.id);
+      if (others.length > 0) {
+        duplicatesByRunner.set(
+          runner.id,
+          others.map(m => ({ orderRef: m.orderRef, status: m.status, href: registrantsHref(m.orderRef) })),
+        );
+      }
+    }
+  }
+  const covers = coverage(unpaidOrders, matches);
+
+  // One row per live runner, built in registrant-rows.ts, with the category
+  // changes each has had (CATEGORY_CHANGE_PLAN.md) read in one query.
+  const runners = buildRegistrantRows({
+    event,
+    statusRecords,
+    changesByRunner: await categoryChangesByRunner(id),
+    // And each order's delivery switches (LOGISTICS_CHANGE_PLAN.md), in one more.
+    logisticsByOrder: await logisticsChangesByOrder(id),
+    // And each order's latest payment correction (PAYMENT_CORRECTION_PLAN.md
+    // Batch 2), in one more, for the detail modal's "Corrected" line.
+    correctionsByOrder: await latestPaymentCorrections(actor.orgId, id),
+    duplicatesByRunner,
+    shortInstant,
+    csvInstant,
+  });
+
+  // What each receipt may do about pickup and delivery, and what the switch
+  // panels quote from (LOGISTICS_CHANGE_PLAN.md Revision 2). Read in full
+  // here so opening a switch fetches nothing; the store re-checks all of it
+  // under the event's locks on save.
+  const switching = await readEventReceipts(id, actor.orgId, { recordPaid: permissions.validate });
+  if (!switching) return <AdminNotFound {...EVENT_NOT_FOUND} />;
+
   // The latest follow-up per order (UNPAID_FOLLOWUP_PLAN.md Batch 1), from
   // the trail in one query, as the status records above are.
   const followUps = await latestFollowUps(actor.orgId, id);
@@ -208,6 +233,12 @@ export default async function RegistrantsPage({
       const cancel = status === 'CANCELLED' ? statusRecords.get(order.id) : undefined;
       const deadline = expiresBy(order.createdAt, order.holdUntil);
       const followUp = followUps.get(order.id);
+      // Runners already on a PAID order or a pending bank transfer elsewhere.
+      // All of them: the order is hidden behind Show covered and leaves the
+      // count, its status untouched, so it returns if that transfer is
+      // rejected. Some of them: listed, with a note.
+      const cover = covers.get(order.id);
+      const fully = cover && cover.covered === cover.total;
       return {
         id: order.id,
         // The order's place in this list, oldest first, fixed here for the
@@ -236,12 +267,17 @@ export default async function RegistrantsPage({
               : 'Expires at the next sweep',
         followUp: followUp ? { ...followUp, ago: followUpAgo(followUp.at, now) } : null,
         cancelReason: cancel?.reason ?? null,
+        coveredBy: fully ? cover.byOrderRefs : [],
+        coverNote:
+          cover && !fully
+            ? `${cover.covered} of ${cover.total} runners registered in ${cover.byOrderRefs.join(', ')}`
+            : null,
       };
     });
   // The tab's count is the orders still awaiting payment, never the expired
   // or cancelled ones it can also show.
   const unpaidRunners = unpaidCheckouts
-    .filter(order => order.status === 'PENDING')
+    .filter(order => order.status === 'PENDING' && order.coveredBy.length === 0)
     .reduce((sum, order) => sum + order.runnerNames.length, 0);
 
   // Refunds are money, so the tab is for those who may make one (D4).

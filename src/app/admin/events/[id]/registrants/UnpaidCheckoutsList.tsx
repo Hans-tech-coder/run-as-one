@@ -43,6 +43,12 @@
  * **Send payment link to N** (`SendLinksButton.tsx`). Rows are keyed by
  * order id, so a mark stays on its order when a filter or search changes the
  * list under it.
+ *
+ * **Covered orders are hidden behind Show Covered** (DUPLICATE_ORDERS_PLAN.md):
+ * an order whose every runner is already on a PAID order or a pending bank
+ * transfer has nobody left to follow up. Its status is not touched, so if
+ * that transfer is rejected the order is back here on the next read. One
+ * only partly covered stays listed, with a note saying how many.
  */
 
 import React, { useMemo, useState } from 'react';
@@ -110,6 +116,14 @@ export type UnpaidCheckout = {
   cancelReason: string | null;
   /** The latest follow-up logged, with "2h ago" worded on the server; null if none. */
   followUp: (FollowUpRecord & { ago: string }) | null;
+  /**
+   * The orders that already hold every runner on this one (PAID or a pending
+   * bank transfer, lib/runner-match.ts); empty unless fully covered. Such an
+   * order is hidden until Show Covered and is not in the tab's count.
+   */
+  coveredBy: string[];
+  /** "2 of 5 runners registered in RM-…" when only some are covered; null otherwise. */
+  coverNote: string | null;
 };
 
 const STATUS_OPTIONS: { value: UnpaidCheckout['status']; label: string }[] = [
@@ -147,6 +161,7 @@ export default function UnpaidCheckoutsList({
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [selectedPayments, setSelectedPayments] = useState<string[]>([]);
   const [selectedFollowUps, setSelectedFollowUps] = useState<string[]>([]);
+  const [showCovered, setShowCovered] = useState(false);
   // One modal for the list, not one per row: the table and the cards are
   // both mounted, and each would otherwise carry its own.
   const [followUpOrder, setFollowUpOrder] = useState<UnpaidCheckout | null>(null);
@@ -174,6 +189,7 @@ export default function UnpaidCheckoutsList({
   );
   const statusesPresent = STATUS_OPTIONS.filter(option => orders.some(order => order.status === option.value));
   const cancelledCount = orders.filter(order => order.status === 'CANCELLED').length;
+  const coveredCount = orders.filter(order => order.coveredBy.length > 0).length;
   const toggle = (list: string[], value: string) =>
     list.includes(value) ? list.filter(v => v !== value) : [...list, value];
   const filterGroups: FilterGroup[] = [
@@ -213,6 +229,7 @@ export default function UnpaidCheckoutsList({
     () =>
       orders.filter(
         order =>
+          (showCovered || order.coveredBy.length === 0) &&
           // Cancelled orders only when asked for (decision D6).
           (selectedStatuses.length === 0
             ? order.status !== 'CANCELLED'
@@ -221,7 +238,7 @@ export default function UnpaidCheckoutsList({
           (selectedFollowUps.length === 0 ||
             selectedFollowUps.includes(order.followUp?.outcome ?? NOT_CONTACTED)),
       ),
-    [orders, selectedStatuses, selectedPayments, selectedFollowUps],
+    [orders, showCovered, selectedStatuses, selectedPayments, selectedFollowUps],
   );
 
   const columns = useMemo(
@@ -290,7 +307,10 @@ export default function UnpaidCheckoutsList({
     ? 'No unpaid checkouts. Every online checkout on this race has been paid.'
     : cancelledCount === orders.length && selectedStatuses.length === 0
       ? `No unpaid checkouts left. ${cancelledCount} cancelled ${cancelledCount === 1 ? 'order is' : 'orders are'} under Filters → Status → Cancelled.`
-      : 'No unpaid checkouts match.';
+      : coveredCount > 0 && !showCovered && selectedStatuses.length === 0 &&
+          orders.every(order => order.coveredBy.length > 0 || order.status === 'CANCELLED')
+        ? `No unpaid checkouts left. ${coveredCount} ${coveredCount === 1 ? 'order is' : 'orders are'} covered by a payment in another order, under Show Covered.`
+        : 'No unpaid checkouts match.';
   const empty = <p className="m-0 py-16 text-center text-[var(--text-muted)]">{emptyMessage}</p>;
 
   return (
@@ -336,6 +356,18 @@ export default function UnpaidCheckoutsList({
             }}
             empty="Nothing to filter yet. Status and payment choices appear here once the list has more than one kind."
           />
+
+          {/* Off by default: a covered order has nobody to chase. */}
+          {coveredCount > 0 && (
+            <button
+              type="button"
+              className="btn-light"
+              aria-pressed={showCovered}
+              onClick={() => setShowCovered(value => !value)}
+            >
+              {showCovered ? 'Hide Covered' : `Show Covered (${coveredCount})`}
+            </button>
+          )}
 
           <ColumnsViewMenu table={table} />
 

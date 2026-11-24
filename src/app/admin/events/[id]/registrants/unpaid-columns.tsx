@@ -27,6 +27,15 @@ export function UnpaidStatus({ order }: { order: UnpaidCheckout }) {
       {order.statusDetail && (
         <span className="text-xs text-[var(--text-muted)]">{order.statusDetail}</span>
       )}
+      {/* Every runner is already on a PAID order or a pending bank transfer
+          (lib/runner-match.ts): shown only under Show Covered. Blue, a
+          fact rather than a task: there is nobody left to chase. */}
+      {order.coveredBy.length > 0 && (
+        <span className="status-badge info whitespace-nowrap">Registered in {order.coveredBy.join(', ')}</span>
+      )}
+      {order.coverNote && (
+        <span className="block max-w-[14rem] text-xs text-secondary [overflow-wrap:anywhere]">{order.coverNote}</span>
+      )}
       {/* Why it was closed, from the trail line Cancel order… wrote. */}
       {order.cancelReason && (
         <span className="block max-w-[14rem] text-xs text-secondary [overflow-wrap:anywhere]">{order.cancelReason}</span>

@@ -51,6 +51,7 @@ import {
   claimReference,
   isReferenceIndexViolation,
 } from '@/lib/payment-reference';
+import { RunnerAlreadyRegisteredError, assertRunnersNotRegistered } from '@/lib/runner-match';
 
 export async function POST(request: Request) {
   // Same window as /api/checkout ('checkout' bucket): both spend the same
@@ -307,6 +308,10 @@ export async function POST(request: Request) {
       const transactionRef = await claimReference(tx, storedTransactionNumber);
 
       await lockEventForRegistration(tx, event.id);
+      // A runner already on a PAID order or a pending bank transfer here is
+      // not registered twice (lib/runner-match.ts). After the event lock, so
+      // two simultaneous orders for one runner cannot both pass.
+      await assertRunnersNotRegistered(tx, event.id, participants);
       await reserveSlots(tx, event.categories, participants);
 
       // The add-ons' stock and cutoff, read again under their own row locks
@@ -496,6 +501,10 @@ export async function POST(request: Request) {
     // Another live payment already carries this reference. The runner is not
     // told whose (R5).
     if (error instanceof ReferenceInUseError) {
+      return NextResponse.json(error.runnerBody(), { status: 409 });
+    }
+    // Names only the runner (M4): no order ref, no email.
+    if (error instanceof RunnerAlreadyRegisteredError) {
       return NextResponse.json(error.runnerBody(), { status: 409 });
     }
     if (isReferenceIndexViolation(error)) {

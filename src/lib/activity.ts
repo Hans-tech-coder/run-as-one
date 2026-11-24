@@ -410,7 +410,10 @@ export function statusProvenance(
 ): string | null {
   const current = status.toUpperCase();
   if (record && record.to.toUpperCase() === current && STATUS_VERBS[current]) {
-    return `${STATUS_VERBS[current]} by ${record.by} · ${formatTrailInstant(record.at)}`;
+    // A cancel's reason is part of the answer: "why is this order cancelled?"
+    // is the question this line is read for.
+    const why = current === 'CANCELLED' && record.reason ? ` · ${record.reason}` : '';
+    return `${STATUS_VERBS[current]} by ${record.by} · ${formatTrailInstant(record.at)}${why}`;
   }
   if (current === 'PAID') {
     // Nobody settled it and nobody has to: the order was ₱0, so checkout

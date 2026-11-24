@@ -16,6 +16,11 @@
  * proof sends the same answer. It starts at the runner's own pick
  * (`initialPaidTo`). The row menu's one-press Validate sends none, which keeps
  * what the runner chose.
+ *
+ * **Possible duplicate** (DUPLICATE_ORDERS_PLAN.md): the route refuses to
+ * mark an order PAID while its runners are on another live order, and names
+ * those orders. The validator is asked once; going ahead re-sends with
+ * `confirmDuplicate`, which the route writes into the audit trail.
  */
 
 import { useState, type Dispatch, type SetStateAction } from 'react';
@@ -42,7 +47,7 @@ export function usePaymentStatus({
       ? paidToPick.value
       : initialPaidTo(runner.paidTo, paidToAccounts);
   const pickPaidTo = (registrationId: string, value: string) => setPaidToPick({ registrationId, value });
-  const { alert, toast, progress } = useAlert();
+  const { alert, confirm, toast, progress } = useAlert();
 
   /**
    * `announce` says who shows the wait. From the row menu — the default — the
@@ -59,16 +64,41 @@ export function usePaymentStatus({
     setUpdatingId(registrationId);
     const paid = newStatus === 'PAID';
     const done = paid ? 'Payment validated.' : 'Payment status updated.';
-    const status =
+    let status =
       announce === 'progress'
         ? progress(paid ? 'Validating payment' : 'Updating payment status')
         : null;
     try {
-      const res = await fetch(`/api/admin/registrations/${registrationId}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(paidTo ? { status: newStatus, paidTo } : { status: newStatus }),
-      });
+      const send = (confirmDuplicate: boolean) =>
+        fetch(`/api/admin/registrations/${registrationId}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: newStatus,
+            ...(paidTo ? { paidTo } : {}),
+            ...(confirmDuplicate ? { confirmDuplicate: true } : {}),
+          }),
+        });
+      let res = await send(false);
+      if (res.status === 409) {
+        const data = await res.clone().json().catch(() => ({}));
+        if (data?.code === 'possibleDuplicate') {
+          // Not "Validating" behind a question nobody has answered yet.
+          status?.clear();
+          const refs = (data.matches ?? [])
+            .map((m: { orderRef: string; status: string }) => `${m.orderRef} (${m.status})`)
+            .join(', ');
+          const go = await confirm({
+            variant: 'danger',
+            title: 'Possible Duplicate',
+            message: `The same runners are on ${refs}. Check that this is a separate payment before you validate. Validate anyway?`,
+            confirmLabel: 'Validate Anyway',
+          });
+          if (!go) return;
+          status = announce === 'progress' ? progress('Validating payment') : null;
+          res = await send(true);
+        }
+      }
       if (res.ok) {
         const { statusChange, registration } = await res
           .json()
