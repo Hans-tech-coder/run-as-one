@@ -1232,9 +1232,8 @@
 - Fonts: Outfit (`--font-sans`, headings), Inter (`--font-body`) on the dashboard and the dark pages; **Archivo** (`--font-archivo`, loaded with its `wdth` axis in `src/app/archivo-font.ts`, imported by `SiteFrame` and `admin/AuthPaperFrame`, so the dashboard proper never uses it) for both on Paper pages.
 - **The logo is a component, not an image** (`components/RunAsOneLogo.tsx`,
   `.rao-logo` in `globals.css`, geometry in `lib/brand-mark.ts` — the one copy
-  of the path data, which the component, the themed favicon and the icon
-  raster scripts all draw from; `public/icon.svg` is the sole exception, a static
-  file that can import nothing, so change it in the same edit). It replaced `public/run-as-one-logo.png` (the old
+  of the path data, which the component and the e-certificate draw from; the
+  raster assets are cut from the official files in `brand/logos/` instead). It replaced `public/run-as-one-logo.png` (the old
   artwork, since deleted)
   everywhere a person sees the app: the public navbar and footer, both
   dashboards' sidebars, and the two auth cards. Two halves made of deliberately
@@ -1326,102 +1325,60 @@
   icons cannot read a variable, so each has a `[data-theme="light"]` twin. Only
   the dashboard sets `data-theme`, so the public site only ever sees the dark
   values.
-- **The three brand assets outside the component, and why each is a different
-  file.** They are not interchangeable and the favicon is not any of the others:
-  - **`public/icon.svg`, `public/favicon.ico`, `public/apple-icon.png` — the mark alone,
-    no wordmark**, since a tab icon is ~16px. The SVG carries literal colours and
-    its own `prefers-color-scheme` rule (a favicon is fetched as a standalone
-    document and never sees the page's stylesheet) and wins in every modern
-    browser; the `.ico` is the old-browser and crawler fallback and the Apple
-    icon is what iOS puts on a home screen. Both are regenerated from the mark
-    with `sharp` — pure geometry, so they rasterise without needing a font.
-    They sit in `public/`, declared by the root layout's `generateMetadata`,
-    not in `app/`: a file there outranks `generateMetadata`, and **a client's
-    site (`CLIENT_SUBDOMAIN_PLAN.md`) uses its own square site icon
-    (`Client.faviconUrl`) as the tab and Apple icon instead**, with
-    `ThemedFavicon` left out. Never the logo, which is rarely square and gets
-    stretched. A client with no site icon keeps the mark.
-  - **`app/opengraph-image.png` — the 1200x630 card a shared link shows.** This
-    is what Messenger, Viber, Facebook, X and Slack scrape, and **it has nothing
-    to do with the favicon**: before it existed a shared link showed no image at
-    all. Next turns the file into `og:image` on its own, but only once
-    `metadataBase` is set in `layout.tsx` — a preview will not resolve a relative
-    path. `SITE_URL` in `site-contact.ts` is that base, and **it has to be a
-    hostname this Vercel project actually serves**: it once named a
-    `*.vercel.app` host the project had never been assigned, which broke nothing
-    in a browser but pointed `og:image` at a URL Facebook could not fetch, so
-    the crawler substituted the featured event's poster and captioned the card
-    with a domain that did not exist. `opengraph-image.alt.txt` beside the PNG
-    supplies the card's `og:image:alt`.
-  - **`public/email/run-as-one-logo.png` — the full lockup for the email
-    header**, 3x for a 224px display width. Email needs a raster: Gmail strips
-    inline SVG and no client resolves the app's CSS variables. It moved out of
-    the Blob store it used to live in and into `public/`, so it ships with the
-    code that renders it instead of being a file somebody uploaded by hand and
-    versioned nowhere.
-  **Every one of them is exported with a transparent background** — this is the
-  project's rule for brand assets, decided knowing the cost, so never bake a
-  full-bleed background plate back in to make one safer. The ink is white, so
-  each asset depends on the surface behind it being dark; the email header cell
-  holds `#050505`, and the icons sit on browser and OS chrome that is dark more
-  often than not.
+- **The brand rasters outside the component, and why each is a different
+  file.** All are cut from the official outlined lockups in `brand/logos/`
+  (`brand/brand-guide.md` §2, §8) by **`node scripts/gen-brand-assets.mjs`** —
+  the wordmark there is already vector paths, so `sharp` rasterises it exactly
+  with no font installed. `brand/` is gitignored, so the script runs only in a
+  checkout that has it; its outputs are committed. Never hand-patch a raster:
+  change the brand file and re-run the script.
+  - **`public/icon.svg`, `public/favicon.ico` (16/32/48), `public/apple-icon.png`
+    (180) — the contained `favicon-badge`**: the mark on a solid Race Navy
+    `#14192B` plate, so one icon is legible on light and dark browser and OS
+    chrome alike (the brand forbids a bare transparent mark there). This
+    replaced the old theme-following favicon (`ThemedFavicon`, deleted). The
+    Apple icon is the same badge full-bleed and square, because iOS rounds the
+    corners itself and fills transparency with black. They sit in `public/`,
+    declared by the root layout's `generateMetadata`, not in `app/`: a file
+    there outranks `generateMetadata`, and **a client's site
+    (`CLIENT_SUBDOMAIN_PLAN.md`) uses its own square site icon
+    (`Client.faviconUrl`) as the tab and Apple icon instead**. A client with no
+    site icon keeps the badge.
+  - **`app/opengraph-image.png` — the 1200x630 card a shared link shows.** A
+    Carbon `#050505` panel inset 30px (some platforms crop 1.91:1 to 2:1,
+    taking 15px off the top and bottom) with a white 14% hairline, and the
+    compact **`poster-stacked-dark`** lockup centred — the brand's lockup for
+    social cards, and one a square-cropped thumbnail still shows whole. No
+    tagline, gradient or glow (brand-guide §1, §2.4). It carries its own dark
+    panel because `og:image` is one static URL crawlers cache and show to
+    light- and dark-mode viewers alike, so the card must be legible on any
+    ground by design. Next turns the file into `og:image` only once
+    `metadataBase` is set; `SITE_URL` in `site-contact.ts` is that base, and
+    **it has to be a hostname this Vercel project actually serves** (it once
+    named a `*.vercel.app` host the project had never been assigned, and
+    Facebook substituted an event poster). `opengraph-image.alt.txt` beside the
+    PNG supplies `og:image:alt`.
+  - **`public/email/run-as-one-logo.png` — `horizontal-dark`**, 3x (672x138)
+    for a 224px display width, white ink on transparent: it relies on the email
+    header cell's `#050505`. Email needs a raster: Gmail strips inline SVG and
+    no client resolves CSS variables.
 
-  **The Open Graph card is the one asset that carries its own ground**, because
-  it is the one nobody else's surface can be trusted for: it was demonstrably
-  reduced to two coloured arcs when a light-mode preview composited it onto
-  white. It gets an **inset rounded panel, not a full-bleed plate** — `#050505`
-  with the app's own hairline border, a 30px transparent margin all round, and
-  the radial glows and the orange→blue rule living inside it. 30px is not
-  arbitrary: some platforms crop a 1.91:1 card to 2:1, taking 15px off the top
-  and bottom, and a tighter margin would leave the panel looking clipped rather
-  than deliberately inset.
-- **The favicon follows the theme; the Open Graph card cannot, ever.** This is
-  the one asymmetry worth understanding before someone tries to "fix" the
-  second. `components/ThemedFavicon` (mounted in the root layout) rewrites the
-  SVG icon link to a data URI whenever the theme changes, taking an explicit
-  `data-theme` first and the system `prefers-color-scheme` otherwise — the same
-  precedence `globals.css` uses, so the light/dark switch will not have to
-  remember to tell the favicon about itself. It swaps the `href` rather than
-  leaning on the `prefers-color-scheme` rule inside `public/icon.svg`, because
-  whether a browser *evaluates* a media query inside a favicon differs between
-  Firefox, Chrome and Safari and has changed more than once; the static file
-  stays as the pre-hydration and no-JavaScript default. **The Open Graph card
-  has no equivalent and no workaround**: `og:image` is one static URL that
-  Facebook's, Slack's and X's crawlers fetch server-side, cache on their own
-  infrastructure and serve to every viewer alike. The crawler sends no
-  colour-scheme signal, the cached image is shared between a light-mode and a
-  dark-mode viewer, and no platform negotiates alternates. A card therefore has
-  to be legible on any ground *by design*, which is exactly why this one carries
-  its own inset dark panel rather than borrowing the platform's background.
-  **Regenerating the two with a wordmark means rendering them in a browser**,
-  where the real Outfit face is loaded — rasterising SVG `<text>` outside one
-  picks up whatever font the rasteriser happens to find.
-
-  **Changing the lockup means patching both wordmark rasters**, and neither
-  can be regenerated from source, because there is no source — they were
-  rasterised from a browser once and committed. They are patched in place with
-  `sharp` on the raw pixels. When the byline was removed, its rows were cleared
-  and the wordmark was moved down by 0.13 of the mark's em — half the byline's
-  line box plus the gap it sat behind, which is exactly where the live component
-  now centres the wordmark (16px in the 3x email PNG, 18px on the OG card). The
-  OG card's text sits on the panel's gradient, so its box is rebuilt by
-  interpolating each column between clean rows above and below, the white
-  wordmark's coverage is recovered against that rebuilt ground, and it is
-  composited back at its new height; the email lockup sits on transparent
-  ground, so its rows are simply moved. A line that has to be *added* is drawn
-  in a canvas on a page where the real face is loaded, measured against the
-  PNG, and composited the same way. Patching leaves every other pixel of both
-  assets byte-identical, which is worth more than a clean re-render that would
-  drift.
+  **The email chrome is dark Paper** (`lib/email-document.ts`, the palette
+  constants at its top mirror the dark block of `app/paper-tokens.css`):
+  Carbon ground and header, `#111114` card with 8px corners and `#2B2926`
+  hairlines, Warm Paper ink, a solid Action Orange `#C2530A` button with 6px
+  corners (no gradient), Blaze `#E05A00` section eyebrows and total, a 4px
+  status chip in Title Case with the dark status inks (`#FAAD14` pending,
+  `#52C41A` done), and `#388BFD` links. Archivo is named first in the font
+  stack for clients that have it, Helvetica/Arial otherwise. Labels are Title
+  Case in the source; nothing is uppercased by CSS.
 
   **A re-cut email logo also needs its URL bumped and a deploy to `main`.**
-  `LOGO_URL` in `lib/email.ts` carries a `?v=` (`LOGO_VERSION`) that must change
-  with the PNG: Gmail's image proxy caches each image URL on Google's side and
-  keeps serving that copy, so a new file behind an old URL still shows the old
-  picture. And the URL is built on `SITE_URL`, the production domain, so an email
-  sent from localhost or a preview shows whatever production serves — a re-cut
-  logo once sat fixed on `dev` while every test email kept showing the old one,
-  because `main` had not been deployed.
+  `LOGO_URL` in `lib/email-document.ts` carries a `?v=` (`LOGO_VERSION`) that
+  must change with the PNG: Gmail's image proxy caches each image URL on
+  Google's side and keeps serving that copy. And the URL is built on
+  `SITE_URL`, the production domain, so an email sent from localhost or a
+  preview shows whatever production serves until `main` is deployed.
 - Commit style: `feat:` / `fix:` / `refactor:` plus a sentence saying what changed
   for the user.
 

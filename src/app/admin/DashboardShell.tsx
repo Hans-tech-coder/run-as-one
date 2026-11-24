@@ -143,7 +143,7 @@ export default function DashboardShell({
    * The account menu's Dark Mode choice (dashboard-theme.ts). It is drawn on
    * the frame from the server's first paint, and mirrored onto `<html>` once
    * mounted so what portals to `<body>` — row menus, lightboxes, the
-   * notifications modal — and the themed favicon follow it too. The mirror is
+   * notifications modal — follow it too. The mirror is
    * removed on the way out, so the public site never inherits the choice.
    */
   theme?: DashboardTheme;

@@ -2,7 +2,6 @@ import { ViewTransition } from "react";
 import ClientLayoutWrapper from "./ClientLayoutWrapper";
 // The Paper face, shared with the sign-in pages' frame (admin/AuthPaperFrame).
 import { archivo } from "./archivo-font";
-import ThemedFavicon from "@/components/ThemedFavicon";
 import type { SiteClient } from "@/lib/site-client";
 import "./site.css";
 import "./checkout-paper.css";
@@ -33,8 +32,6 @@ export default function SiteFrame({
 }) {
   return (
     <ViewTransition enter="site-page-in" exit="site-page-out" default="none">
-      {/* A client's site icon replaces the mark, so it is not swapped in. */}
-      {!site?.faviconUrl && <ThemedFavicon />}
       <ClientLayoutWrapper site={site} fontClass={archivo.variable}>{children}</ClientLayoutWrapper>
     </ViewTransition>
   );

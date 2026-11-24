@@ -44,7 +44,7 @@ export interface InkTheme {
 
 /**
  * The two ink sets. `light` is the site's own dark-UI palette (text greys from
- * `globals.css`, `MARK_INKS_FOR_DARK_UI`); `dark` is the light theme's, with
+ * `globals.css`, the mark in white / #007AFF / #FF6B00); `dark` is the light theme's, with
  * both accents deepened because brand orange on white is 2.8:1. An organizer's
  * accent replaces orange and turns the title rule into a solid bar of it.
  */

@@ -49,8 +49,22 @@ function fromAddress(contactEmail: string): string {
   const sender = canSendFrom(contactEmail) ? contactEmail : DEFAULT_CONTACT_EMAIL;
   return `"${SITE_NAME}" <${sender}>`;
 }
-const BRAND_ORANGE = '#FF6B00';
-const BRAND_BLUE = '#007AFF';
+/**
+ * The dark Paper palette (brand/brand-guide.md §3, the `[data-color-theme="dark"]`
+ * block of `app/paper-tokens.css`). Email keeps the dark ground the brand names
+ * for its header — `horizontal-dark` is white ink on Carbon — and spells each
+ * hue out, because no email client resolves the app's CSS variables.
+ */
+const CARBON = '#050505';
+const CARD = '#111114';
+const INK = '#F6F3EE';
+const BODY_INK = '#D9D4CC';
+const MUTED = '#A29D94';
+const LINE = '#2B2926';
+const ACTION = '#C2530A'; // Action Orange: white on it is 4.6:1
+const ACCENT_TEXT = '#E05A00'; // Blaze, the dark-UI accent
+const LINK = '#388BFD';
+const FONT = "Archivo, 'Helvetica Neue', Helvetica, Arial, sans-serif";
 
 /**
  * The site's own brand lockup, the same one the navbar shows, exported as a
@@ -62,7 +76,8 @@ const BRAND_BLUE = '#007AFF';
  * hand, versioned nowhere and updated out of band; in `public/` it ships with
  * the code that renders it and can never disagree with the site.
  *
- * Drawn at 3x (672x168) for a 224px display width, white ink on a transparent
+ * Cut from `brand/logos/horizontal-dark.svg` by `scripts/gen-brand-assets.mjs`,
+ * at 3x (672x138) for a 224px display width, white ink on a transparent
  * ground. It relies on the header cell behind it holding its #050505: a client
  * that drops that background renders white on white. That is a deliberate
  * trade — every brand asset in this app is exported transparent — not an
@@ -77,7 +92,7 @@ const BRAND_BLUE = '#007AFF';
  * email sent from localhost or a preview deployment still shows whatever
  * production is serving: a new logo reaches inboxes only once it is on `main`.
  */
-const LOGO_VERSION = '3';
+const LOGO_VERSION = '4';
 const LOGO_URL = `${SITE_URL}/email/run-as-one-logo.png?v=${LOGO_VERSION}`;
 
 let client: Resend | null = null;
@@ -255,9 +270,9 @@ export interface EmailDocument {
  * ──────────────────────────────────────────────────────────────────────── */
 
 const LABEL_STYLE =
-  'padding: 7px 12px 7px 0; font-size: 13px; color: #8b8b96; font-family: Arial, Helvetica, sans-serif; vertical-align: top;';
+  `padding: 7px 12px 7px 0; font-size: 13px; color: ${MUTED}; font-family: ${FONT}; vertical-align: top;`;
 const VALUE_STYLE =
-  'padding: 7px 0; font-size: 14px; color: #f4f4f6; font-family: Arial, Helvetica, sans-serif; font-weight: 600; text-align: right; vertical-align: top;';
+  `padding: 7px 0; font-size: 14px; color: ${INK}; font-family: ${FONT}; font-weight: 600; text-align: right; vertical-align: top;`;
 
 /** Registrant text reaches the template exactly as it was typed, so it is escaped on the way in. */
 function escapeHtml(value: string): string {
@@ -281,7 +296,7 @@ function segmentsHtml(segments: Segment[]): string {
     .map(segment =>
       typeof segment === 'string'
         ? escapeHtml(segment)
-        : `<strong style="color: #f4f4f6;">${escapeHtml(segment.strong)}</strong>`
+        : `<strong style="color: ${INK};">${escapeHtml(segment.strong)}</strong>`
     )
     .join('');
 }
@@ -305,53 +320,53 @@ function rowHtml(row: Row, isLastRunner: boolean): string {
     case 'amount':
       return `
     <tr>
-      <td style="padding: 6px 12px 6px 0; font-size: 13px; color: #8b8b96; font-family: Arial, Helvetica, sans-serif;">${escapeHtml(row.label)}</td>
-      <td align="right" style="padding: 6px 0; font-size: 13px; color: #8b8b96; font-family: Arial, Helvetica, sans-serif; text-align: right; white-space: nowrap;">${pesoHtml(row.centavos)}</td>
+      <td style="padding: 6px 12px 6px 0; font-size: 13px; color: ${MUTED}; font-family: ${FONT};">${escapeHtml(row.label)}</td>
+      <td align="right" style="padding: 6px 0; font-size: 13px; color: ${MUTED}; font-family: ${FONT}; text-align: right; white-space: nowrap;">${pesoHtml(row.centavos)}</td>
     </tr>`;
     case 'total':
       return `
     <tr>
-      <td style="padding: 14px 12px 0 0; font-family: Arial, Helvetica, sans-serif; font-size: 15px; font-weight: 700; color: #ffffff;">${escapeHtml(row.label)}</td>
-      <td align="right" style="padding: 14px 0 0; font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 800; color: ${BRAND_ORANGE}; text-align: right; white-space: nowrap;">${pesoHtml(row.centavos)}</td>
+      <td style="padding: 14px 12px 0 0; font-family: ${FONT}; font-size: 15px; font-weight: 700; color: ${INK};">${escapeHtml(row.label)}</td>
+      <td align="right" style="padding: 14px 0 0; font-family: ${FONT}; font-size: 18px; font-weight: 700; color: ${ACCENT_TEXT}; text-align: right; white-space: nowrap;">${pesoHtml(row.centavos)}</td>
     </tr>`;
     case 'rule':
       return fullWidthRow(
-        `<div style="border-top: 1px solid rgba(255,255,255,0.1); font-size: 0; line-height: 0;">&nbsp;</div>`,
+        `<div style="border-top: 1px solid ${LINE}; font-size: 0; line-height: 0;">&nbsp;</div>`,
         'padding-top: 10px; font-size: 0; line-height: 0;'
       );
     case 'runnerHeading':
       return fullWidthRow(
         escapeHtml(row.text),
-        `padding: ${row.first ? 4 : 22}px 0 6px; font-family: Arial, Helvetica, sans-serif; font-size: 14px; font-weight: 700; color: #f4f4f6;`
+        `padding: ${row.first ? 4 : 22}px 0 6px; font-family: ${FONT}; font-size: 14px; font-weight: 700; color: ${INK};`
       );
     case 'runner': {
-      const border = isLastRunner ? 'none' : '1px solid rgba(255,255,255,0.08)';
+      const border = isLastRunner ? 'none' : `1px solid ${LINE}`;
       // Fun-run packages carry no shirt size (see shirt-size.ts), so an empty
       // singletSize means "not applicable" — not a value worth printing blank.
       const size = row.size
-        ? `<div style="font-size: 12px; color: #8b8b96;">SIZE</div>
-           <div style="font-size: 13px; font-weight: 600; color: #f4f4f6; margin-top: 2px;">${escapeHtml(row.size)}</div>`
+        ? `<div style="font-size: 12px; color: ${MUTED};">Size</div>
+           <div style="font-size: 13px; font-weight: 600; color: ${INK}; margin-top: 2px;">${escapeHtml(row.size)}</div>`
         : '&nbsp;';
       return `
     <tr>
-      <td style="padding: 10px 12px 10px 0; border-bottom: ${border}; font-family: Arial, Helvetica, sans-serif;">
-        <div style="font-size: 14px; font-weight: 600; color: #f4f4f6;">${escapeHtml(row.name)}</div>
-        <div style="font-size: 12px; color: #8b8b96; margin-top: 3px;">${escapeHtml(row.reference)} &middot; ${escapeHtml(row.category)}</div>
+      <td style="padding: 10px 12px 10px 0; border-bottom: ${border}; font-family: ${FONT};">
+        <div style="font-size: 14px; font-weight: 600; color: ${INK};">${escapeHtml(row.name)}</div>
+        <div style="font-size: 12px; color: ${MUTED}; margin-top: 3px;">${escapeHtml(row.reference)} &middot; ${escapeHtml(row.category)}</div>
         ${
           row.community
-            ? `<div style="font-size: 12px; color: #8b8b96; margin-top: 2px;">${escapeHtml(row.community)}</div>`
+            ? `<div style="font-size: 12px; color: ${MUTED}; margin-top: 2px;">${escapeHtml(row.community)}</div>`
             : ''
         }
         ${
           row.guardian
-            ? `<div style="font-size: 12px; color: #8b8b96; margin-top: 2px;">Parent/Guardian: ${escapeHtml(row.guardian)}</div>`
+            ? `<div style="font-size: 12px; color: ${MUTED}; margin-top: 2px;">Parent/Guardian: ${escapeHtml(row.guardian)}</div>`
             : ''
         }
         ${row.addOns
-          .map(line => `<div style="font-size: 12px; color: #8b8b96; margin-top: 2px;">Add-on: ${escapeHtml(line)}</div>`)
+          .map(line => `<div style="font-size: 12px; color: ${MUTED}; margin-top: 2px;">Add-on: ${escapeHtml(line)}</div>`)
           .join('')}
       </td>
-      <td align="right" style="padding: 10px 0; border-bottom: ${border}; font-family: Arial, Helvetica, sans-serif; text-align: right; vertical-align: top; white-space: nowrap;">${size}</td>
+      <td align="right" style="padding: 10px 0; border-bottom: ${border}; font-family: ${FONT}; text-align: right; vertical-align: top; white-space: nowrap;">${size}</td>
     </tr>`;
     }
   }
@@ -375,7 +390,7 @@ function rowsHtml(rows: Row[]): string {
  */
 function cardHtml(rows: Row[]): string {
   return fullWidthRow(
-    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 16px 20px;">
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: ${CARBON}; border: 1px solid ${LINE}; border-radius: 8px; padding: 16px 20px;">
         ${rowsHtml(rows)}
       </table>`,
     'padding: 2px 0 0;'
@@ -386,13 +401,13 @@ function blockHtml(block: Block, index: number): string {
   switch (block.kind) {
     case 'paragraph':
       return fullWidthRow(
-        `<p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 15px; line-height: 1.6; color: #c8c8d0;">${segmentsHtml(block.segments)}</p>`,
+        `<p style="margin: 0; font-family: ${FONT}; font-size: 15px; line-height: 1.6; color: ${BODY_INK};">${segmentsHtml(block.segments)}</p>`,
         'padding: 0 0 14px;'
       );
     case 'heading':
       return fullWidthRow(
         escapeHtml(block.text),
-        'padding: 30px 0 6px; font-family: Arial, Helvetica, sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 1.5px; color: #8b8b96; text-transform: uppercase;'
+        `padding: 30px 0 6px; font-family: ${FONT}; font-size: 13px; font-weight: 600; letter-spacing: 0.01em; color: ${ACCENT_TEXT};`
       );
     case 'card':
       return cardHtml(block.rows);
@@ -400,15 +415,15 @@ function blockHtml(block: Block, index: number): string {
       return rowsHtml(block.rows);
     case 'note':
       return fullWidthRow(
-        `<p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 13px; line-height: 1.6; color: #8b8b96;">${segmentsHtml(block.segments)}</p>`,
+        `<p style="margin: 0; font-family: ${FONT}; font-size: 13px; line-height: 1.6; color: ${MUTED};">${segmentsHtml(block.segments)}</p>`,
         `padding: ${index === 0 ? 0 : 30}px 0 0;`
       );
     case 'button':
-      // A solid orange fill under the gradient, because Outlook desktop drops
-      // background-image and would otherwise leave white text on nothing. The
-      // link is the whole padded box, so a thumb anywhere on it lands.
+      // The brand's one primary button: solid Action Orange, white label, 6px
+      // corners, no gradient. The link is the whole padded box, so a thumb
+      // anywhere on it lands.
       return fullWidthRow(
-        `<a href="${escapeHtml(block.href)}" style="display: inline-block; background-color: ${BRAND_ORANGE}; background-image: linear-gradient(90deg, ${BRAND_ORANGE} 0%, ${BRAND_BLUE} 100%); color: #ffffff; font-family: Arial, Helvetica, sans-serif; font-size: 15px; font-weight: 700; letter-spacing: 0.5px; text-decoration: none; padding: 14px 30px; border-radius: 12px;">${escapeHtml(block.label)}</a>`,
+        `<a href="${escapeHtml(block.href)}" style="display: inline-block; background-color: ${ACTION}; color: #ffffff; font-family: ${FONT}; font-size: 16px; font-weight: 600; text-decoration: none; padding: 14px 28px; border-radius: 6px;">${escapeHtml(block.label)}</a>`,
         'padding: 10px 0 8px; text-align: center;'
       );
     case 'image':
@@ -418,9 +433,9 @@ function blockHtml(block: Block, index: number): string {
         // tile takes the full width up to 320px; a div rather than a nested
         // table, which Gmail's Android app shrinks to its content. Outlook
         // desktop ignores the CSS and keeps the width attribute.
-        `<div style="max-width: 320px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; padding: 12px; box-sizing: border-box;"><img src="${escapeHtml(block.src)}" alt="${escapeHtml(block.alt)}" width="296" style="display: block; width: 100%; height: auto; border: 0;"></div>${
+        `<div style="max-width: 320px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; padding: 12px; box-sizing: border-box;"><img src="${escapeHtml(block.src)}" alt="${escapeHtml(block.alt)}" width="296" style="display: block; width: 100%; height: auto; border: 0;"></div>${
           block.caption
-            ? `<div style="font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: #8b8b96; margin-top: 8px;">${escapeHtml(block.caption)}</div>`
+            ? `<div style="font-family: ${FONT}; font-size: 12px; color: ${MUTED}; margin-top: 8px;">${escapeHtml(block.caption)}</div>`
             : ''
         }`,
         'padding: 12px 0 4px; text-align: center;'
@@ -429,25 +444,26 @@ function blockHtml(block: Block, index: number): string {
 }
 
 /**
- * Two tones, not one label style: "pending" (blue-tinted) reads as an
- * in-progress state — Registration Received, still awaiting payment or
- * verification — and "success" (green-tinted) reads as done — the receipt,
- * once money is actually confirmed. Colored text glyphs (●, ✓) are used
+ * Two tones, not one label style: "pending" reads as an in-progress state —
+ * Registration Received, still awaiting payment or verification — and
+ * "success" reads as done — the receipt, once money is actually confirmed.
+ * The inks are the brand's dark status inks (brand-guide §3.3): Warning amber
+ * for pending, Success green for done. Colored text glyphs (●, ✓) are used
  * instead of an icon font or SVG: icon fonts don't render in email at all,
  * and SVG support is inconsistent (Outlook desktop in particular), while a
  * plain text character always renders and can be colored like any text.
  */
-const STATUS_STYLES: Record<StatusTone, { bg: string; border: string; color: string; icon: string }> = {
-  pending: { bg: 'rgba(0,122,255,0.14)', border: 'rgba(0,122,255,0.4)', color: '#6cb2ff', icon: '&#9679;' },
-  success: { bg: 'rgba(34,197,94,0.14)', border: 'rgba(34,197,94,0.4)', color: '#4ade80', icon: '&#10003;' },
+const STATUS_STYLES: Record<StatusTone, { border: string; color: string; icon: string }> = {
+  pending: { border: '#5C4410', color: '#FAAD14', icon: '&#9679;' },
+  success: { border: '#2E5A17', color: '#52C41A', icon: '&#10003;' },
 };
 
 /**
- * The chrome every email shares: logo on a dark header (never on the brand
- * gradient — the logo's own wordmark is already orange-and-blue, so a
- * gradient behind it would fight it for contrast instead of framing it),
- * a thin gradient bar as the one accent touch, a status pill, and the same
- * footer. The status is the one thing each email varies in the header.
+ * The chrome every email shares (brand-guide §2.1, §5): the wide
+ * `horizontal-dark` lockup on a Carbon header, a hairline beneath it rather
+ * than a coloured bar (the old orange-to-blue ramp is retired), a 4px status
+ * chip in Title Case, a Carbon card with 8px corners, and the same footer. The
+ * status is the one thing each email varies in the header.
  */
 function renderHtml(doc: EmailDocument, contactEmail: string): string {
   const style = STATUS_STYLES[doc.status.tone];
@@ -459,8 +475,12 @@ function renderHtml(doc: EmailDocument, contactEmail: string): string {
   return `
 <!DOCTYPE html>
 <html>
-  <body style="margin: 0; padding: 0; background-color: #050505;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #050505;">
+  <head>
+    <meta name="color-scheme" content="dark" />
+    <meta name="supported-color-schemes" content="dark" />
+  </head>
+  <body style="margin: 0; padding: 0; background-color: ${CARBON};">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: ${CARBON};">
       <tr>
         <td align="center" style="padding: 32px 16px;">
           <!-- Fluid up to 600px: a fixed width="600" never shrank on a phone,
@@ -468,19 +488,16 @@ function renderHtml(doc: EmailDocument, contactEmail: string): string {
                text and QR codes with it. Outlook desktop ignores max-width,
                so it gets a fixed 600px table around it instead. -->
           <!--[if mso]><table role="presentation" width="600" cellpadding="0" cellspacing="0"><tr><td><![endif]-->
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width: 100%; max-width: 600px; background-color: #0c0c10; border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08);">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width: 100%; max-width: 600px; background-color: ${CARD}; border-radius: 8px; overflow: hidden; border: 1px solid ${LINE};">
 
             <!-- Header -->
             <tr>
-              <td style="background-color: ${BRAND_ORANGE}; background-image: linear-gradient(90deg, ${BRAND_ORANGE} 0%, ${BRAND_BLUE} 100%); font-size: 0; line-height: 0;">&nbsp;</td>
-            </tr>
-            <tr>
-              <td align="center" style="background-color: #050505; padding: 28px 32px 26px;">
+              <td align="center" style="background-color: ${CARBON}; padding: 30px 32px 26px; border-bottom: 1px solid ${LINE};">
                 <img src="${LOGO_URL}" alt="${SITE_NAME}" width="224" style="width: 224px; max-width: 62%; height: auto; display: block; margin: 0 auto;" />
-                <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 16px auto 0;">
+                <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 18px auto 0;">
                   <tr>
-                    <td style="background-color: ${style.bg}; border: 1px solid ${style.border}; border-radius: 999px; padding: 7px 16px;">
-                      <span style="font-family: Arial, Helvetica, sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 1px; color: ${style.color}; text-transform: uppercase; white-space: nowrap;">
+                    <td style="border: 1px solid ${style.border}; border-radius: 4px; padding: 6px 12px;">
+                      <span style="font-family: ${FONT}; font-size: 13px; font-weight: 600; color: ${style.color}; white-space: nowrap;">
                         ${style.icon}&nbsp; ${escapeHtml(doc.status.label)}
                       </span>
                     </td>
@@ -498,10 +515,10 @@ function renderHtml(doc: EmailDocument, contactEmail: string): string {
 
             <!-- Footer -->
             <tr>
-              <td style="padding: 20px 32px; border-top: 1px solid rgba(255,255,255,0.08);">
-                <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 12px; line-height: 1.6; color: #6b6b76; text-align: center;">
+              <td style="padding: 20px 32px; border-top: 1px solid ${LINE};">
+                <p style="margin: 0; font-family: ${FONT}; font-size: 12px; line-height: 1.6; color: ${MUTED}; text-align: center;">
                   Questions about this ${escapeHtml(doc.footerTopic ?? 'order')}? Reply to this email or reach us at
-                  <a href="mailto:${escapeHtml(contactEmail)}" style="color: ${BRAND_BLUE}; text-decoration: none;">${escapeHtml(contactEmail)}</a>.<br/>
+                  <a href="mailto:${escapeHtml(contactEmail)}" style="color: ${LINK}; text-decoration: none;">${escapeHtml(contactEmail)}</a>.<br/>
                   &copy; ${new Date().getFullYear()} ${SITE_NAME}. All rights reserved.
                 </p>
               </td>

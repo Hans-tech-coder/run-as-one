@@ -225,7 +225,7 @@ switch's name is what it turns on and `aria-checked` says whether. The choice is
 (`admin/dashboard-theme.ts`, dark unless it says `light`), which the admin
 layout reads so `DashboardShell` draws `data-theme` on `.admin-layout` on the
 server's first paint; once mounted it mirrors the value onto `<html>` so
-portals and the themed favicon follow, and deletes it on unmount so the
+portals follow, and deletes it on unmount so the
 public site never inherits it. The bare sign-in pages are not themed.
 **The light palette is tokens** (`LIGHT_THEME_PLAN.md` Batches 1–2): the frame,
 sidebar, header, this menu, dropdowns, modals, badges, buttons, form
