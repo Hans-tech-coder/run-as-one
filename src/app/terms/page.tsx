@@ -4,6 +4,7 @@ import { Scale } from 'lucide-react';
 import LegalPage, { type LegalSection } from '@/components/LegalPage';
 import { SITE_NAME } from '@/lib/site-contact';
 import { getContactEmail } from '@/lib/site-settings';
+import PageReveal from '@/components/PageReveal';
 
 export const metadata: Metadata = {
   title: `Terms of Service | ${SITE_NAME}`,
@@ -126,13 +127,15 @@ export default async function TermsPage() {
   const contactEmail = await getContactEmail();
 
   return (
-    <LegalPage
-      eyebrow="The Fine Print"
-      title="Terms of Service"
-      intro={`What you agree to when you register through ${SITE_NAME}, and where our responsibility ends and the event organizer's begins.`}
-      icon={<Scale size={20} aria-hidden="true" />}
-      sections={sections(contactEmail)}
-      contactEmail={contactEmail}
-    />
+    <PageReveal>
+      <LegalPage
+        eyebrow="The Fine Print"
+        title="Terms of Service"
+        intro={`What you agree to when you register through ${SITE_NAME}, and where our responsibility ends and the event organizer's begins.`}
+        icon={<Scale size={20} aria-hidden="true" />}
+        sections={sections(contactEmail)}
+        contactEmail={contactEmail}
+      />
+    </PageReveal>
   );
 }

@@ -9,6 +9,8 @@ import { PAST_CARD, pastEventsWhere, toPastCard } from '@/lib/past-events';
 import { forListing } from '@/lib/registration-gate';
 import { EVENT_SITE_CLIENT, eventLinkOrigin } from '@/lib/site-client';
 import RecentlyHeld from './RecentlyHeld';
+import PageReveal from '@/components/PageReveal';
+import StatementHighlight from '@/components/StatementHighlight';
 
 const HOME_EVENT_LIMIT = 6;
 /** One row of cards on a desktop grid: a glance back, not a second listing. */
@@ -123,12 +125,39 @@ export default async function Home({ params }: { params: Promise<{ site: string 
   const pastCards = recentlyHeld.map((row) => toPastCard(row, linkOrigin));
 
   return (
-    <div className="w-full">
-      <HeroSection provinces={provinces} nextRace={events[0] ?? null} />
-      <HomeEventBrowser events={events} totalEvents={totalEvents} />
-      {pastCards.length > 0 && <RecentlyHeld events={pastCards} />}
-      <OrganizerBand />
-    </div>
+    <PageReveal>
+      <div className="w-full">
+        <HeroSection provinces={provinces} nextRace={events[0] ?? null} />
+        <HomeEventBrowser events={events} totalEvents={totalEvents} />
+        <RaceDayStatement />
+        {pastCards.length > 0 && <RecentlyHeld events={pastCards} />}
+        <OrganizerBand />
+      </div>
+    </PageReveal>
+  );
+}
+
+/**
+ * The home page's one scroll moment (`design-taste-frontend` deals one to a
+ * page of this length, and dealt `word-highlight`, owner 2026-11-24): what a
+ * runner does here, from sign-up to the finish, lit word by word as it
+ * crosses the screen. It sits between the races still open and the races
+ * already run, the two halves of the trip it describes. Every clause is a
+ * thing the site really does — nothing on it is a promise the app does not
+ * keep. See StatementHighlight.
+ */
+function RaceDayStatement() {
+  return (
+    <section className="site-statement site-wrap" aria-labelledby="race-day">
+      <h2 id="race-day" className="site-statement__label">From Sign-Up to Finish Line</h2>
+      <StatementHighlight
+        parts={[
+          'Register online, pick up your race kit, then find',
+          { strong: 'your finish time and e-certificate' },
+          'right here.',
+        ]}
+      />
+    </section>
   );
 }
 

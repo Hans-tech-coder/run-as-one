@@ -1,3 +1,4 @@
+import PageReveal from '@/components/PageReveal';
 import EventDetails from './EventDetails';
 
 export { generateMetadata } from './EventDetails';
@@ -16,5 +17,9 @@ export function generateStaticParams() {
 
 export default async function EventDetailsPage({ params }: { params: Promise<{ site: string; slug: string }> }) {
   const { site, slug } = await params;
-  return <EventDetails site={site} slug={slug} staff={false} />;
+  return (
+    <PageReveal>
+      <EventDetails site={site} slug={slug} staff={false} />
+    </PageReveal>
+  );
 }

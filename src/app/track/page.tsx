@@ -5,6 +5,7 @@ import { IconBadge } from '@/components/StatusPanel';
 import { SITE_NAME } from '@/lib/site-contact';
 import { getSiteSettings } from '@/lib/site-settings';
 import TrackLookup from './TrackLookup';
+import PageReveal from '@/components/PageReveal';
 
 export const metadata: Metadata = {
   title: `Track My Registration | ${SITE_NAME}`,
@@ -26,25 +27,27 @@ export default async function TrackPage() {
   const { contactEmail, socialLinks } = await getSiteSettings();
 
   return (
-    <div className="site-wrap">
-    <div className="mx-auto flex w-full max-w-2xl flex-col items-center pb-20 pt-8 sm:pt-12">
-      <header className="mb-8 flex flex-col items-center text-center sm:mb-10">
-        <IconBadge>
-          <ClipboardCheck size={30} aria-hidden="true" />
-        </IconBadge>
-        <p className="mb-3 mt-6 text-sm font-semibold text-site-accent">Your Registration</p>
-        <h1 className="mb-3 text-2xl font-semibold tracking-wide text-site-ink text-balance sm:text-3xl">
-          Track My Registration
-        </h1>
-        <p className="m-0 max-w-lg text-base leading-relaxed text-secondary">
-          See whether your registration is paid or your bank transfer is
-          validated, and check the details you submitted. Enter the reference
-          from your registration email and the email you used.
-        </p>
-      </header>
+    <PageReveal>
+      <div className="site-wrap">
+      <div className="mx-auto flex w-full max-w-2xl flex-col items-center pb-20 pt-8 sm:pt-12">
+        <header className="mb-8 flex flex-col items-center text-center sm:mb-10">
+          <IconBadge>
+            <ClipboardCheck size={30} aria-hidden="true" />
+          </IconBadge>
+          <p className="mb-3 mt-6 text-sm font-semibold text-site-accent">Your Registration</p>
+          <h1 className="mb-3 text-2xl font-semibold tracking-wide text-site-ink text-balance sm:text-3xl">
+            Track My Registration
+          </h1>
+          <p className="m-0 max-w-lg text-base leading-relaxed text-secondary">
+            See whether your registration is paid or your bank transfer is
+            validated, and check the details you submitted. Enter the reference
+            from your registration email and the email you used.
+          </p>
+        </header>
 
-      <TrackLookup help={{ contactEmail, facebookUrl: socialLinks.facebook }} />
-    </div>
-    </div>
+        <TrackLookup help={{ contactEmail, facebookUrl: socialLinks.facebook }} />
+      </div>
+      </div>
+    </PageReveal>
   );
 }

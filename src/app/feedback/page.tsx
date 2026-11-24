@@ -4,6 +4,7 @@ import FeedbackForm from './FeedbackForm';
 import { SITE_NAME, supportMailto } from '@/lib/site-contact';
 import { getContactEmail } from '@/lib/site-settings';
 import { asSitePath } from '@/lib/feedback';
+import PageReveal from '@/components/PageReveal';
 
 export const metadata: Metadata = {
   title: `Send Feedback | ${SITE_NAME}`,
@@ -48,31 +49,33 @@ export default async function FeedbackPage({
   const contactEmail = await getContactEmail();
 
   return (
-    <section className="site-section site-wrap">
-      <div className="feedback-layout">
-        <header className="feedback-layout__intro" data-enter>
-          <p className="m-0 mb-4 text-[0.9375rem] font-semibold text-site-accent">Feedback</p>
-          <h1 className="site-h1">Tell Us What to Fix</h1>
-          <p className="site-lead">
-            Something not working, something that could be easier, or something
-            you wish this app could do — all three belong here. A real person
-            reads every message, and nothing you send goes to a mailing list.
-          </p>
+    <PageReveal>
+      <section className="site-section site-wrap">
+        <div className="feedback-layout">
+          <header className="feedback-layout__intro" data-enter>
+            <p className="m-0 mb-4 text-[0.9375rem] font-semibold text-site-accent">Feedback</p>
+            <h1 className="site-h1">Tell Us What to Fix</h1>
+            <p className="site-lead">
+              Something not working, something that could be easier, or something
+              you wish this app could do — all three belong here. A real person
+              reads every message, and nothing you send goes to a mailing list.
+            </p>
 
-          {/* The address stays on the page on purpose. The form takes one
-              screenshot, but some things need several files or a thread, and
-              a form is the wrong shape for those — offering only the form
-              would send that person away with nothing. */}
-          <p className="m-0 mt-6 text-[0.9375rem] leading-relaxed text-site-muted">
-            Need to send more files or talk it through?{' '}
-            <a href={supportMailto(contactEmail)} className="site-link [overflow-wrap:anywhere]">
-              {contactEmail}
-            </a>
-          </p>
-        </header>
+            {/* The address stays on the page on purpose. The form takes one
+                screenshot, but some things need several files or a thread, and
+                a form is the wrong shape for those — offering only the form
+                would send that person away with nothing. */}
+            <p className="m-0 mt-6 text-[0.9375rem] leading-relaxed text-site-muted">
+              Need to send more files or talk it through?{' '}
+              <a href={supportMailto(contactEmail)} className="site-link [overflow-wrap:anywhere]">
+                {contactEmail}
+              </a>
+            </p>
+          </header>
 
-        <FeedbackForm pagePath={pagePath} />
-      </div>
-    </section>
+          <FeedbackForm pagePath={pagePath} />
+        </div>
+      </section>
+    </PageReveal>
   );
 }

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { ViewTransition } from "react";
 import RunnerLoader from "@/components/ui/RunnerLoader";
 
 /**
@@ -21,17 +21,23 @@ import RunnerLoader from "@/components/ui/RunnerLoader";
  * the top of the screen. It fades in after 120ms, so a prefetched page never
  * flashes it, and its caption changes after five seconds so a slow
  * connection reads as slow rather than stuck.
+ *
+ * When the page lands, the screen fades out (`site-page-out`, site.css)
+ * while the page's own `PageReveal` fades it in — one hand-off, not a cut.
+ * Only the exit is wired: its arrival keeps the 120ms-held CSS fade above.
  */
 export default function PublicRouteLoading() {
   return (
-    <div className="public-route-loading" aria-busy="true">
-      <div className="public-route-loading__stage">
-        <RunnerLoader
-          size="lg"
-          caption="Loading"
-          slowCaption="Still loading, hang tight"
-        />
+    <ViewTransition exit="site-page-out" default="none">
+      <div className="public-route-loading" aria-busy="true">
+        <div className="public-route-loading__stage">
+          <RunnerLoader
+            size="lg"
+            caption="Loading"
+            slowCaption="Still loading, hang tight"
+          />
+        </div>
       </div>
-    </div>
+    </ViewTransition>
   );
 }

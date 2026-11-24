@@ -59,11 +59,24 @@ Antigravity load the exact same copies. Never install a project-only skill
 globally without asking. Pick from this table instead of browsing the list; one
 or two skills per task is the norm.
 
+**A skill added on one side is added on both, in the same step.** Claude Code
+reads only `.claude/skills/`, so a folder put in `.agents/skills/` alone is
+invisible to it, and a folder put in `.claude/skills/` alone is invisible to
+Antigravity. The real folder always goes in `.agents/skills/<name>/`, and
+`.claude/skills/<name>` is a junction to it (one junction per skill,
+`New-Item -ItemType Junction -Path ".claude\skills\<name>" -Target "$PWD\.agents\skills\<name>"`).
+If a skill turns up as a real folder in `.claude/skills/`, move it into
+`.agents/skills/` and replace it with the junction. Removing a skill removes
+both. The same holds globally: `~/.agents/skills/` is the folder,
+`~/.claude/skills/` and `~/.gemini/config/skills/` link to it. Add the new
+skill's row to the table below in the same change.
+
 | Task | Skill |
 |---|---|
 | Bug fix or small behavior change | `surgical-patch`; `investigate-first` when the cause is unknown |
 | New feature | `lean-build`; plus `ui-ux-pro-max` (and `transitions-dev` if it animates) for UI |
 | Public pages' look (home, events, results, track) — redesign or "looks AI-made" | `design-taste-frontend` leads, `ui-ux-pro-max` checks UX and accessibility; admin screens stay with `ui-ux-pro-max` |
+| Page transitions, route changes, shared-element morphs (React `<ViewTransition>`) | `vercel-react-view-transitions`; on public pages `design-taste-frontend`'s motion rules still win over its "implement every pattern" advice |
 | Refactor or splitting a large file | `safe-refactor` |
 | Prisma queries | `prisma-client-api` |
 | Prisma CLI / schema migration | `prisma-cli`, `migration` |

@@ -7,6 +7,7 @@ import { IconBadge, StatusPanel } from '@/components/StatusPanel';
 import { REGISTRATION_FORMS, asRegistrationForm } from '@/lib/registration-form';
 import RegistrationWizardClient from './RegistrationWizardClient';
 import BankTransferWizardClient from './BankTransferWizardClient';
+import PageReveal from '@/components/PageReveal';
 import { approvedCommunityNames } from '@/lib/running-community-store';
 import { requestCountry } from '@/lib/request-country';
 import {
@@ -223,19 +224,25 @@ export default async function RegisterPage(props: {
   const form = asRegistrationForm(event.registrationForm);
 
   if (form === REGISTRATION_FORMS.BANK_TRANSFER) {
-    return <BankTransferWizardClient
-        event={{ ...event, categories, addOns }}
-        eventId={event.id}
-        registration={registration}
-        communities={communities}
-        defaultCountry={defaultCountry}
-        automaticPromos={automaticPromos}
-        promoCodesAccepted={promoCodesAccepted}
-        initialCategoryId={initialCategoryId}
-      />;
+    return (
+      <PageReveal>
+        <BankTransferWizardClient
+          event={{ ...event, categories, addOns }}
+          eventId={event.id}
+          registration={registration}
+          communities={communities}
+          defaultCountry={defaultCountry}
+          automaticPromos={automaticPromos}
+          promoCodesAccepted={promoCodesAccepted}
+          initialCategoryId={initialCategoryId}
+        />
+      </PageReveal>
+    );
   }
 
-  return <RegistrationWizardClient
+  return (
+    <PageReveal>
+      <RegistrationWizardClient
         event={{ ...event, categories, addOns }}
         eventId={event.id}
         registration={registration}
@@ -244,7 +251,9 @@ export default async function RegisterPage(props: {
         automaticPromos={automaticPromos}
         promoCodesAccepted={promoCodesAccepted}
         initialCategoryId={initialCategoryId}
-      />;
+      />
+    </PageReveal>
+  );
 }
 
 /**

@@ -12,6 +12,7 @@ import { EventsTabSwitch } from './EventsTabs';
 import type { EventsView } from './events-view';
 import PastEvents from './PastEvents';
 import { NoPastEvents, NothingUpcoming } from './EventsEmptyStates';
+import PageReveal from '@/components/PageReveal';
 
 /**
  * Cached per site for at most a minute, and dropped by any write — the home
@@ -123,29 +124,31 @@ export default async function EventsPage({ params }: { params: Promise<{ site: s
   );
 
   return (
-    <>
-      {hero && <ClientSiteHero site={hero} />}
-      <section className="site-section site-wrap" aria-label="Races">
-        {/* Which tab shows is read from the address by the switch, on the
-            server as on the client. */}
-        <EventsTabSwitch
-          counts={counts}
-          heading={{ upcoming: heading('upcoming'), past: heading('past') }}
-          panels={{
-            upcoming:
-              events.length > 0 ? (
-                <EventGrid events={events} eagerCount={4} />
-              ) : (
-                <NothingUpcoming
-                  everHadEvents={totalEvents > 0}
-                  hasPublishedResults={eventsWithResults > 0}
-                  hasPastEvents={counts.past > 0}
-                />
-              ),
-            past: pastCards.length > 0 ? <PastEvents events={pastCards} /> : <NoPastEvents />,
-          }}
-        />
-      </section>
-    </>
+    <PageReveal>
+      <>
+        {hero && <ClientSiteHero site={hero} />}
+        <section className="site-section site-wrap" aria-label="Races">
+          {/* Which tab shows is read from the address by the switch, on the
+              server as on the client. */}
+          <EventsTabSwitch
+            counts={counts}
+            heading={{ upcoming: heading('upcoming'), past: heading('past') }}
+            panels={{
+              upcoming:
+                events.length > 0 ? (
+                  <EventGrid events={events} eagerCount={4} />
+                ) : (
+                  <NothingUpcoming
+                    everHadEvents={totalEvents > 0}
+                    hasPublishedResults={eventsWithResults > 0}
+                    hasPastEvents={counts.past > 0}
+                  />
+                ),
+              past: pastCards.length > 0 ? <PastEvents events={pastCards} /> : <NoPastEvents />,
+            }}
+          />
+        </section>
+      </>
+    </PageReveal>
   );
 }

@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { ArrowRight, Mail } from 'lucide-react';
 import { SITE_NAME, SOCIAL_CHANNELS, supportMailto, type SocialChannel } from '@/lib/site-contact';
 import { getSiteSettings } from '@/lib/site-settings';
+import PageReveal from '@/components/PageReveal';
 
 export const metadata: Metadata = {
   title: `Coming Soon | ${SITE_NAME}`,
@@ -38,29 +39,31 @@ export default async function ComingSoonPage({
   if (live) redirect(live);
 
   return (
-    <section className="site-section site-wrap">
-      <div className="site-notice" data-enter>
-        <p className="site-notice__code">Coming Soon</p>
-        <h1 className="site-h1">
-          {channel ? `Our ${channel.name} Isn't Live Yet` : 'Our Social Channels Are on the Way'}
-        </h1>
-        <p className="site-lead max-w-[56ch]">
-          We&apos;re still setting this one up. Nothing about registering is
-          waiting on it — events are open now, and the fastest way to reach
-          a real person is email.
-        </p>
-        <div className="site-notice__actions">
-          <Link href="/events" className="site-btn site-btn--action site-btn--block-sm">
-            Browse Events
-            <ArrowRight size={18} aria-hidden="true" />
-          </Link>
-          <a href={supportMailto(contactEmail)} className="site-btn site-btn--quiet site-btn--block-sm">
-            <Mail size={18} aria-hidden="true" className="shrink-0" />
-            <span className="min-w-0 break-all">{contactEmail}</span>
-          </a>
+    <PageReveal>
+      <section className="site-section site-wrap">
+        <div className="site-notice" data-enter>
+          <p className="site-notice__code">Coming Soon</p>
+          <h1 className="site-h1">
+            {channel ? `Our ${channel.name} Isn't Live Yet` : 'Our Social Channels Are on the Way'}
+          </h1>
+          <p className="site-lead max-w-[56ch]">
+            We&apos;re still setting this one up. Nothing about registering is
+            waiting on it — events are open now, and the fastest way to reach
+            a real person is email.
+          </p>
+          <div className="site-notice__actions">
+            <Link href="/events" className="site-btn site-btn--action site-btn--block-sm">
+              Browse Events
+              <ArrowRight size={18} aria-hidden="true" />
+            </Link>
+            <a href={supportMailto(contactEmail)} className="site-btn site-btn--quiet site-btn--block-sm">
+              <Mail size={18} aria-hidden="true" className="shrink-0" />
+              <span className="min-w-0 break-all">{contactEmail}</span>
+            </a>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </PageReveal>
   );
 }
 

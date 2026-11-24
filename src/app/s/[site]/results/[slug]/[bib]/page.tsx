@@ -14,6 +14,7 @@ import { toWholeSeconds } from '@/lib/race-time';
 import { withPacerRanks } from '@/lib/pacer-store';
 import { RESULT_STATUS_LABELS, isResultStatus } from '@/lib/result-status';
 import { EVENT_SITE_CLIENT, ensureEventSite, eventPageMetadata } from '@/lib/site-client';
+import PageReveal from '@/components/PageReveal';
 
 /**
  * Cached per site and address for at most a minute, and dropped by any write
@@ -184,140 +185,142 @@ export default async function RunnerAnalyticsPage({
   const genderWord = genderDivision(result.gender);
 
   return (
-    <div className="site-wrap relative pb-16 sm:pb-20">
-      <RaceHeader event={result.event} back={{ href: `/results/${result.event.slug}/full`, label: 'Back to the Leaderboard' }} />
-      <div className="pb-6 sm:pb-8">
-        {/* Wide enough that the four analytics tiles each get a real column
-            instead of squeezing their labels onto two lines. */}
-        <div className="max-w-5xl mx-auto">
-          {/* Finisher Profile Card. The padding steps down on a phone: 32px a
-              side there left the analytics tiles too narrow for their own
-              labels. */}
-          <div className="relative rounded-panel sm:rounded-panel bg-site-card border border-site-line p-4 min-[360px]:p-5 sm:p-8 md:p-12 mb-8 sm:mb-12 overflow-hidden">
-            
-            <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 md:gap-8 mb-6 sm:mb-10 border-b border-site-line pb-6 sm:pb-10">
-              {/* min-w-0 lets this column give way to the time panel instead of
-                  holding itself open and squeezing the badges into a ragged second
-                  row. The name sizes below are set so that even at 768 — where the
-                  column is at its narrowest, about 300px — no word has to break in
-                  half. */}
-              <div className="w-full md:flex-1 md:min-w-0">
-                <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-secondary mb-4 sm:mb-5">
-                  {finished ? (
-                    <span className="bg-site-surface text-site-accent border border-site-line px-3 py-1.5 rounded-chip text-xs font-bold flex items-center gap-1.5 whitespace-nowrap">
-                      <CheckCircle2 size={14} className="shrink-0" /> Finisher
+    <PageReveal>
+      <div className="site-wrap relative pb-16 sm:pb-20">
+        <RaceHeader event={result.event} back={{ href: `/results/${result.event.slug}/full`, label: 'Back to the Leaderboard' }} />
+        <div className="pb-6 sm:pb-8">
+          {/* Wide enough that the four analytics tiles each get a real column
+              instead of squeezing their labels onto two lines. */}
+          <div className="max-w-5xl mx-auto">
+            {/* Finisher Profile Card. The padding steps down on a phone: 32px a
+                side there left the analytics tiles too narrow for their own
+                labels. */}
+            <div className="relative rounded-panel sm:rounded-panel bg-site-card border border-site-line p-4 min-[360px]:p-5 sm:p-8 md:p-12 mb-8 sm:mb-12 overflow-hidden">
+              
+              <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 md:gap-8 mb-6 sm:mb-10 border-b border-site-line pb-6 sm:pb-10">
+                {/* min-w-0 lets this column give way to the time panel instead of
+                    holding itself open and squeezing the badges into a ragged second
+                    row. The name sizes below are set so that even at 768 — where the
+                    column is at its narrowest, about 300px — no word has to break in
+                    half. */}
+                <div className="w-full md:flex-1 md:min-w-0">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-secondary mb-4 sm:mb-5">
+                    {finished ? (
+                      <span className="bg-site-surface text-site-accent border border-site-line px-3 py-1.5 rounded-chip text-xs font-bold flex items-center gap-1.5 whitespace-nowrap">
+                        <CheckCircle2 size={14} className="shrink-0" /> Finisher
+                      </span>
+                    ) : (
+                      <span className="bg-site-surface text-secondary border border-site-line px-3 py-1.5 rounded-chip text-xs font-bold whitespace-nowrap">
+                        {statusWord}
+                      </span>
+                    )}
+                    {isPacer && (
+                      <span className="bg-site-surface text-site-accent border border-site-action px-3 py-1.5 rounded-chip text-xs font-bold whitespace-nowrap">
+                        Pacer
+                      </span>
+                    )}
+                    {/* An organizer names their own categories, so this one is the
+                        unpredictable label: it keeps to a single line and truncates
+                        rather than wrapping inside its pill — the full name is spelled
+                        out again under Overall Rank below. */}
+                    <span className="bg-site-surface border border-site-line px-3 py-1.5 rounded-chip text-xs font-bold text-site-ink whitespace-nowrap truncate max-w-full" title={result.category.name}>
+                      {result.category.name}
                     </span>
-                  ) : (
-                    <span className="bg-site-surface text-secondary border border-site-line px-3 py-1.5 rounded-chip text-xs font-bold whitespace-nowrap">
-                      {statusWord}
-                    </span>
-                  )}
-                  {isPacer && (
-                    <span className="bg-site-surface text-site-accent border border-site-action px-3 py-1.5 rounded-chip text-xs font-bold whitespace-nowrap">
-                      Pacer
-                    </span>
-                  )}
-                  {/* An organizer names their own categories, so this one is the
-                      unpredictable label: it keeps to a single line and truncates
-                      rather than wrapping inside its pill — the full name is spelled
-                      out again under Overall Rank below. */}
-                  <span className="bg-site-surface border border-site-line px-3 py-1.5 rounded-chip text-xs font-bold text-site-ink whitespace-nowrap truncate max-w-full" title={result.category.name}>
-                    {result.category.name}
-                  </span>
-                  <span className="flex items-center gap-1.5 text-sm bg-site-card px-3 py-1.5 rounded-chip border border-site-line whitespace-nowrap"><Hash size={14} className="text-secondary shrink-0" /> {result.bibNumber}</span>
-                  <span className="flex items-center gap-1.5 text-sm bg-site-card px-3 py-1.5 rounded-chip border border-site-line whitespace-nowrap"><User size={14} className="text-secondary shrink-0" /> {genderWord}</span>
-                </div>
-                
-                <h1 className={`${nameScale} site-h1 leading-[1.05] text-balance break-words`}>
-                  {result.name}
-                </h1>
-              </div>
-
-              {/* Huge Chip Time display — shrink-0 with a floor on its width, so
-                  the time sits in the same place at the same size on every
-                  runner's card no matter how long the name beside it is. */}
-              <div className="shrink-0 text-center w-full md:w-auto md:min-w-[17rem] bg-site-card border border-site-line px-5 sm:px-6 py-4 sm:py-5 rounded-panel sm:rounded-panel">
-                <div className="text-site-muted text-sm mb-2 font-semibold flex items-center justify-center gap-2">
-                  <Timer size={14} className="text-site-accent shrink-0" /> Official Chip Time
-                </div>
-                <div className="text-[clamp(2.75rem,7.5vw,4.5rem)] leading-[1.1] font-mono font-semibold text-site-ink tracking-tighter tabular-nums">
-                  {toWholeSeconds(result.chipTime)}
-                </div>
-                {result.gunTime && (
-                  <div className="text-xs text-site-muted font-mono mt-2">
-                    Gun Time: {toWholeSeconds(result.gunTime)}
+                    <span className="flex items-center gap-1.5 text-sm bg-site-card px-3 py-1.5 rounded-chip border border-site-line whitespace-nowrap"><Hash size={14} className="text-secondary shrink-0" /> {result.bibNumber}</span>
+                    <span className="flex items-center gap-1.5 text-sm bg-site-card px-3 py-1.5 rounded-chip border border-site-line whitespace-nowrap"><User size={14} className="text-secondary shrink-0" /> {genderWord}</span>
                   </div>
-                )}
+                  
+                  <h1 className={`${nameScale} site-h1 leading-[1.05] text-balance break-words`}>
+                    {result.name}
+                  </h1>
+                </div>
+
+                {/* Huge Chip Time display — shrink-0 with a floor on its width, so
+                    the time sits in the same place at the same size on every
+                    runner's card no matter how long the name beside it is. */}
+                <div className="shrink-0 text-center w-full md:w-auto md:min-w-[17rem] bg-site-card border border-site-line px-5 sm:px-6 py-4 sm:py-5 rounded-panel sm:rounded-panel">
+                  <div className="text-site-muted text-sm mb-2 font-semibold flex items-center justify-center gap-2">
+                    <Timer size={14} className="text-site-accent shrink-0" /> Official Chip Time
+                  </div>
+                  <div className="text-[clamp(2.75rem,7.5vw,4.5rem)] leading-[1.1] font-mono font-semibold text-site-ink tracking-tighter tabular-nums">
+                    {toWholeSeconds(result.chipTime)}
+                  </div>
+                  {result.gunTime && (
+                    <div className="text-xs text-site-muted font-mono mt-2">
+                      Gun Time: {toWholeSeconds(result.gunTime)}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Detailed Analytics Grid */}
+              {/* Four across from 860px, the width at which each tile is finally wide
+                  enough to hold "Overall Rank" on one line; below that, two roomy
+                  columns read better than four cramped ones. */}
+              <div className="grid grid-cols-2 min-[860px]:grid-cols-4 gap-3 sm:gap-4 md:gap-6 relative z-10">
+                {/* Overall Rank */}
+                <div className="bg-site-surface border border-site-line p-3.5 sm:p-5 rounded-panel sm:rounded-panel cursor-default">
+                  <div className="text-secondary text-[11px] tracking-wide mb-2 sm:mb-3 font-medium flex items-center gap-1 min-[360px]:gap-1.5 sm:gap-2 whitespace-nowrap">
+                    <Trophy size={14} className="text-site-accent" /> Overall Rank
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-bold text-site-ink mb-1 flex items-baseline gap-2">
+                    {formatRank(ranks.categoryRank)}
+                    {(ranks.categoryRank ?? 0) > 0 && (
+                      <span className="text-sm font-normal text-site-muted font-mono">/ {totalInCategory}</span>
+                    )}
+                  </div>
+                  <div className="text-xs text-site-muted break-words">in {result.category.name}</div>
+                </div>
+
+                {/* Gender Rank */}
+                <div className="bg-site-surface border border-site-line p-3.5 sm:p-5 rounded-panel sm:rounded-panel cursor-default">
+                  <div className="text-secondary text-[11px] tracking-wide mb-2 sm:mb-3 font-medium flex items-center gap-1 min-[360px]:gap-1.5 sm:gap-2 whitespace-nowrap">
+                    <Medal size={14} className="text-site-accent" /> Gender Rank
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-bold text-site-ink mb-1 flex items-baseline gap-2">
+                    {formatRank(ranks.genderRank)}
+                    {(ranks.genderRank ?? 0) > 0 && (
+                      <span className="text-sm font-normal text-site-muted font-mono">/ {totalInGender}</span>
+                    )}
+                  </div>
+                  <div className="text-xs text-site-muted">in {genderWord} division</div>
+                </div>
+
+                {/* Average Pace */}
+                <div className="bg-site-surface border border-site-line p-3.5 sm:p-5 rounded-panel sm:rounded-panel cursor-default relative overflow-hidden">
+                                  <div className="text-secondary text-[11px] tracking-wide mb-2 sm:mb-3 font-medium flex items-center gap-1 min-[360px]:gap-1.5 sm:gap-2 whitespace-nowrap relative z-10">
+                    <Activity size={14} className="text-[var(--status-success)]" /> Average Pace
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-mono font-bold text-site-ink mb-1 relative z-10">
+                    {averagePace}
+                  </div>
+                  <div className="text-xs text-site-muted relative z-10 font-mono">min/km</div>
+                </div>
+
+                {/* Estimated Speed */}
+                <div className="bg-site-surface border border-site-line p-3.5 sm:p-5 rounded-panel sm:rounded-panel cursor-default relative overflow-hidden">
+                                  <div className="text-secondary text-[11px] tracking-wide mb-2 sm:mb-3 font-medium flex items-center gap-1 min-[360px]:gap-1.5 sm:gap-2 whitespace-nowrap relative z-10">
+                    <Zap size={14} className="text-[var(--status-warning)]" /> Average Speed
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-mono font-bold text-site-ink mb-1 relative z-10">
+                    {speedKmH}
+                  </div>
+                  <div className="text-xs text-site-muted relative z-10 font-mono">km/h</div>
+                </div>
               </div>
             </div>
 
-            {/* Detailed Analytics Grid */}
-            {/* Four across from 860px, the width at which each tile is finally wide
-                enough to hold "Overall Rank" on one line; below that, two roomy
-                columns read better than four cramped ones. */}
-            <div className="grid grid-cols-2 min-[860px]:grid-cols-4 gap-3 sm:gap-4 md:gap-6 relative z-10">
-              {/* Overall Rank */}
-              <div className="bg-site-surface border border-site-line p-3.5 sm:p-5 rounded-panel sm:rounded-panel cursor-default">
-                <div className="text-secondary text-[11px] tracking-wide mb-2 sm:mb-3 font-medium flex items-center gap-1 min-[360px]:gap-1.5 sm:gap-2 whitespace-nowrap">
-                  <Trophy size={14} className="text-site-accent" /> Overall Rank
-                </div>
-                <div className="text-2xl sm:text-3xl font-bold text-site-ink mb-1 flex items-baseline gap-2">
-                  {formatRank(ranks.categoryRank)}
-                  {(ranks.categoryRank ?? 0) > 0 && (
-                    <span className="text-sm font-normal text-site-muted font-mono">/ {totalInCategory}</span>
-                  )}
-                </div>
-                <div className="text-xs text-site-muted break-words">in {result.category.name}</div>
-              </div>
+            {/* Certificate Generator, for a finisher only. */}
+            {finished && <React.Suspense fallback={<div className="p-8 text-center text-secondary">Loading certificate...</div>}>
+              <ECertificateGenerator
+                result={{ ...result, categoryRank: ranks.categoryRank, genderRank: ranks.genderRank, isPacer, paceGroup: ranks.paceGroup }}
+                event={result.event}
+              />
+            </React.Suspense>}
 
-              {/* Gender Rank */}
-              <div className="bg-site-surface border border-site-line p-3.5 sm:p-5 rounded-panel sm:rounded-panel cursor-default">
-                <div className="text-secondary text-[11px] tracking-wide mb-2 sm:mb-3 font-medium flex items-center gap-1 min-[360px]:gap-1.5 sm:gap-2 whitespace-nowrap">
-                  <Medal size={14} className="text-site-accent" /> Gender Rank
-                </div>
-                <div className="text-2xl sm:text-3xl font-bold text-site-ink mb-1 flex items-baseline gap-2">
-                  {formatRank(ranks.genderRank)}
-                  {(ranks.genderRank ?? 0) > 0 && (
-                    <span className="text-sm font-normal text-site-muted font-mono">/ {totalInGender}</span>
-                  )}
-                </div>
-                <div className="text-xs text-site-muted">in {genderWord} division</div>
-              </div>
-
-              {/* Average Pace */}
-              <div className="bg-site-surface border border-site-line p-3.5 sm:p-5 rounded-panel sm:rounded-panel cursor-default relative overflow-hidden">
-                                <div className="text-secondary text-[11px] tracking-wide mb-2 sm:mb-3 font-medium flex items-center gap-1 min-[360px]:gap-1.5 sm:gap-2 whitespace-nowrap relative z-10">
-                  <Activity size={14} className="text-[var(--status-success)]" /> Average Pace
-                </div>
-                <div className="text-2xl sm:text-3xl font-mono font-bold text-site-ink mb-1 relative z-10">
-                  {averagePace}
-                </div>
-                <div className="text-xs text-site-muted relative z-10 font-mono">min/km</div>
-              </div>
-
-              {/* Estimated Speed */}
-              <div className="bg-site-surface border border-site-line p-3.5 sm:p-5 rounded-panel sm:rounded-panel cursor-default relative overflow-hidden">
-                                <div className="text-secondary text-[11px] tracking-wide mb-2 sm:mb-3 font-medium flex items-center gap-1 min-[360px]:gap-1.5 sm:gap-2 whitespace-nowrap relative z-10">
-                  <Zap size={14} className="text-[var(--status-warning)]" /> Average Speed
-                </div>
-                <div className="text-2xl sm:text-3xl font-mono font-bold text-site-ink mb-1 relative z-10">
-                  {speedKmH}
-                </div>
-                <div className="text-xs text-site-muted relative z-10 font-mono">km/h</div>
-              </div>
-            </div>
           </div>
-
-          {/* Certificate Generator, for a finisher only. */}
-          {finished && <React.Suspense fallback={<div className="p-8 text-center text-secondary">Loading certificate...</div>}>
-            <ECertificateGenerator
-              result={{ ...result, categoryRank: ranks.categoryRank, genderRank: ranks.genderRank, isPacer, paceGroup: ranks.paceGroup }}
-              event={result.event}
-            />
-          </React.Suspense>}
-
         </div>
       </div>
-    </div>
+    </PageReveal>
   );
 }

@@ -788,7 +788,8 @@
     `events/[slug]/` and `results/[slug]/` catch moving within one (event page
     → wizard, winners → leaderboard → a runner's result) — a fallback shows
     only when the segment *directly* under it changes. It fades in after
-    120ms, so a prefetched page never flashes it, and after
+    120ms, so a prefetched page never flashes it, fades out as the page
+    arrives (the page transition, below), and after
     `--runner-slow-after` (5s) its caption swaps to "Still loading, hang
     tight" through the text-swap motion (`slowCaption` on `RunnerLoader`,
     timed in CSS so the fallback stays hook-free) — a long wait is explained,
@@ -911,6 +912,45 @@
   `skills/` on a new machine.) On public pages, `design-taste-frontend`'s motion
   rules win: no card tilt, no scroll-triggered reveals, and on Paper no entrance
   but the hero's (see "The public site is Paper").
+- **Page transitions on the public site are React's `<ViewTransition>`**
+  (owner, 2026-11-24; no animation library — `design-taste-frontend` allows
+  none on a site of kind *other*, and its GSAP / Lenis are out). On a client
+  navigation the page being left fades out (150ms) and the page arriving
+  fades in after it (250ms) while rising 8px (400ms, `--ease-smooth-out`):
+  `site-page-out` / `site-page-in`, "Page transitions" in `site.css`, which
+  also carries the reduced-motion rule (no transition at all). A first load
+  served whole has none, so the hero's `data-enter` stays the only entrance
+  there; a first load that streams through a `loading.tsx` screen gets the
+  same loading-to-page hand-off as a navigation.
+  Three places carry it, and a new public page needs the first:
+  - **`components/PageReveal`** wraps the tree every public `page.tsx`
+    returns (each `return`, placed before any DOM node, never in a layout —
+    a layout persists, so its enter and exit never fire). `default="none"`
+    keeps it still on a tab switch, a filter or a refresh.
+  - **`SiteFrame`** carries the same boundary, because every layout draws its
+    own frame: moving between two layouts (`/events` → the wizard, `/track` →
+    `/contact`) replaces the whole frame, and a page's `PageReveal` sits under
+    the frame's markup, where React will not enter or exit it. The navbar is
+    pinned out of that fade (`view-transition-name: site-nav`), so only the
+    page and footer move.
+  - **`PublicRouteLoading`** exits the same way, so a loading screen hands
+    over to the page instead of cutting to it.
+  The root is drawn live (`::view-transition-old(root)` hidden), so nothing
+  outside a boundary cross-fades and the overlay never blocks a click. A
+  browser without view transitions, or a hidden tab, just swaps the page.
+  Reference: the project skill `vercel-react-view-transitions`.
+- **The scroll moment is `StatementHighlight`** (`design-taste-frontend`'s
+  `word-highlight`, dealt for the home page, owner 2026-11-24): one large
+  statement whose words turn from a resting 62% ink (4.8:1, readable before
+  it lights) to ink as it crosses the screen, the `{ strong }` words to the
+  accent text; scrubbed both ways, all ink at the foot of the page, all ink
+  without script or under reduced motion (`.site-statement*` in site.css). It
+  is the only thing on a Paper page that moves because of the scroll, in a
+  section of its own (`RaceDayStatement` on `/`, between the open races and
+  Recently Held), never in a card. One per page — two only on a page of
+  eight sections or more — and a new one is dealt by the skill
+  (`moments.mjs pick --page service`), not picked by taste. Its words are
+  things the site really does.
 - **The public site is "Paper"** (the 2026-11-21 redesign, `design-taste-frontend`
   leading). A warm off-white ground (`#f6f3ee`), navy ink (`#14192b`), **one
   solid orange action** (`#c2530a`, 4.6:1 under white text), Archivo for

@@ -10,6 +10,7 @@ import { canonicalResultsPath, eventByParam } from '@/lib/event-slug';
 import { withPacerRanks } from '@/lib/pacer-store';
 import { genderDivision } from '@/lib/gender-division';
 import { EVENT_SITE_CLIENT, ensureEventSite, eventPageMetadata } from '@/lib/site-client';
+import PageReveal from '@/components/PageReveal';
 
 /**
  * Cached per site and address for at most a minute, and dropped by any write
@@ -76,15 +77,17 @@ export default async function FullResultsPage({
   const tagged = ranked.map(result => ({ ...result, gender: genderDivision(result.gender) }));
 
   return (
-    <div className="site-wrap pb-16 md:pb-20">
-      <RaceHeader event={event} back={{ href: `/results/${event.slug}`, label: 'Race Winners' }} title="Full Leaderboard" />
-      <div className="w-full">
+    <PageReveal>
+      <div className="site-wrap pb-16 md:pb-20">
+        <RaceHeader event={event} back={{ href: `/results/${event.slug}`, label: 'Race Winners' }} title="Full Leaderboard" />
         <div className="w-full">
-          <Suspense fallback={<div className="py-12 text-center text-site-muted">Loading results…</div>}>
-            <FullResultsClient results={tagged} event={event} />
-          </Suspense>
+          <div className="w-full">
+            <Suspense fallback={<div className="py-12 text-center text-site-muted">Loading results…</div>}>
+              <FullResultsClient results={tagged} event={event} />
+            </Suspense>
+          </div>
         </div>
       </div>
-    </div>
+    </PageReveal>
   );
 }

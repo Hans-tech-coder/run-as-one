@@ -5,6 +5,7 @@ import { SITE_NAME, supportMailto } from '@/lib/site-contact';
 import { getContactEmail } from '@/lib/site-settings';
 import { requestSiteClient } from '@/lib/site-client';
 import { contactRaces } from '@/lib/contact-races';
+import PageReveal from '@/components/PageReveal';
 
 export const metadata: Metadata = {
   title: `Contact Us | ${SITE_NAME}`,
@@ -31,27 +32,29 @@ export default async function ContactPage() {
   const races = await contactRaces(site?.id ?? null);
 
   return (
-    <section className="site-section site-wrap">
-      <div className="feedback-layout">
-        <header className="feedback-layout__intro" data-enter>
-          <p className="m-0 mb-4 text-[0.9375rem] font-semibold text-site-accent">Questions and Inquiries</p>
-          <h1 className="site-h1">Contact Us</h1>
-          <p className="site-lead">
-            Ask about a registration, a payment, your race kit, results, or
-            having us run your race. A real person reads every message and
-            replies to the email you leave.
-          </p>
+    <PageReveal>
+      <section className="site-section site-wrap">
+        <div className="feedback-layout">
+          <header className="feedback-layout__intro" data-enter>
+            <p className="m-0 mb-4 text-[0.9375rem] font-semibold text-site-accent">Questions and Inquiries</p>
+            <h1 className="site-h1">Contact Us</h1>
+            <p className="site-lead">
+              Ask about a registration, a payment, your race kit, results, or
+              having us run your race. A real person reads every message and
+              replies to the email you leave.
+            </p>
 
-          <p className="m-0 mt-6 text-[0.9375rem] leading-relaxed text-site-muted">
-            Rather write an email?{' '}
-            <a href={supportMailto(contactEmail)} className="site-link [overflow-wrap:anywhere]">
-              {contactEmail}
-            </a>
-          </p>
-        </header>
+            <p className="m-0 mt-6 text-[0.9375rem] leading-relaxed text-site-muted">
+              Rather write an email?{' '}
+              <a href={supportMailto(contactEmail)} className="site-link [overflow-wrap:anywhere]">
+                {contactEmail}
+              </a>
+            </p>
+          </header>
 
-        <ContactForm races={races} contactEmail={contactEmail} />
-      </div>
-    </section>
+          <ContactForm races={races} contactEmail={contactEmail} />
+        </div>
+      </section>
+    </PageReveal>
   );
 }

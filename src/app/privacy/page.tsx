@@ -4,6 +4,7 @@ import { ShieldCheck } from 'lucide-react';
 import LegalPage, { type LegalSection } from '@/components/LegalPage';
 import { SITE_NAME } from '@/lib/site-contact';
 import { getContactEmail } from '@/lib/site-settings';
+import PageReveal from '@/components/PageReveal';
 
 export const metadata: Metadata = {
   title: `Privacy Policy | ${SITE_NAME}`,
@@ -127,13 +128,15 @@ export default async function PrivacyPage() {
   const contactEmail = await getContactEmail();
 
   return (
-    <LegalPage
-      eyebrow="Data Privacy Act of 2012"
-      title="Privacy Policy"
-      intro="What we collect when you register for a race, why each field exists, who gets to see it, and how to get it corrected or removed."
-      icon={<ShieldCheck size={20} aria-hidden="true" />}
-      sections={sections(contactEmail)}
-      contactEmail={contactEmail}
-    />
+    <PageReveal>
+      <LegalPage
+        eyebrow="Data Privacy Act of 2012"
+        title="Privacy Policy"
+        intro="What we collect when you register for a race, why each field exists, who gets to see it, and how to get it corrected or removed."
+        icon={<ShieldCheck size={20} aria-hidden="true" />}
+        sections={sections(contactEmail)}
+        contactEmail={contactEmail}
+      />
+    </PageReveal>
   );
 }

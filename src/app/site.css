@@ -263,6 +263,104 @@ button.site-link:disabled { opacity: 0.5; cursor: not-allowed; }
   from { opacity: 0; transform: translateY(14px); }
 }
 
+/* ── The statement: the page's one scroll moment ──────────────
+   `StatementHighlight` (design-taste-frontend's word-highlight). Large type on
+   the page's own ground, no card. Each word rests at 62% ink (4.8:1 on the
+   ground, so it is read before it lights) and turns to ink as the scroll
+   reaches it; the strong words turn to the accent text instead. The grey
+   is only drawn once the script is live (`.is-live`), so without script or
+   under reduced motion the statement is ink throughout. */
+.site-statement {
+  padding-block: clamp(4rem, 3rem + 6vw, 8.5rem);
+}
+.site-statement__label {
+  margin: 0 0 1.25rem;
+  font-family: var(--site-text);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--site-muted);
+}
+.site-statement__text {
+  margin: 0;
+  max-width: 24ch;
+  font-family: var(--site-display);
+  font-stretch: var(--site-display-stretch);
+  font-weight: 500;
+  font-size: clamp(2rem, 1.3rem + 3vw, 3.75rem);
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+  color: var(--site-ink);
+  text-wrap: pretty;
+}
+.site-statement__text strong { font-weight: inherit; color: var(--site-accent-text); }
+.site-statement__text.is-live .site-statement__word {
+  color: color-mix(in srgb, var(--site-ink) 62%, var(--site-bg));
+  transition: color 160ms ease;
+}
+.site-statement__text.is-live .site-statement__word.is-on { color: var(--site-ink); }
+.site-statement__text.is-live strong .site-statement__word.is-on { color: var(--site-accent-text); }
+@media (prefers-reduced-motion: reduce) {
+  .site-statement__text.is-live .site-statement__word { color: inherit; transition: none; }
+}
+
+/* ── Page transitions: a client navigation and a loading reveal ──
+   `PageReveal` (React's <ViewTransition>) wraps every public page. The page
+   being left fades out fast, so it never competes with the one arriving;
+   the new page waits for it, then fades in and rises a few pixels on the
+   site's smooth-out ease. The loading figure leaves the same way
+   (`PublicRouteLoading`). A first load served whole has none — that is the
+   hero's own entrance above — since a reveal runs only inside a navigation
+   or a Suspense reveal (a first load that streams through a loading screen
+   gets the hand-off, nothing more).
+
+   The root is drawn live rather than cross-faded: the navbar and footer stay
+   put and keep answering the pointer, and nothing under the overlay is
+   blocked from a click. Reduced motion: no transition at all. */
+:root {
+  --page-out-dur: var(--duration-quick);   /* 150ms */
+  --page-in-dur: var(--duration-fast);     /* 250ms */
+  --page-move-dur: var(--duration-slow);   /* 400ms */
+  --page-rise: 8px;
+}
+::view-transition { pointer-events: none; }
+::view-transition-old(root) { display: none; }
+::view-transition-new(root) { animation: none; }
+
+/* The navbar is pinned: a move between two layouts replaces the whole frame
+   (SiteFrame), and the bar is the same on both sides, so it is drawn live on
+   top instead of fading out and back in with the page. */
+.site-nav { view-transition-name: site-nav; }
+::view-transition-group(site-nav) { animation: none; z-index: 100; }
+::view-transition-old(site-nav) { display: none; }
+::view-transition-new(site-nav) { animation: none; }
+
+::view-transition-old(.site-page-out) {
+  animation: site-page-fade var(--page-out-dur) ease-out both reverse;
+}
+::view-transition-new(.site-page-in) {
+  animation:
+    site-page-fade var(--page-in-dur) ease-out var(--page-out-dur) both,
+    site-page-rise var(--page-move-dur) var(--ease-smooth-out) both;
+}
+@keyframes site-page-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes site-page-rise {
+  from { transform: translateY(var(--page-rise)); }
+  to { transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+}
+
 /* ── The event card ───────────────────────────────────────────
    The poster whole on top (organizers' banners carry their own title, so
    nothing is printed over them), the facts on the card under it. The frame is

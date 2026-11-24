@@ -14,6 +14,7 @@ import { CATEGORY_ORDER, RACE_DISTANCE_CATEGORIES } from '@/lib/category-order';
 import { pacerResultMatcherForEvent } from '@/lib/pacer-store';
 import { genderDivision } from '@/lib/gender-division';
 import { EVENT_SITE_CLIENT, ensureEventSite, eventPageMetadata } from '@/lib/site-client';
+import PageReveal from '@/components/PageReveal';
 
 type Winner = { id: string; name: string; bibNumber: string; chipTime: string };
 
@@ -171,73 +172,75 @@ export default async function WinnersOverviewPage({
       : 'Top 3 male and female finishers by category. Open the full leaderboard to search by name or bib.';
 
   return (
-    <div className="site-wrap">
-      {/* Every results link lands here first, though most visitors want their
-          own time and e-certificate rather than the podium — so the lead says
-          both what this board shows and where to search by name or bib, right
-          above the leaderboard button and the race's photo albums (D7). */}
-      <RaceHeader event={event} back={{ href: '/results', label: 'All Results' }} title="Race Winners" lead={lead}>
-        <Link href={fullHref} className="site-btn site-btn--action group">
-          See the Full Leaderboard
-          <LinkPendingIcon>
-            <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
-          </LinkPendingIcon>
-        </Link>
-        <RacePhotoLinks albums={event.photoAlbums} align="start" />
-      </RaceHeader>
+    <PageReveal>
+      <div className="site-wrap">
+        {/* Every results link lands here first, though most visitors want their
+            own time and e-certificate rather than the podium — so the lead says
+            both what this board shows and where to search by name or bib, right
+            above the leaderboard button and the race's photo albums (D7). */}
+        <RaceHeader event={event} back={{ href: '/results', label: 'All Results' }} title="Race Winners" lead={lead}>
+          <Link href={fullHref} className="site-btn site-btn--action group">
+            See the Full Leaderboard
+            <LinkPendingIcon>
+              <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
+            </LinkPendingIcon>
+          </Link>
+          <RacePhotoLinks albums={event.photoAlbums} align="start" />
+        </RaceHeader>
 
-      <div className="winners-board">
-        {winnersByCategory.length === 0 ? (
-          <div className="winners-category">
-            <p className="winners-empty px-0">No results recorded yet.</p>
-          </div>
-        ) : (
-          <>
-            {winnersByCategory.map(cat => {
-              const distanceLabel = cat.distance || cat.name;
-              const linkText =
-                cat.finisherCount > 0
-                  ? `All ${distanceLabel} Finishers (${cat.finisherCount.toLocaleString()})`
-                  : `All ${distanceLabel} Finishers`;
-              return (
-                <section key={cat.id} className="winners-category" aria-labelledby={`winners-${cat.id}`}>
-                  <div className="winners-category__head">
-                    <h2 id={`winners-${cat.id}`} className="winners-category__title">
-                      {/* A package has no distance, so the parenthetical would read "( )". */}
-                      {cat.name}{cat.distance ? ` (${cat.distance})` : ''} Winners
-                    </h2>
-                    <Link href={`${fullHref}?category=${cat.id}`} className="site-link site-link--arrow shrink-0 text-[0.9375rem]">
-                      <span>{linkText}</span>
-                      <LinkPendingIcon>
-                        <ArrowRight size={16} />
-                      </LinkPendingIcon>
-                    </Link>
-                  </div>
+        <div className="winners-board">
+          {winnersByCategory.length === 0 ? (
+            <div className="winners-category">
+              <p className="winners-empty px-0">No results recorded yet.</p>
+            </div>
+          ) : (
+            <>
+              {winnersByCategory.map(cat => {
+                const distanceLabel = cat.distance || cat.name;
+                const linkText =
+                  cat.finisherCount > 0
+                    ? `All ${distanceLabel} Finishers (${cat.finisherCount.toLocaleString()})`
+                    : `All ${distanceLabel} Finishers`;
+                return (
+                  <section key={cat.id} className="winners-category" aria-labelledby={`winners-${cat.id}`}>
+                    <div className="winners-category__head">
+                      <h2 id={`winners-${cat.id}`} className="winners-category__title">
+                        {/* A package has no distance, so the parenthetical would read "( )". */}
+                        {cat.name}{cat.distance ? ` (${cat.distance})` : ''} Winners
+                      </h2>
+                      <Link href={`${fullHref}?category=${cat.id}`} className="site-link site-link--arrow shrink-0 text-[0.9375rem]">
+                        <span>{linkText}</span>
+                        <LinkPendingIcon>
+                          <ArrowRight size={16} />
+                        </LinkPendingIcon>
+                      </Link>
+                    </div>
 
-                  <div className="winners-grid">
-                    <DivisionPanel title="Male" winners={cat.winners.Male} hrefFor={hrefFor} />
-                    <DivisionPanel title="Female" winners={cat.winners.Female} hrefFor={hrefFor} />
-                  </div>
-                </section>
-              );
-            })}
+                    <div className="winners-grid">
+                      <DivisionPanel title="Male" winners={cat.winners.Male} hrefFor={hrefFor} />
+                      <DivisionPanel title="Female" winners={cat.winners.Female} hrefFor={hrefFor} />
+                    </div>
+                  </section>
+                );
+              })}
 
-            {totalFinishers > 0 && (
-              <div className="winners-foot">
-                <p className="m-0 text-[0.9375rem] text-site-muted">
-                  Looking for your own finish time or e-certificate?
-                </p>
-                <Link href={fullHref} className="site-link site-link--arrow shrink-0 text-[0.9375rem]">
-                  <span>Search the Full Leaderboard</span>
-                  <LinkPendingIcon>
-                    <ArrowRight size={16} />
-                  </LinkPendingIcon>
-                </Link>
-              </div>
-            )}
-          </>
-        )}
+              {totalFinishers > 0 && (
+                <div className="winners-foot">
+                  <p className="m-0 text-[0.9375rem] text-site-muted">
+                    Looking for your own finish time or e-certificate?
+                  </p>
+                  <Link href={fullHref} className="site-link site-link--arrow shrink-0 text-[0.9375rem]">
+                    <span>Search the Full Leaderboard</span>
+                    <LinkPendingIcon>
+                      <ArrowRight size={16} />
+                    </LinkPendingIcon>
+                  </Link>
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
-    </div>
+    </PageReveal>
   );
 }

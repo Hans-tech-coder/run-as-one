@@ -9,6 +9,7 @@ import { mostRecentFirst } from '@/lib/event-schedule';
 import { EVENT_SITE_CLIENT, eventLinkOrigin, getSiteClient } from '@/lib/site-client';
 import { pastWithoutResultsWhere } from '@/lib/past-events';
 import { PAST_EVENTS_HREF } from '../events/events-view';
+import PageReveal from '@/components/PageReveal';
 
 /**
  * Cached per site for at most a minute, like the two event listings (the full
@@ -63,40 +64,42 @@ export default async function GlobalResultsPage({ params }: { params: Promise<{ 
   const events = rows.map(({ client, ...event }) => ({ ...event, siteOrigin: linkOrigin({ client }) }));
 
   return (
-    <section className="site-section site-wrap" aria-labelledby="results-title">
-      <div className="site-section__head">
-        <div>
-          <h1 id="results-title" className="site-h1">Race Results</h1>
-          <p className="site-section__sub max-w-[60ch]">
-            {site
-              ? `Official times from every ${site.name} race. Open one for the winners, the full leaderboard and your e-certificate.`
-              : 'Official times from every race with results. Open one for the winners, the full leaderboard and your e-certificate.'}
-          </p>
-        </div>
-      </div>
-
-      {events.length === 0 ? (
-        <NoResultsYet hasPastEvents={pastWithoutResults > 0} />
-      ) : (
-        <>
-          {/* Same card as /events, so an event looks like itself whether it
-              is open for registration or already run — only the button
-              changes. */}
-          <EventGrid events={events} action="results" eagerCount={4} />
-          {/* One quiet line rather than a button: it is for the runner who
-              did not find their race above, not a second thing to do. */}
-          {pastWithoutResults > 0 && (
-            <p className="m-0 mt-6 text-center text-[0.9375rem] text-site-muted">
-              Looking for a race without timed results?{' '}
-              <Link href={PAST_EVENTS_HREF} className="site-link site-link--arrow">
-                <span>See Past Races</span>
-                <ArrowRight size={16} aria-hidden="true" className="shrink-0" />
-              </Link>
+    <PageReveal>
+      <section className="site-section site-wrap" aria-labelledby="results-title">
+        <div className="site-section__head">
+          <div>
+            <h1 id="results-title" className="site-h1">Race Results</h1>
+            <p className="site-section__sub max-w-[60ch]">
+              {site
+                ? `Official times from every ${site.name} race. Open one for the winners, the full leaderboard and your e-certificate.`
+                : 'Official times from every race with results. Open one for the winners, the full leaderboard and your e-certificate.'}
             </p>
-          )}
-        </>
-      )}
-    </section>
+          </div>
+        </div>
+
+        {events.length === 0 ? (
+          <NoResultsYet hasPastEvents={pastWithoutResults > 0} />
+        ) : (
+          <>
+            {/* Same card as /events, so an event looks like itself whether it
+                is open for registration or already run — only the button
+                changes. */}
+            <EventGrid events={events} action="results" eagerCount={4} />
+            {/* One quiet line rather than a button: it is for the runner who
+                did not find their race above, not a second thing to do. */}
+            {pastWithoutResults > 0 && (
+              <p className="m-0 mt-6 text-center text-[0.9375rem] text-site-muted">
+                Looking for a race without timed results?{' '}
+                <Link href={PAST_EVENTS_HREF} className="site-link site-link--arrow">
+                  <span>See Past Races</span>
+                  <ArrowRight size={16} aria-hidden="true" className="shrink-0" />
+                </Link>
+              </p>
+            )}
+          </>
+        )}
+      </section>
+    </PageReveal>
   );
 }
 
