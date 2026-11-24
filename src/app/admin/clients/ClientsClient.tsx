@@ -335,7 +335,7 @@ export default function ClientsClient() {
                 isLoading ? (
                   <AdminCardListSkeleton cards={3} fields={3} className="is-flush" />
                 ) : (
-                  <div className="border border-[var(--dash-border)] rounded-lg py-16 px-4 text-center text-[var(--text-muted)]">
+                  <div className="border border-[var(--dash-border)] rounded-panel py-16 px-4 text-center text-[var(--text-muted)]">
                     {emptyMessage}
                   </div>
                 )

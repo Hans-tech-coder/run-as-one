@@ -174,7 +174,7 @@ export default async function EventDetails({ site, slug, staff }: { site: string
       {access.preview && (
         <p
           role="status"
-          className="mt-6 mb-0 rounded-[10px] border border-[var(--status-warning)] px-5 py-3 text-sm font-medium text-[var(--status-warning)]"
+          className="mt-6 mb-0 rounded-control border border-[var(--status-warning)] px-5 py-3 text-sm font-medium text-[var(--status-warning)]"
         >
           Preview. {describePublish(event)} Runners cannot open or register for it yet.
         </p>
@@ -189,7 +189,7 @@ export default async function EventDetails({ site, slug, staff }: { site: string
       <div className="grid grid-cols-1 gap-8 pb-16 lg:grid-cols-12 lg:gap-10 md:pb-20">
         <div className="lg:col-span-7 xl:col-span-8">
           {event.imageUrl?.trim() && (
-            <div className="overflow-hidden rounded-[14px] bg-site-surface">
+            <div className="overflow-hidden rounded-panel bg-site-surface">
               {/* Whole, never cropped or written over: the banner carries the
                   race's own name and sponsors. */}
               <img src={event.imageUrl} alt={`${event.title} poster`} className="block h-auto w-full" />

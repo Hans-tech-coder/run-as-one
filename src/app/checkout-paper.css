@@ -175,7 +175,7 @@ body:has(.site-checkout) [class*="backdrop-blur"] {
 /* ── The panels ──────────────────────────────────────────────
    `.glass-panel` is already a flat card on Paper (site.css); the wizard's
    rounded-3xl gives it the event page's 14px. */
-.site-checkout .glass-panel { border-radius: 14px; border-color: var(--site-line); }
+.site-checkout .glass-panel { border-radius: var(--radius-panel); border-color: var(--site-line); }
 
 /* A step's heading takes focus when the step changes, so a screen reader
    reads the new step's name (useStepReveal). It is not a control, and the
@@ -285,7 +285,7 @@ body:has(.site-checkout) .bg-\[\#0d0d0f\] {
 .site-checkout .checkout-total-box {
   background: var(--site-surface);
   border-color: var(--site-line);
-  border-radius: 14px;
+  border-radius: var(--radius-panel);
 }
 
 /* ── Modals ──────────────────────────────────────────────────
@@ -298,7 +298,7 @@ body:has(.site-checkout) .modal-overlay {
 body:has(.site-checkout) :is(.modal-content, .poster-lightbox) {
   background: var(--site-card);
   border-color: var(--site-line);
-  border-radius: 14px;
+  border-radius: var(--radius-panel);
   color: var(--site-ink);
   box-shadow: 0 24px 50px -20px rgb(20 25 43 / 0.4);
 }
@@ -311,7 +311,7 @@ body:has(.site-checkout) .runner-overlay { background: rgb(246 243 238 / 0.78); 
 body:has(.site-checkout) .runner-overlay__panel {
   background: var(--site-card);
   border-color: var(--site-line);
-  border-radius: 14px;
+  border-radius: var(--radius-panel);
   box-shadow: 0 24px 50px -20px rgb(20 25 43 / 0.35);
   --runner-far: color-mix(in srgb, var(--site-blue-text) 55%, var(--site-card));
   --shimmer-base: var(--site-muted);
@@ -321,7 +321,7 @@ body:has(.site-checkout) .runner-overlay__hint { color: var(--site-muted); }
 
 /* The alert modal (components/ui/AlertModal): its panel is the card. */
 body:has(.site-checkout) .alert-modal .t-modal {
-  border-radius: 14px;
+  border-radius: var(--radius-panel);
   box-shadow: 0 24px 50px -20px rgb(20 25 43 / 0.4);
 }
 

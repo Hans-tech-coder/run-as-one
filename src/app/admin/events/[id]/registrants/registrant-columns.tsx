@@ -70,7 +70,7 @@ export function selectionColumn<T>(): ColumnDef<T> {
               type="checkbox"
               checked={isChecked}
               onChange={table.getToggleAllPageRowsSelectedHandler()}
-              className="appearance-none w-4 h-4 rounded border border-[var(--ink-20)] bg-transparent checked:bg-[var(--ink)] checked:border-[var(--ink)] cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ink-20)]"
+              className="appearance-none w-4 h-4 rounded-chip border border-[var(--ink-20)] bg-transparent checked:bg-[var(--ink)] checked:border-[var(--ink)] cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ink-20)]"
             />
             {isChecked && <Check className="absolute text-[var(--dash-inverse-fg)] pointer-events-none" size={12} strokeWidth={3} />}
           </div>
@@ -86,7 +86,7 @@ export function selectionColumn<T>(): ColumnDef<T> {
               type="checkbox"
               checked={isChecked}
               onChange={row.getToggleSelectedHandler()}
-              className="appearance-none w-4 h-4 rounded border border-[var(--ink-20)] bg-transparent checked:bg-[var(--ink)] checked:border-[var(--ink)] cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ink-20)]"
+              className="appearance-none w-4 h-4 rounded-chip border border-[var(--ink-20)] bg-transparent checked:bg-[var(--ink)] checked:border-[var(--ink)] cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ink-20)]"
             />
             {isChecked && <Check className="absolute text-[var(--dash-inverse-fg)] pointer-events-none" size={12} strokeWidth={3} />}
           </div>
@@ -144,7 +144,7 @@ export function buildRegistrantColumns({
             type="button"
             onClick={() => onView(row.original)}
             aria-label={`View details of ${row.original.name}, ${row.original.runnerRef}`}
-            className="whitespace-nowrap bg-transparent border-none p-0 cursor-pointer text-inherit [font:inherit] hover:text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ink)] rounded-sm"
+            className="whitespace-nowrap bg-transparent border-none p-0 cursor-pointer text-inherit [font:inherit] hover:text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ink)] rounded-chip"
           >
             {row.original.runnerRef}
           </button>

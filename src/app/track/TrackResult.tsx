@@ -59,7 +59,7 @@ export default function TrackResult({
       <TrackStatusCard view={view} />
 
       {event.finished && (event.resultsHref || event.resultsComing) && (
-        <section aria-labelledby="track-results-title" className="rounded-[14px] border border-site-line bg-site-surface p-5 sm:p-6">
+        <section aria-labelledby="track-results-title" className="rounded-panel border border-site-line bg-site-surface p-5 sm:p-6">
           <h2 id="track-results-title" className="m-0 flex items-center gap-2 text-lg font-semibold tracking-wide text-site-ink">
             <Trophy size={20} aria-hidden="true" className="shrink-0 text-site-accent" />
             Results
@@ -83,7 +83,7 @@ export default function TrackResult({
         </section>
       )}
 
-      <section aria-labelledby="track-kit-title" className="rounded-[14px] border border-site-line bg-site-surface p-5 sm:p-6">
+      <section aria-labelledby="track-kit-title" className="rounded-panel border border-site-line bg-site-surface p-5 sm:p-6">
         <h2 id="track-kit-title" className="m-0 flex items-center gap-2 text-lg font-semibold tracking-wide text-site-ink">
           {logistics.method === 'pickup' ? (
             <Package size={20} aria-hidden="true" className="shrink-0 text-site-accent" />
@@ -112,7 +112,7 @@ export default function TrackResult({
             ) : (
               <p className="m-0 mt-1 text-sm leading-relaxed text-secondary">{logistics.fallback}</p>
             )}
-            <p className="m-0 mt-4 rounded-[12px] border border-site-line bg-site-card px-4 py-3 text-xs leading-relaxed text-secondary">
+            <p className="m-0 mt-4 rounded-panel border border-site-line bg-site-card px-4 py-3 text-xs leading-relaxed text-secondary">
               <span className="font-bold text-site-ink">Can’t claim it yourself? </span>
               {PROXY_RULE}
             </p>

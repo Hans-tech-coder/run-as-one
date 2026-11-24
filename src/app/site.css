@@ -134,7 +134,7 @@ html:has(.site-paper) { background-color: #f6f3ee; }
   gap: 0.5rem;
   min-height: 48px;
   padding: 0 1.375rem;
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   border: 1.5px solid transparent;
   font-family: var(--site-text);
   font-size: 1rem;
@@ -213,6 +213,9 @@ button.site-link:disabled { opacity: 0.5; cursor: not-allowed; }
 .site-link--back:hover svg,
 .site-link--back:focus-visible svg { transform: translateX(-3px); }
 .site-link--arrow:active svg { transform: translateX(1px); }
+/* A leading icon that names the thing (a certificate), not a direction:
+   it stays put while the underline draws. */
+.site-link--still:is(:hover, :focus-visible, :active) svg { transform: none; }
 
 :where(.site-paper) :focus-visible {
   outline: 2px solid var(--site-focus);
@@ -272,7 +275,7 @@ button.site-link:disabled { opacity: 0.5; cursor: not-allowed; }
   height: 100%;
   overflow: hidden;
   border: 1px solid var(--site-line);
-  border-radius: 14px;
+  border-radius: var(--radius-panel);
   background: var(--site-card);
   color: var(--site-ink);
   transition: transform var(--duration-fast) var(--ease-smooth-out, ease),
@@ -352,7 +355,7 @@ button.site-link:disabled { opacity: 0.5; cursor: not-allowed; }
   align-items: center;
   gap: 0.3rem;
   padding: 0.25rem 0.625rem;
-  border-radius: 999px;
+  border-radius: var(--radius-chip);
   background: var(--site-surface);
   color: var(--site-ink);
   font-size: 0.8125rem;
@@ -427,7 +430,7 @@ button.site-link:disabled { opacity: 0.5; cursor: not-allowed; }
 .site-paper .btn-secondary {
   min-height: 48px;
   padding: 0 1.375rem;
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   font-family: var(--site-text);
   font-size: 1rem;
   font-weight: 600;
@@ -447,7 +450,7 @@ button.site-link:disabled { opacity: 0.5; cursor: not-allowed; }
 .site-paper .glass-panel {
   background: var(--site-card);
   border-color: var(--site-line);
-  border-radius: 14px;
+  border-radius: var(--radius-panel);
   box-shadow: none;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
@@ -457,7 +460,7 @@ button.site-link:disabled { opacity: 0.5; cursor: not-allowed; }
   width: 3rem;
   height: 3rem;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-panel);
   background: var(--site-surface);
   color: var(--site-ink);
   box-shadow: none;
@@ -472,7 +475,7 @@ button.site-link:disabled { opacity: 0.5; cursor: not-allowed; }
 .site-paper .input-group textarea {
   background: var(--site-card);
   border-color: var(--site-field-line);
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   color: var(--site-ink);
 }
 .site-paper .input-group input::placeholder,
@@ -542,7 +545,7 @@ button.site-link:disabled { opacity: 0.5; cursor: not-allowed; }
   height: 44px;
   margin-right: -0.5rem;
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   background: transparent;
   color: var(--site-ink);
 }
@@ -617,7 +620,7 @@ button.site-link:disabled { opacity: 0.5; cursor: not-allowed; }
   min-height: 44px;
   padding: 0.625rem 1rem;
   border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   text-decoration: none;
   transition: border-color var(--duration-quick) ease;
 }
@@ -629,7 +632,7 @@ button.site-link:disabled { opacity: 0.5; cursor: not-allowed; }
   align-items: center;
   justify-content: center;
   border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
-  border-radius: 999px;
+  border-radius: var(--radius-control);
   transition: transform var(--duration-quick) ease, border-color var(--duration-quick) ease;
 }
 .site-footer__social:hover { transform: translateY(-2px); border-color: currentColor; }
@@ -653,7 +656,7 @@ button.site-link:disabled { opacity: 0.5; cursor: not-allowed; }
 .legal-toc {
   padding: 1rem 1.125rem;
   border: 1px solid var(--site-line);
-  border-radius: 14px;
+  border-radius: var(--radius-panel);
   background: var(--site-card);
 }
 @media (min-width: 1024px) { .legal-toc { padding: 0; border: 0; background: none; } }
@@ -714,7 +717,7 @@ button.site-link:disabled { opacity: 0.5; cursor: not-allowed; }
   margin-top: 1rem;
   padding: 1.5rem;
   border: 1px solid var(--site-line);
-  border-radius: 14px;
+  border-radius: var(--radius-panel);
   background: var(--site-card);
 }
 @media (min-width: 640px) { .legal-ask { padding: 2rem; } }
@@ -766,7 +769,7 @@ button.site-link:disabled { opacity: 0.5; cursor: not-allowed; }
 .site-form-card {
   padding: 1.25rem;
   border: 1px solid var(--site-line);
-  border-radius: 14px;
+  border-radius: var(--radius-panel);
   background: var(--site-card);
 }
 @media (min-width: 640px) { .site-form-card { padding: 2rem; } }
@@ -790,7 +793,7 @@ button.site-link:disabled { opacity: 0.5; cursor: not-allowed; }
   min-height: 44px;
   padding: 1rem;
   border: 1.5px solid var(--site-line-strong);
-  border-radius: 12px;
+  border-radius: var(--radius-panel);
   background: var(--site-card);
   color: var(--site-ink);
   cursor: pointer;
@@ -812,7 +815,7 @@ button.site-link:disabled { opacity: 0.5; cursor: not-allowed; }
   height: 2.5rem;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   background: var(--site-surface);
   color: var(--site-ink);
 }
@@ -826,7 +829,7 @@ button.site-link:disabled { opacity: 0.5; cursor: not-allowed; }
   overflow: hidden;
   padding: 1.25rem;
   border: 1.5px dashed var(--site-field-line);
-  border-radius: 12px;
+  border-radius: var(--radius-panel);
   background: var(--site-card);
   text-align: center;
   cursor: pointer;
@@ -851,7 +854,7 @@ button.site-link:disabled { opacity: 0.5; cursor: not-allowed; }
   align-items: center;
   justify-content: center;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-control);
   background: transparent;
   color: var(--site-muted);
   cursor: pointer;
@@ -866,7 +869,7 @@ button.site-link:disabled { opacity: 0.5; cursor: not-allowed; }
   height: 3rem;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
+  border-radius: var(--radius-panel);
   background: var(--status-success);
   color: #ffffff;
 }
@@ -924,7 +927,7 @@ button.site-link:disabled { opacity: 0.5; cursor: not-allowed; }
 .winners-division {
   overflow: hidden;
   border: 1px solid var(--site-line);
-  border-radius: 12px;
+  border-radius: var(--radius-panel);
   background: var(--site-card);
 }
 .winners-division__head {
@@ -1072,6 +1075,82 @@ button.site-link:disabled { opacity: 0.5; cursor: not-allowed; }
   border-top: 1px solid var(--site-line);
 }
 
+/* The full leaderboard (/results/[slug]/full) on the Paper radius scale
+   (--radius-chip / -control / -panel) — and one
+   answer to the pointer per kind of thing, so only what can be clicked
+   responds, and everything of a kind responds alike:
+   - `.lb-control`: a bordered control (the filters, rows per page, the pager).
+     Hover darkens the edge to the ink, as a field does on focus; press fills
+     it with the surface. A disabled one does not answer at all.
+     A row's E-Cert is not one of these: it is a `.site-link` text link with
+     a certificate icon (icon plus label, never a bare icon).
+   - `.lb-menu` / `.lb-menu__item`: the open menus. An item's corner is the
+     panel's less the panel's padding, so the two stay concentric.
+   - `.lb-row`: a table row, which opens the runner's result. The same as the
+     winners board's rows: surface on hover, a step darker on press, an inset
+     focus ring. The table around it no longer reacts — it is not a link.
+   - `.lb-card`: a phone card, which opens the result. The same lift as every
+     linked Paper card (`.site-card`). */
+.lb-control {
+  border: 1px solid var(--site-field-line);
+  border-radius: var(--radius-control);
+  background: var(--site-card);
+  color: var(--site-ink);
+  transition: border-color var(--duration-quick) ease, background-color var(--duration-quick) ease;
+}
+.lb-control:not(:disabled):hover,
+.lb-control[aria-expanded="true"] { border-color: var(--site-ink); }
+.lb-control:not(:disabled):active { background: var(--site-surface); }
+.lb-control:focus-visible { outline: 2px solid var(--site-focus); outline-offset: 2px; }
+.lb-control:disabled { opacity: 0.35; cursor: not-allowed; }
+/* A busy link button (a row's E-Cert while it draws) stays legible rather
+   than dimming like a disabled one. */
+button.site-link[aria-busy="true"] { opacity: 1; cursor: wait; }
+.lb-menu {
+  border: 1px solid var(--site-line);
+  border-radius: var(--radius-panel);
+  background: var(--site-card);
+  box-shadow: 0 16px 36px -18px rgb(20 25 43 / 0.35);
+}
+.lb-menu__item {
+  border-radius: calc(var(--radius-panel) - 4px);
+  transition: background-color var(--duration-quick) ease;
+}
+.lb-menu--roomy .lb-menu__item { border-radius: max(2px, calc(var(--radius-panel) - 8px)); }
+.lb-menu__item:not(:disabled):hover { background: var(--site-surface); }
+.lb-menu__item:not(:disabled):active { background: color-mix(in srgb, var(--site-ink) 7%, var(--site-surface)); }
+.lb-menu__item:focus-visible { outline: 2px solid var(--site-focus); outline-offset: -2px; }
+.lb-menu__item[aria-current="true"] { background: var(--site-surface); }
+.lb-row {
+  cursor: pointer;
+  transition: background-color var(--duration-quick) ease;
+}
+.lb-row:hover { background: var(--site-surface); }
+.lb-row:active { background: color-mix(in srgb, var(--site-ink) 7%, var(--site-surface)); }
+.lb-row:focus-visible {
+  background: var(--site-surface);
+  outline: 2px solid var(--site-focus);
+  outline-offset: -2px;
+}
+.lb-row__name { transition: color var(--duration-quick) ease; }
+.lb-row:is(:hover, :focus-visible) .lb-row__name { color: var(--site-accent-text, var(--site-accent)); }
+.lb-card {
+  border: 1px solid var(--site-line);
+  border-radius: var(--radius-panel);
+  background: var(--site-card);
+  cursor: pointer;
+  transition: transform var(--duration-fast) var(--ease-smooth-out, ease),
+    border-color var(--duration-fast) ease, box-shadow var(--duration-fast) ease;
+}
+.lb-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--site-line-strong);
+  box-shadow: 0 10px 24px -14px rgb(20 25 43 / 0.28);
+}
+.lb-card:active { transform: translateY(0); box-shadow: none; }
+.lb-card:focus-visible { outline: 2px solid var(--site-focus); outline-offset: 2px; }
+.lb-card:is(:hover, :focus-visible) .lb-row__name { color: var(--site-accent-text, var(--site-accent)); }
+
 /* The route loader and the running figure's caption on Paper: the paper
    ground with no blue glow behind the figure, and a mixed-case caption. */
 .site-paper .public-route-loading__stage { background: var(--site-bg); }
@@ -1151,11 +1230,11 @@ body:has(.site-paper[data-theme]) :is(.site-portal, .alert-modal, .toast-rail, .
   color: var(--site-ink);
   border: 1px solid var(--site-line);
   border-bottom: 0;
-  border-radius: 14px 14px 0 0;
+  border-radius: var(--radius-panel) var(--radius-panel) 0 0;
   box-shadow: var(--site-lift);
 }
 @media (min-width: 640px) {
-  .site-modal { border-bottom: 1px solid var(--site-line); border-radius: 14px; }
+  .site-modal { border-bottom: 1px solid var(--site-line); border-radius: var(--radius-panel); }
 }
 .site-modal__head,
 .site-modal__foot { display: flex; gap: 0.75rem; padding: 1rem 1.25rem; }
@@ -1187,7 +1266,7 @@ body:has(.site-paper[data-theme]) :is(.site-portal, .alert-modal, .toast-rail, .
   align-items: center;
   justify-content: center;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-control);
   background: transparent;
   color: var(--site-muted);
   cursor: pointer;
@@ -1203,7 +1282,7 @@ body:has(.site-paper[data-theme]) .alert-modal {
 }
 body:has(.site-paper[data-theme]) .alert-modal .t-modal {
   border-color: var(--site-line);
-  border-radius: 14px;
+  border-radius: var(--radius-panel);
   box-shadow: var(--site-lift);
 }
 body:has(.site-paper[data-theme]) .alert-modal h3 {
@@ -1245,7 +1324,9 @@ body:has(.site-paper[data-theme]) .zoom-lightbox-hint { background: var(--site-i
   [data-enter] > * { animation: none; }
   .site-btn, .site-card, .site-card__poster .poster-frame__img, .site-link, .site-link--arrow > span:not(:has(svg)), .site-link--arrow svg, .site-nav__link::after,
   .site-card__go svg, .site-footer__social, .site-notice__more strong svg, .site-modal__close,
-  .winners-row, .winners-row__name, .winners-row__go { transition: none; }
+  .winners-row, .winners-row__name, .winners-row__go,
+  .lb-control, .lb-menu__item, .lb-row, .lb-row__name, .lb-card { transition: none; }
+  .lb-card:hover { transform: none; }
   .site-btn:hover, .site-card:hover, .site-footer__social:hover { transform: none; }
   .site-card:hover .site-card__poster .poster-frame__img, .site-notice__more a:hover strong svg,
   .site-link--arrow:is(:hover, :focus-visible, :active) svg,

@@ -140,11 +140,11 @@ export default function RunnerCard({
 }) {
   return (
     <div
-      className="participant-form-block mb-10 p-6 rounded-[16px] bg-black/20 border border-white/5 relative"
+      className="participant-form-block mb-10 p-6 rounded-panel bg-black/20 border border-white/5 relative"
     >
       <div className="flex justify-between items-center mb-6 pb-4 border-b border-white/10">
         <h3 className="text-2xl font-bold text-white flex items-center gap-2 flex-wrap">
-          <span className="bg-white/10 w-8 h-8 rounded-full flex items-center justify-center text-sm">
+          <span className="bg-white/10 w-8 h-8 rounded-control flex items-center justify-center text-sm">
             {index + 1}
           </span>
           Runner Details
@@ -152,14 +152,14 @@ export default function RunnerCard({
               when a runner changes category. That is the rule
               being shown, not a decoration. */}
           {isFree && (
-            <span className="rounded-full border border-emerald-400/40 bg-emerald-400/10 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-emerald-300">
+            <span className="rounded-chip border border-emerald-400/40 bg-emerald-400/10 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-emerald-300">
               Free
             </span>
           )}
         </h3>
         {index > 0 && (
           <button
-            className="text-red-500 hover:text-red-400 hover:bg-red-500/10 px-3 py-1.5 rounded-lg flex items-center gap-1 transition-colors text-sm font-bold"
+            className="text-red-500 hover:text-red-400 hover:bg-red-500/10 px-3 py-1.5 rounded-control flex items-center gap-1 transition-colors text-sm font-bold"
             onClick={() => onRemove(index)}
           >
             <Trash2 size={16} /> Remove

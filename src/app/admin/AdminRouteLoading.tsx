@@ -273,7 +273,7 @@ function EventCardsSkeleton({ count }: { count: number }) {
               </div>
               <div className="viewer-event-body">
                 <div className="t-skel-skeleton is-pulsing flex flex-col gap-3">
-                  <div className="t-skel-bar" style={{ width: "5rem", height: "24px", borderRadius: "999px" }} />
+                  <div className="t-skel-bar" style={{ width: "5rem", height: "24px", borderRadius: "var(--radius-chip)" }} />
                   <div className="t-skel-bar" style={{ width: "75%", height: "20px", margin: "2px 0" }} />
                   <div className="t-skel-bar" style={{ width: "55%", height: "16px", margin: "2px 0" }} />
                   <div className="t-skel-bar" style={{ width: "40%", height: "32px", marginTop: "6px" }} />
@@ -410,7 +410,7 @@ function TableSkeleton({
   boxed?: boolean;
 }) {
   return (
-    <div className={boxed ? "border border-[var(--dash-border)] rounded-lg overflow-hidden" : "data-table-wrapper"}>
+    <div className={boxed ? "border border-[var(--dash-border)] rounded-panel overflow-hidden" : "data-table-wrapper"}>
       <div
         className="t-skel-skeleton is-pulsing flex items-center px-4"
         style={{

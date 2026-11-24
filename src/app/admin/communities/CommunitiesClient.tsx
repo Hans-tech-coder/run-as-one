@@ -362,7 +362,7 @@ export default function CommunitiesClient() {
                 isLoading ? (
                   <AdminCardListSkeleton cards={4} fields={1} className="is-flush" />
                 ) : (
-                  <div className="border border-[var(--dash-border)] rounded-lg py-16 px-4 text-center text-[var(--text-muted)]">
+                  <div className="border border-[var(--dash-border)] rounded-panel py-16 px-4 text-center text-[var(--text-muted)]">
                     No clubs found.
                   </div>
                 )

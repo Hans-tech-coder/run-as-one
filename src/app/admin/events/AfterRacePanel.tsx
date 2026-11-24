@@ -72,7 +72,7 @@ export default function AfterRacePanel({
             </p>
 
             {albums.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-[var(--ink-15)] bg-[var(--ink-02)] p-6 text-center">
+              <div className="rounded-panel border border-dashed border-[var(--ink-15)] bg-[var(--ink-02)] p-6 text-center">
                 <Camera size={28} className="mx-auto mb-3 opacity-50" aria-hidden="true" />
                 <p className="text-sm m-0">No photo albums added yet.</p>
               </div>
@@ -82,7 +82,7 @@ export default function AfterRacePanel({
                   const error = albumError?.index === idx ? albumError.message : undefined;
                   const id = `photoAlbum-${idx}`;
                   return (
-                    <div key={idx} className="rounded-xl border border-[var(--dash-border)] bg-[var(--ink-02)] p-4 sm:p-5">
+                    <div key={idx} className="rounded-panel border border-[var(--dash-border)] bg-[var(--ink-02)] p-4 sm:p-5">
                       <div className="flex items-center justify-between mb-4">
                         <span className="text-sm font-medium text-secondary uppercase tracking-wider">
                           Album {idx + 1}

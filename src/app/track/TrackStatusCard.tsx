@@ -104,13 +104,13 @@ export default function TrackStatusCard({ view }: { view: TrackView }) {
   const copy = copyFor(status, view.event.registerHref);
 
   return (
-    <section aria-labelledby="track-status-title" className="rounded-[14px] border border-site-line bg-site-surface p-5 sm:p-6">
+    <section aria-labelledby="track-status-title" className="rounded-panel border border-site-line bg-site-surface p-5 sm:p-6">
       <div className="flex items-start gap-4">
-        <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] border ${TONES[copy.tone]}`}>
+        <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-control border ${TONES[copy.tone]}`}>
           {copy.icon}
         </div>
         <div className="min-w-0 flex-1">
-          <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-bold tracking-wide ${TONES[copy.tone]}`}>
+          <span className={`inline-flex items-center rounded-chip border px-2.5 py-0.5 text-xs font-bold tracking-wide ${TONES[copy.tone]}`}>
             {copy.badge}
           </span>
           <h2 id="track-status-title" className="mb-1 mt-2 text-lg font-semibold tracking-wide text-site-ink">
@@ -141,7 +141,7 @@ export default function TrackStatusCard({ view }: { view: TrackView }) {
       {view.pending.length > 0 && (
         <ul className="m-0 mt-5 flex list-none flex-col gap-3 border-t border-site-line p-0 pt-5">
           {view.pending.map(item => (
-            <li key={`${item.kind}-${item.title}`} className="rounded-[14px] border border-amber-400/20 bg-amber-400/[0.05] p-4">
+            <li key={`${item.kind}-${item.title}`} className="rounded-panel border border-amber-400/20 bg-amber-400/[0.05] p-4">
               <p className="m-0 text-xs font-bold tracking-wide text-[var(--status-warning)]">
                 {item.kind === 'category' ? 'Category Change' : 'Delivery Switch'}
                 {item.proofSubmitted ? ' · For Validation' : ' · Awaiting Payment'}

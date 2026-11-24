@@ -61,7 +61,7 @@ export default function MessageDetail({
             src={`/api/admin/feedback/${row.id}/screenshot`}
             alt="Screenshot the sender attached"
             loading="lazy"
-            className="max-h-64 w-auto max-w-full rounded-[12px] border border-[var(--dash-hairline)] object-contain transition-opacity group-hover:opacity-90"
+            className="max-h-64 w-auto max-w-full rounded-panel border border-[var(--dash-hairline)] object-contain transition-opacity group-hover:opacity-90"
           />
           <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-accent-blue-ink">
             <ImageIcon size={14} aria-hidden="true" /> Open Screenshot Full Size

@@ -124,14 +124,14 @@ function RefundActionModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={ids.title}
-        className={`t-modal admin-modal-panel w-full max-w-md bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-2xl max-sm:rounded-none shadow-2xl flex flex-col max-h-[calc(100dvh-2rem)] max-sm:max-h-[100dvh] max-sm:h-[100dvh] ${visible ? 'is-open' : 'is-closing'}`}
+        className={`t-modal admin-modal-panel w-full max-w-md bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-panel max-sm:rounded-none shadow-2xl flex flex-col max-h-[calc(100dvh-2rem)] max-sm:max-h-[100dvh] max-sm:h-[100dvh] ${visible ? 'is-open' : 'is-closing'}`}
       >
         <div className="p-6 max-sm:px-4 max-sm:py-3 border-b border-[var(--dash-border)] flex justify-between items-start gap-4 shrink-0">
           <div className="min-w-0">
             <h3 id={ids.title} className="text-xl font-semibold text-primary m-0">{recording ? 'Record Refund' : 'Void Refund'}</h3>
             <p className="text-sm text-secondary mt-1 m-0 [overflow-wrap:anywhere]">{refund.name} &middot; ₱{formatPesos(refund.amount)}</p>
           </div>
-          <button type="button" onClick={close} aria-label="Close" className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-full text-secondary hover:text-primary">
+          <button type="button" onClick={close} aria-label="Close" className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-control text-secondary hover:text-primary">
             <X size={20} />
           </button>
         </div>
@@ -193,7 +193,7 @@ export default function RefundsList({ refunds }: { refunds: RefundRow[] }) {
       {refunds.map(refund => {
         const copy = STATUS_COPY[refund.status] ?? { label: refund.status, badge: 'neutral' };
         return (
-          <article key={refund.id} className="rounded-xl border border-[var(--dash-border)] bg-[var(--dash-panel-solid)] p-4 flex flex-col gap-3 min-w-0">
+          <article key={refund.id} className="rounded-panel border border-[var(--dash-border)] bg-[var(--dash-panel-solid)] p-4 flex flex-col gap-3 min-w-0">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <h3 className="m-0 text-base font-semibold text-primary [overflow-wrap:anywhere]">{refund.name}</h3>

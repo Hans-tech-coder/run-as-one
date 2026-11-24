@@ -484,7 +484,7 @@ export default function AdminDatePicker({
                     onFocus={() => {
                       if (!isFocus) setFocusDay(day);
                     }}
-                    className={`flex h-11 w-full max-w-11 sm:h-10 sm:max-w-10 items-center justify-center rounded-full text-sm tabular-nums transition-colors focus:outline-none focus-visible:shadow-[0_0_0_2px_var(--accent-blue)] ${
+                    className={`flex h-11 w-full max-w-11 sm:h-10 sm:max-w-10 items-center justify-center rounded-control text-sm tabular-nums transition-colors focus:outline-none focus-visible:shadow-[0_0_0_2px_var(--accent-blue)] ${
                       isSelected
                         ? "bg-accent-orange font-semibold text-white"
                         : isOff
@@ -544,7 +544,7 @@ export default function AdminDatePicker({
                 onChange("");
                 close(true);
               }}
-              className="rounded-lg px-3 h-11 sm:h-9 text-sm text-secondary hover:bg-[var(--ink-05)] hover:text-primary focus:outline-none focus-visible:shadow-[0_0_0_2px_var(--accent-blue)]"
+              className="rounded-control px-3 h-11 sm:h-9 text-sm text-secondary hover:bg-[var(--ink-05)] hover:text-primary focus:outline-none focus-visible:shadow-[0_0_0_2px_var(--accent-blue)]"
             >
               Clear
             </button>
@@ -559,7 +559,7 @@ export default function AdminDatePicker({
                   if (withTime) setFocusDay(now);
                   pick(now);
                 }}
-                className="rounded-lg px-3 h-11 sm:h-9 text-sm font-medium text-accent-blue-ink hover:bg-[var(--ink-05)] focus:outline-none focus-visible:shadow-[0_0_0_2px_var(--accent-blue)]"
+                className="rounded-control px-3 h-11 sm:h-9 text-sm font-medium text-accent-blue-ink hover:bg-[var(--ink-05)] focus:outline-none focus-visible:shadow-[0_0_0_2px_var(--accent-blue)]"
               >
                 Today
               </button>
@@ -568,7 +568,7 @@ export default function AdminDatePicker({
               <button
                 type="button"
                 onClick={() => close(true)}
-                className="rounded-lg px-3 h-11 sm:h-9 text-sm font-semibold text-primary hover:bg-[var(--ink-05)] focus:outline-none focus-visible:shadow-[0_0_0_2px_var(--accent-blue)]"
+                className="rounded-control px-3 h-11 sm:h-9 text-sm font-semibold text-primary hover:bg-[var(--ink-05)] focus:outline-none focus-visible:shadow-[0_0_0_2px_var(--accent-blue)]"
               >
                 Done
               </button>
@@ -643,7 +643,7 @@ export default function AdminDatePicker({
             {...dialogProps}
             data-origin={place.up ? "bottom-left" : "top-left"}
             style={{ top: place.top, left: place.left }}
-            className={`t-dropdown ${isShown ? "is-open" : "is-closing"} fixed z-[1100] w-[20rem] max-w-[calc(100vw-24px)] rounded-[12px] border border-[var(--ink-15)] bg-[var(--dash-panel-solid)] p-3 text-primary shadow-[0_16px_40px_var(--dash-shadow)]`}
+            className={`t-dropdown ${isShown ? "is-open" : "is-closing"} fixed z-[1100] w-[20rem] max-w-[calc(100vw-24px)] rounded-panel border border-[var(--ink-15)] bg-[var(--dash-panel-solid)] p-3 text-primary shadow-[0_16px_40px_var(--dash-shadow)]`}
           >
             {calendar}
           </div>,
@@ -661,7 +661,7 @@ export default function AdminDatePicker({
             />
             <div
               {...dialogProps}
-              className={`date-sheet ${isShown ? "is-open" : "is-closing"} absolute inset-x-0 bottom-0 rounded-t-[20px] border-t border-[var(--ink-15)] bg-[var(--dash-panel-solid)] px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))] text-primary shadow-[0_-16px_40px_var(--dash-shadow)]`}
+              className={`date-sheet ${isShown ? "is-open" : "is-closing"} absolute inset-x-0 bottom-0 rounded-t-panel border-t border-[var(--ink-15)] bg-[var(--dash-panel-solid)] px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))] text-primary shadow-[0_-16px_40px_var(--dash-shadow)]`}
             >
               <div className="mb-3 flex items-center justify-between">
                 <span className="text-sm font-semibold">{dialogLabel}</span>
@@ -669,7 +669,7 @@ export default function AdminDatePicker({
                   type="button"
                   onClick={() => close(true)}
                   aria-label="Close calendar"
-                  className="-mr-2 flex h-11 w-11 items-center justify-center rounded-full text-secondary hover:bg-[var(--ink-10)] hover:text-primary focus:outline-none focus-visible:shadow-[0_0_0_2px_var(--accent-blue)]"
+                  className="-mr-2 flex h-11 w-11 items-center justify-center rounded-control text-secondary hover:bg-[var(--ink-10)] hover:text-primary focus:outline-none focus-visible:shadow-[0_0_0_2px_var(--accent-blue)]"
                 >
                   <X size={20} aria-hidden="true" />
                 </button>

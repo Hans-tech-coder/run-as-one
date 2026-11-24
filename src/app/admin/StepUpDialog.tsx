@@ -187,11 +187,11 @@ function StepUpPanel({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="t-modal is-open admin-modal-panel w-full max-w-md bg-[var(--dash-panel-solid)] border border-[var(--dash-hairline)] rounded-2xl shadow-2xl p-6 flex flex-col gap-5"
+        className="t-modal is-open admin-modal-panel w-full max-w-md bg-[var(--dash-panel-solid)] border border-[var(--dash-hairline)] rounded-panel shadow-2xl p-6 flex flex-col gap-5"
       >
         <form onSubmit={submit} noValidate className="flex flex-col gap-5 min-h-0">
           <div className="flex items-start gap-4">
-            <div className="p-3 bg-blue-500/10 rounded-full text-accent-blue-ink shrink-0 mt-1">
+            <div className="p-3 bg-blue-500/10 rounded-control text-accent-blue-ink shrink-0 mt-1">
               <ShieldCheck size={24} strokeWidth={2} aria-hidden="true" />
             </div>
             <div className="flex flex-col gap-1 min-w-0 flex-1">
@@ -207,7 +207,7 @@ function StepUpPanel({
               onClick={onCancel}
               disabled={busy === 'typed'}
               aria-label="Close"
-              className="-m-3 w-11 h-11 inline-flex items-center justify-center rounded-lg text-secondary hover:text-primary shrink-0"
+              className="-m-3 w-11 h-11 inline-flex items-center justify-center rounded-control text-secondary hover:text-primary shrink-0"
             >
               <X size={18} aria-hidden="true" />
             </button>

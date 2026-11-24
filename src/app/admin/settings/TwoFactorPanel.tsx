@@ -451,7 +451,7 @@ function RecoveryCodes({ codes, onDone }: { codes: string[]; onDone: () => void 
         />
         <span
           aria-hidden="true"
-          className={`shrink-0 w-5 h-5 rounded-[6px] border-2 flex items-center justify-center transition-all peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent-orange ${
+          className={`shrink-0 w-5 h-5 rounded-control border-2 flex items-center justify-center transition-all peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent-orange ${
             saved ? 'border-accent-orange bg-accent-orange' : 'border-[var(--dash-border)] group-hover:border-[var(--text-secondary)]'
           }`}
         >

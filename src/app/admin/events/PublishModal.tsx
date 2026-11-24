@@ -59,14 +59,14 @@ export default function PublishModal({
       }`}
     >
       <div
-        className={`t-modal admin-modal-panel w-full max-w-3xl bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${isOpen ? 'is-open' : ''} ${isClosing ? 'is-closing' : ''}`}
+        className={`t-modal admin-modal-panel w-full max-w-3xl bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-panel shadow-2xl flex flex-col max-h-[90vh] ${isOpen ? 'is-open' : ''} ${isClosing ? 'is-closing' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="publish-modal-title"
       >
         <div className="p-6 border-b border-[var(--dash-border)] flex justify-between items-start gap-4 shrink-0">
           <div className="flex items-start gap-3 min-w-0">
-            <span className="p-2 rounded-lg bg-accent-blue/10 text-accent-blue-ink shrink-0">
+            <span className="p-2 rounded-panel bg-accent-blue/10 text-accent-blue-ink shrink-0">
               <Globe size={20} />
             </span>
             <div className="min-w-0">

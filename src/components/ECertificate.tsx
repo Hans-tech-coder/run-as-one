@@ -195,12 +195,12 @@ export function ECertificateModal({ result, event, pdfUrl, sharePath, onClose }:
               <iframe
                 src={`${pdfUrl}#toolbar=0&navpanes=0&view=Fit`}
                 onLoad={() => setLoaded(true)}
-                className="block h-full w-full rounded-[6px] border border-site-line bg-site-card"
+                className="block h-full w-full rounded-control border border-site-line bg-site-card"
                 title="E-certificate preview"
                 aria-busy={!previewReady}
               />
               {!previewReady && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 rounded-[6px] border border-site-line bg-site-card px-6 text-center">
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 rounded-panel border border-site-line bg-site-card px-6 text-center">
                   <RunnerLoader
                     size="lg"
                     caption="Preparing your certificate"
@@ -213,7 +213,7 @@ export function ECertificateModal({ result, event, pdfUrl, sharePath, onClose }:
               )}
             </div>
           ) : (
-            <div className="w-full rounded-[12px] border border-site-line bg-site-card px-5 py-7 text-center">
+            <div className="w-full rounded-panel border border-site-line bg-site-card px-5 py-7 text-center">
               <CheckCircle2 size={28} className="mx-auto mb-3 text-[var(--status-success)]" aria-hidden="true" />
               <p className="text-sm font-semibold text-site-muted mb-2">Certificate of Completion</p>
               <p className="site-modal__title text-[1.375rem] text-balance break-words">{result.name}</p>

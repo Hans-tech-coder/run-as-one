@@ -53,7 +53,7 @@ export default function RegistrantTransactionFields({
           group paid under and what a bank line will match. */}
       <p className="flex flex-col"><span className="text-[var(--text-muted)]">Order Ref</span> <span className="text-primary font-medium">{runner.orderRef}</span></p>
       <p className="flex flex-col"><span className="text-[var(--text-muted)]">Status</span>
-        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium w-fit mt-1 ${statusPillClass(displayStatus(runner))}`}>
+        <span className={`inline-flex items-center px-2 py-0.5 rounded-chip text-xs font-medium w-fit mt-1 ${statusPillClass(displayStatus(runner))}`}>
           {displayStatus(runner)}
         </span>
         {/* An EXPIRED row is the one status nobody chose, so it is

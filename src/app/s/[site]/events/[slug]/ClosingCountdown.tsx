@@ -50,7 +50,7 @@ export default function ClosingCountdown({ closesAt, when }: { closesAt: string;
         : `Registration Closes in ${left(remaining)}`;
 
   return (
-    <div className="flex items-start gap-3 rounded-[10px] border border-site-action px-4 py-3">
+    <div className="flex items-start gap-3 rounded-panel border border-site-action px-4 py-3">
       <Hourglass size={18} className="mt-0.5 shrink-0 text-site-accent" aria-hidden="true" />
       <div className="min-w-0">
         <p className="m-0 font-semibold text-site-ink">{heading}</p>

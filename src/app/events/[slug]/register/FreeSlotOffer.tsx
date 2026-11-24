@@ -29,7 +29,7 @@ export default function FreeSlotOffer({
   onAdd: () => void;
 }) {
   return (
-    <div className="mt-4 flex flex-col gap-4 rounded-[16px] border border-emerald-400/30 bg-emerald-400/[0.07] p-5 sm:flex-row sm:items-center sm:justify-between">
+    <div className="mt-4 flex flex-col gap-4 rounded-panel border border-emerald-400/30 bg-emerald-400/[0.07] p-5 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-start gap-3">
         <Gift
           size={22}
@@ -53,7 +53,7 @@ export default function FreeSlotOffer({
       <button
         type="button"
         onClick={onAdd}
-        className="flex shrink-0 items-center justify-center gap-2 rounded-[12px] border border-emerald-400/40 bg-emerald-400/10 px-5 py-3 font-bold text-emerald-300 transition-colors hover:bg-emerald-400/20"
+        className="flex shrink-0 items-center justify-center gap-2 rounded-control border border-emerald-400/40 bg-emerald-400/10 px-5 py-3 font-bold text-emerald-300 transition-colors hover:bg-emerald-400/20"
       >
         <Plus size={18} aria-hidden="true" />
         Add {needed === 1 ? "Runner" : `${needed} Runners`}

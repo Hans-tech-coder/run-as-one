@@ -64,7 +64,7 @@ export function EventSidebar({
 }) {
   return (
     <div className="flex flex-col gap-4 lg:sticky lg:top-[calc(var(--nav-offset)+1.5rem)]">
-      <div className="rounded-[14px] border border-site-line bg-site-card p-5 sm:p-6">
+      <div className="rounded-panel border border-site-line bg-site-card p-5 sm:p-6">
         <h2 className="site-h3 mb-4">{sellsPackages(event) ? 'Packages' : 'Distances and Fees'}</h2>
         <ul className="m-0 flex list-none flex-col gap-2.5 p-0">
           {categories.map((cat) => {
@@ -176,7 +176,7 @@ export function EventSidebar({
  */
 function CATEGORY_ROW(isFull: boolean, bookable: boolean) {
   const base =
-    'group flex items-center justify-between gap-3 rounded-[10px] border border-site-line bg-site-bg px-4 py-3.5 transition-colors';
+    'group flex items-center justify-between gap-3 rounded-control border border-site-line bg-site-bg px-4 py-3.5 transition-colors';
   if (isFull) return `${base} opacity-70`;
   if (!bookable) return base;
   return `${base} no-underline hover:border-site-ink`;

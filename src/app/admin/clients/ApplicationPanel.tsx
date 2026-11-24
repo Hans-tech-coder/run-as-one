@@ -63,13 +63,13 @@ export default function ApplicationPanel({
         role="dialog"
         aria-modal="true"
         aria-labelledby="client-application-title"
-        className={`t-modal admin-modal-panel admin-modal-sheet w-full max-w-2xl bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${
+        className={`t-modal admin-modal-panel admin-modal-sheet w-full max-w-2xl bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-panel shadow-2xl flex flex-col max-h-[90vh] ${
           open ? 'is-open' : ''
         } ${closing ? 'is-closing' : ''}`}
       >
         <div className="p-6 max-sm:p-4 border-b border-[var(--dash-border)] flex justify-between items-start gap-4 shrink-0">
           <div className="flex items-start gap-3 min-w-0">
-            <span className="p-2 rounded-lg bg-accent-blue/10 text-accent-blue-ink shrink-0">
+            <span className="p-2 rounded-panel bg-accent-blue/10 text-accent-blue-ink shrink-0">
               <FileText size={20} aria-hidden="true" />
             </span>
             <div className="min-w-0">
@@ -111,7 +111,7 @@ export default function ApplicationPanel({
           {!hasDetails && (
             // One honest sentence instead of fifteen blanks: these accounts
             // were never asked any of it.
-            <p className="text-sm text-[var(--tone-amber)] bg-amber-400/10 border border-amber-400/20 rounded-lg px-4 py-3 m-0">
+            <p className="text-sm text-[var(--tone-amber)] bg-amber-400/10 border border-amber-400/20 rounded-panel px-4 py-3 m-0">
               This submission came from an account created before the application form existed,
               so there are no application details to show. The address below is all it was asked
               for.

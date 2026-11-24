@@ -35,14 +35,14 @@ export function AddOnsBlock({
           return (
             <li
               key={addOn.id}
-              className={`flex gap-4 rounded-[12px] border border-site-line bg-site-card p-3 sm:p-4 ${status ? 'opacity-70' : ''}`}
+              className={`flex gap-4 rounded-panel border border-site-line bg-site-card p-3 sm:p-4 ${status ? 'opacity-70' : ''}`}
             >
               {poster && (
                 <img
                   src={poster}
                   alt={`${addOn.name} poster`}
                   loading="lazy"
-                  className="w-20 h-20 sm:w-24 sm:h-24 shrink-0 rounded-[10px] object-cover bg-site-surface"
+                  className="w-20 h-20 sm:w-24 sm:h-24 shrink-0 rounded-panel object-cover bg-site-surface"
                 />
               )}
               <div className="min-w-0 flex-1">

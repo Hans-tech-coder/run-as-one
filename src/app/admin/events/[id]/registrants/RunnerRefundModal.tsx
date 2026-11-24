@@ -208,7 +208,7 @@ export default function RunnerRefundModal({ runner, onClose }: { runner: Registr
           role="dialog"
           aria-modal="true"
           aria-labelledby={ids.title}
-          className={`t-modal admin-modal-panel w-full max-w-2xl bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-2xl max-sm:rounded-none shadow-2xl flex flex-col max-h-[calc(100dvh-2rem)] max-sm:max-h-[100dvh] max-sm:h-[100dvh] ${visible ? 'is-open' : 'is-closing'}`}
+          className={`t-modal admin-modal-panel w-full max-w-2xl bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-panel max-sm:rounded-none shadow-2xl flex flex-col max-h-[calc(100dvh-2rem)] max-sm:max-h-[100dvh] max-sm:h-[100dvh] ${visible ? 'is-open' : 'is-closing'}`}
         >
           <div className="p-6 max-sm:px-4 max-sm:py-3 border-b border-[var(--dash-border)] flex justify-between items-start gap-4 shrink-0">
             <div className="min-w-0">
@@ -219,7 +219,7 @@ export default function RunnerRefundModal({ runner, onClose }: { runner: Registr
               type="button"
               onClick={close}
               aria-label="Close"
-              className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-full text-secondary hover:text-primary"
+              className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-control text-secondary hover:text-primary"
             >
               <X size={20} />
             </button>
@@ -232,7 +232,7 @@ export default function RunnerRefundModal({ runner, onClose }: { runner: Registr
 
             {ready && quote && typeof data === 'object' && (
               <>
-                <section className="space-y-2 rounded-lg border border-[var(--dash-border)] bg-[var(--dash-sunken)] px-4 py-3">
+                <section className="space-y-2 rounded-panel border border-[var(--dash-border)] bg-[var(--dash-sunken)] px-4 py-3">
                   <h4 className="m-0 text-sm font-semibold text-primary">Refunded to the Runner</h4>
                   <Row label={quote.freeEntry ? 'Entry (Free Seat)' : 'Entry as Paid'} centavos={entry ?? 0} />
                   {quote.addOnOrganizerAmount > 0 && <Row label="Add-Ons Sold by the Organizer" centavos={quote.addOnOrganizerAmount} />}
@@ -240,7 +240,7 @@ export default function RunnerRefundModal({ runner, onClose }: { runner: Registr
                   <Row label="Total Refund" centavos={total} strong />
                 </section>
 
-                <section className="space-y-2 rounded-lg border border-[var(--dash-border)] px-4 py-3">
+                <section className="space-y-2 rounded-panel border border-[var(--dash-border)] px-4 py-3">
                   <h4 className="m-0 text-sm font-semibold text-primary">Not Returned</h4>
                   <Row label="Platform Fee" centavos={quote.keptAdminFee} />
                   {quote.keptDeliveryFee > 0 && <Row label="Delivery Fee" centavos={quote.keptDeliveryFee} />}
@@ -279,7 +279,7 @@ export default function RunnerRefundModal({ runner, onClose }: { runner: Registr
                   <legend className="form-label">Who Pays the Runner</legend>
                   <div className="grid gap-2 sm:grid-cols-2">
                     {([REFUND_PAID_BY.RUN_AS_ONE, REFUND_PAID_BY.ORGANIZER] as RefundPaidBy[]).map(option => (
-                      <label key={option} className="flex items-start gap-3 rounded-lg border border-[var(--dash-border)] px-3 py-2.5 min-h-11 cursor-pointer">
+                      <label key={option} className="flex items-start gap-3 rounded-control border border-[var(--dash-border)] px-3 py-2.5 min-h-11 cursor-pointer">
                         <input type="radio" name="refund-paid-by" className="mt-0.5" checked={paidBy === option} onChange={() => setPaidBy(option)} disabled={saving} />
                         <span className="text-sm text-primary">{REFUND_PAID_BY_LABELS[option]}</span>
                       </label>
@@ -331,7 +331,7 @@ export default function RunnerRefundModal({ runner, onClose }: { runner: Registr
                 <div className="min-w-0">
                   <span className="form-label">Organizer&apos;s Approval</span>
                   {proof ? (
-                    <div className="flex items-center justify-between gap-3 rounded-lg border border-[var(--dash-border)] px-3 py-2">
+                    <div className="flex items-center justify-between gap-3 rounded-panel border border-[var(--dash-border)] px-3 py-2">
                       <span className="min-w-0 text-sm text-primary [overflow-wrap:anywhere]">{proof.name}</span>
                       <button type="button" className="btn-filter max-lg:min-h-11 shrink-0" onClick={() => setProof(null)} disabled={saving}>
                         Remove

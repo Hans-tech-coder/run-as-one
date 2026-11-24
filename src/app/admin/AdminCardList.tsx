@@ -117,7 +117,7 @@ export default function AdminCardList<T>({
                 type="checkbox"
                 checked={selectAll.checked}
                 onChange={selectAll.toggle}
-                className="appearance-none w-4 h-4 rounded border border-[var(--ink-20)] bg-transparent checked:bg-[var(--ink)] checked:border-[var(--ink)] cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ink-20)]"
+                className="appearance-none w-4 h-4 rounded-chip border border-[var(--ink-20)] bg-transparent checked:bg-[var(--ink)] checked:border-[var(--ink)] cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ink-20)]"
               />
               {selectAll.checked && (
                 <Check className="absolute text-[var(--dash-inverse-fg)] pointer-events-none" size={12} strokeWidth={3} />
@@ -150,7 +150,7 @@ export default function AdminCardList<T>({
                       checked={isSelected}
                       onChange={() => selection.toggle(item)}
                       aria-label={selection.label(item)}
-                      className="appearance-none w-4 h-4 rounded border border-[var(--ink-20)] bg-transparent checked:bg-[var(--ink)] checked:border-[var(--ink)] cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ink-20)]"
+                      className="appearance-none w-4 h-4 rounded-chip border border-[var(--ink-20)] bg-transparent checked:bg-[var(--ink)] checked:border-[var(--ink)] cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ink-20)]"
                     />
                     {isSelected && (
                       <Check className="absolute text-[var(--dash-inverse-fg)] pointer-events-none" size={12} strokeWidth={3} />
@@ -217,7 +217,7 @@ export function AdminCardListSkeleton({
         <li key={card} className="admin-card">
           <div className="t-skel-skeleton is-pulsing flex flex-col gap-3">
             <div className="t-skel-bar" style={{ width: '70%', height: '18px' }} />
-            <div className="t-skel-bar" style={{ width: '5rem', height: '22px', borderRadius: '999px' }} />
+            <div className="t-skel-bar" style={{ width: '5rem', height: '22px', borderRadius: 'var(--radius-chip)' }} />
             {Array.from({ length: fields }, (_, row) => (
               <div key={row} className="t-skel-bar" style={{ width: '100%', height: '36px' }} />
             ))}

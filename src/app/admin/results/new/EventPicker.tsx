@@ -110,11 +110,11 @@ export default function EventPicker({
             </p>
 
             {matches.length === 0 ? (
-              <p className="m-0 rounded-lg border border-dashed border-[var(--dash-border)] p-4 text-sm text-secondary">
+              <p className="m-0 rounded-panel border border-dashed border-[var(--dash-border)] p-4 text-sm text-secondary">
                 No race matches &ldquo;{query.trim()}&rdquo;. Search by the race&apos;s name or its client.
               </p>
             ) : (
-              <ul className="m-0 flex list-none flex-col divide-y divide-[var(--dash-border)] overflow-hidden rounded-lg border border-[var(--dash-border)] p-0">
+              <ul className="m-0 flex list-none flex-col divide-y divide-[var(--dash-border)] overflow-hidden rounded-panel border border-[var(--dash-border)] p-0">
                 {matches.map(event => (
                   <li key={event.id}>
                     <button

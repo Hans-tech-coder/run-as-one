@@ -132,7 +132,7 @@ export default function CategoryPicker({
           return (
             <div
               key={cat.id}
-              className={`relative flex items-center gap-3 sm:gap-4 border rounded-[16px] p-3 transition-all ${
+              className={`relative flex items-center gap-3 sm:gap-4 border rounded-panel p-3 transition-all ${
                 isFull
                   ? 'border-white/5 bg-black/20 opacity-60'
                   : isSelected
@@ -171,7 +171,7 @@ export default function CategoryPicker({
                     the right edge. From sm up there is room for one line,
                     radio first, as before. */}
                 <label
-                  className={`grid grid-cols-[minmax(0,1fr)_auto] [grid-template-areas:'name_radio'_'meta_meta'] items-center gap-x-3 gap-y-2 py-1 sm:grid-cols-[auto_minmax(0,max-content)_minmax(0,1fr)_auto_auto] sm:[grid-template-areas:'radio_name_meta_price_check'] after:absolute after:-inset-px after:rounded-[16px] ${
+                  className={`grid grid-cols-[minmax(0,1fr)_auto] [grid-template-areas:'name_radio'_'meta_meta'] items-center gap-x-3 gap-y-2 py-1 sm:grid-cols-[auto_minmax(0,max-content)_minmax(0,1fr)_auto_auto] sm:[grid-template-areas:'radio_name_meta_price_check'] after:absolute after:-inset-px after:rounded-control ${
                     isFull ? 'cursor-not-allowed' : 'cursor-pointer'
                   }`}
                 >
@@ -216,19 +216,19 @@ export default function CategoryPicker({
                         part of the name rather than as a note beside the price. */}
                     <span className="sm:[grid-area:meta] min-w-0 flex flex-wrap items-center gap-1.5 empty:hidden">
                       {cat.distance && (
-                        <span className="shrink-0 text-xs font-semibold text-secondary bg-white/10 px-2.5 py-0.5 rounded-full uppercase tracking-wide">
+                        <span className="shrink-0 text-xs font-semibold text-secondary bg-white/10 px-2.5 py-0.5 rounded-chip uppercase tracking-wide">
                           {cat.distance}
                         </span>
                       )}
                       {/* Same chip shape as the distance, so the row gains a
                           fact rather than a new kind of ornament. */}
                       {isFull && (
-                        <span className="shrink-0 text-xs font-bold text-white/70 bg-white/10 border border-white/10 px-2.5 py-0.5 rounded-full uppercase tracking-wide">
+                        <span className="shrink-0 text-xs font-bold text-white/70 bg-white/10 border border-white/10 px-2.5 py-0.5 rounded-chip uppercase tracking-wide">
                           Full
                         </span>
                       )}
                       {slotsLeft !== null && (
-                        <span className="shrink-0 text-xs font-bold text-accent-orange bg-accent-orange/15 px-2.5 py-0.5 rounded-full uppercase tracking-wide">
+                        <span className="shrink-0 text-xs font-bold text-accent-orange bg-accent-orange/15 px-2.5 py-0.5 rounded-chip uppercase tracking-wide">
                           {slotsLeft} Slot{slotsLeft === 1 ? '' : 's'} Left
                         </span>
                       )}
@@ -325,7 +325,7 @@ function PosterThumb({
         onOpen();
       }}
       aria-label={`View ${cat.name} inclusions`}
-      className={`w-16 h-16 sm:w-24 sm:h-24 relative shrink-0 rounded-xl overflow-hidden border border-white/10 bg-black/40 group/thumb ${className}`}
+      className={`w-16 h-16 sm:w-24 sm:h-24 relative shrink-0 rounded-control overflow-hidden border border-white/10 bg-black/40 group/thumb ${className}`}
     >
       <img
         src={cat.imageUrl}
@@ -336,7 +336,7 @@ function PosterThumb({
       {/* Always visible, not hover-only: touch has no hover, and this is the
           only cue that the thumbnail opens something. On a phone it is also
           the only way to the inclusions, so it is sized to be seen. */}
-      <span className="absolute bottom-1 right-1 w-6 h-6 rounded-lg bg-black/75 ring-1 ring-white/15 flex items-center justify-center text-white group-hover/thumb:bg-accent-orange transition-colors">
+      <span className="absolute bottom-1 right-1 w-6 h-6 rounded-panel bg-black/75 ring-1 ring-white/15 flex items-center justify-center text-white group-hover/thumb:bg-accent-orange transition-colors">
         <Maximize2 size={12} aria-hidden="true" />
       </span>
     </button>

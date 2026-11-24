@@ -166,7 +166,7 @@ function ServiceGroups({ services }: { services: string[] }) {
             {inGroup.map(service => (
               <li
                 key={service}
-                className="rounded-full border border-[var(--dash-border)] bg-[var(--ink-05)] px-3 py-1 text-xs text-[var(--ink-85)]"
+                className="rounded-chip border border-[var(--dash-border)] bg-[var(--ink-05)] px-3 py-1 text-xs text-[var(--ink-85)]"
               >
                 {organizerServiceLabel(service)}
               </li>

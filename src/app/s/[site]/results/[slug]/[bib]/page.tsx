@@ -193,7 +193,7 @@ export default async function RunnerAnalyticsPage({
           {/* Finisher Profile Card. The padding steps down on a phone: 32px a
               side there left the analytics tiles too narrow for their own
               labels. */}
-          <div className="relative rounded-[14px] sm:rounded-[14px] bg-site-card border border-site-line p-4 min-[360px]:p-5 sm:p-8 md:p-12 mb-8 sm:mb-12 overflow-hidden">
+          <div className="relative rounded-panel sm:rounded-panel bg-site-card border border-site-line p-4 min-[360px]:p-5 sm:p-8 md:p-12 mb-8 sm:mb-12 overflow-hidden">
             
             <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 md:gap-8 mb-6 sm:mb-10 border-b border-site-line pb-6 sm:pb-10">
               {/* min-w-0 lets this column give way to the time panel instead of
@@ -204,16 +204,16 @@ export default async function RunnerAnalyticsPage({
               <div className="w-full md:flex-1 md:min-w-0">
                 <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-secondary mb-4 sm:mb-5">
                   {finished ? (
-                    <span className="bg-site-surface text-site-accent border border-site-line px-3 py-1.5 rounded-[12px] text-xs font-bold flex items-center gap-1.5 whitespace-nowrap">
+                    <span className="bg-site-surface text-site-accent border border-site-line px-3 py-1.5 rounded-chip text-xs font-bold flex items-center gap-1.5 whitespace-nowrap">
                       <CheckCircle2 size={14} className="shrink-0" /> Finisher
                     </span>
                   ) : (
-                    <span className="bg-site-surface text-secondary border border-site-line px-3 py-1.5 rounded-[12px] text-xs font-bold whitespace-nowrap">
+                    <span className="bg-site-surface text-secondary border border-site-line px-3 py-1.5 rounded-chip text-xs font-bold whitespace-nowrap">
                       {statusWord}
                     </span>
                   )}
                   {isPacer && (
-                    <span className="bg-site-surface text-site-accent border border-site-action px-3 py-1.5 rounded-[12px] text-xs font-bold whitespace-nowrap">
+                    <span className="bg-site-surface text-site-accent border border-site-action px-3 py-1.5 rounded-chip text-xs font-bold whitespace-nowrap">
                       Pacer
                     </span>
                   )}
@@ -221,11 +221,11 @@ export default async function RunnerAnalyticsPage({
                       unpredictable label: it keeps to a single line and truncates
                       rather than wrapping inside its pill — the full name is spelled
                       out again under Overall Rank below. */}
-                  <span className="bg-site-surface border border-site-line px-3 py-1.5 rounded-[12px] text-xs font-bold text-site-ink whitespace-nowrap truncate max-w-full" title={result.category.name}>
+                  <span className="bg-site-surface border border-site-line px-3 py-1.5 rounded-chip text-xs font-bold text-site-ink whitespace-nowrap truncate max-w-full" title={result.category.name}>
                     {result.category.name}
                   </span>
-                  <span className="flex items-center gap-1.5 text-sm bg-site-card px-3 py-1.5 rounded-[12px] border border-site-line whitespace-nowrap"><Hash size={14} className="text-secondary shrink-0" /> {result.bibNumber}</span>
-                  <span className="flex items-center gap-1.5 text-sm bg-site-card px-3 py-1.5 rounded-[12px] border border-site-line whitespace-nowrap"><User size={14} className="text-secondary shrink-0" /> {genderWord}</span>
+                  <span className="flex items-center gap-1.5 text-sm bg-site-card px-3 py-1.5 rounded-chip border border-site-line whitespace-nowrap"><Hash size={14} className="text-secondary shrink-0" /> {result.bibNumber}</span>
+                  <span className="flex items-center gap-1.5 text-sm bg-site-card px-3 py-1.5 rounded-chip border border-site-line whitespace-nowrap"><User size={14} className="text-secondary shrink-0" /> {genderWord}</span>
                 </div>
                 
                 <h1 className={`${nameScale} site-h1 leading-[1.05] text-balance break-words`}>
@@ -236,7 +236,7 @@ export default async function RunnerAnalyticsPage({
               {/* Huge Chip Time display — shrink-0 with a floor on its width, so
                   the time sits in the same place at the same size on every
                   runner's card no matter how long the name beside it is. */}
-              <div className="shrink-0 text-center w-full md:w-auto md:min-w-[17rem] bg-site-card border border-site-line px-5 sm:px-6 py-4 sm:py-5 rounded-[14px] sm:rounded-[14px]">
+              <div className="shrink-0 text-center w-full md:w-auto md:min-w-[17rem] bg-site-card border border-site-line px-5 sm:px-6 py-4 sm:py-5 rounded-panel sm:rounded-panel">
                 <div className="text-site-muted text-sm mb-2 font-semibold flex items-center justify-center gap-2">
                   <Timer size={14} className="text-site-accent shrink-0" /> Official Chip Time
                 </div>
@@ -257,7 +257,7 @@ export default async function RunnerAnalyticsPage({
                 columns read better than four cramped ones. */}
             <div className="grid grid-cols-2 min-[860px]:grid-cols-4 gap-3 sm:gap-4 md:gap-6 relative z-10">
               {/* Overall Rank */}
-              <div className="bg-site-surface border border-site-line p-3.5 sm:p-5 rounded-[10px] sm:rounded-[14px] cursor-default">
+              <div className="bg-site-surface border border-site-line p-3.5 sm:p-5 rounded-panel sm:rounded-panel cursor-default">
                 <div className="text-secondary text-[11px] tracking-wide mb-2 sm:mb-3 font-medium flex items-center gap-1 min-[360px]:gap-1.5 sm:gap-2 whitespace-nowrap">
                   <Trophy size={14} className="text-site-accent" /> Overall Rank
                 </div>
@@ -271,7 +271,7 @@ export default async function RunnerAnalyticsPage({
               </div>
 
               {/* Gender Rank */}
-              <div className="bg-site-surface border border-site-line p-3.5 sm:p-5 rounded-[10px] sm:rounded-[14px] cursor-default">
+              <div className="bg-site-surface border border-site-line p-3.5 sm:p-5 rounded-panel sm:rounded-panel cursor-default">
                 <div className="text-secondary text-[11px] tracking-wide mb-2 sm:mb-3 font-medium flex items-center gap-1 min-[360px]:gap-1.5 sm:gap-2 whitespace-nowrap">
                   <Medal size={14} className="text-site-accent" /> Gender Rank
                 </div>
@@ -285,7 +285,7 @@ export default async function RunnerAnalyticsPage({
               </div>
 
               {/* Average Pace */}
-              <div className="bg-site-surface border border-site-line p-3.5 sm:p-5 rounded-[10px] sm:rounded-[14px] cursor-default relative overflow-hidden">
+              <div className="bg-site-surface border border-site-line p-3.5 sm:p-5 rounded-panel sm:rounded-panel cursor-default relative overflow-hidden">
                                 <div className="text-secondary text-[11px] tracking-wide mb-2 sm:mb-3 font-medium flex items-center gap-1 min-[360px]:gap-1.5 sm:gap-2 whitespace-nowrap relative z-10">
                   <Activity size={14} className="text-[var(--status-success)]" /> Average Pace
                 </div>
@@ -296,7 +296,7 @@ export default async function RunnerAnalyticsPage({
               </div>
 
               {/* Estimated Speed */}
-              <div className="bg-site-surface border border-site-line p-3.5 sm:p-5 rounded-[10px] sm:rounded-[14px] cursor-default relative overflow-hidden">
+              <div className="bg-site-surface border border-site-line p-3.5 sm:p-5 rounded-panel sm:rounded-panel cursor-default relative overflow-hidden">
                                 <div className="text-secondary text-[11px] tracking-wide mb-2 sm:mb-3 font-medium flex items-center gap-1 min-[360px]:gap-1.5 sm:gap-2 whitespace-nowrap relative z-10">
                   <Zap size={14} className="text-[var(--status-warning)]" /> Average Speed
                 </div>

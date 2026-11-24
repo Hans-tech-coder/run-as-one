@@ -31,7 +31,7 @@ export default function ClientSiteHero({ site }: { site: SiteClient }) {
         )}
       </div>
       {site.heroImageUrl && (
-        <div className="mt-8 overflow-hidden rounded-[14px] bg-site-surface md:mt-10" data-enter>
+        <div className="mt-8 overflow-hidden rounded-panel bg-site-surface md:mt-10" data-enter>
           {/* The client's photograph, cropped to one band across the page; it
               is a picture of their runners, not a poster with words to keep. */}
           <img src={site.heroImageUrl} alt="" className="block aspect-[16/9] w-full object-cover sm:aspect-[21/9]" />

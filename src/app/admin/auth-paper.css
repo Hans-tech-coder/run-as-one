@@ -29,7 +29,7 @@
 .site-paper.auth-paper .auth-card {
   padding: 2.5rem 2.25rem;
   border: 1px solid var(--site-line);
-  border-radius: 14px;
+  border-radius: var(--radius-panel);
   background: var(--site-card);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
@@ -111,7 +111,7 @@
   padding: 0.75rem 1rem;
   background: var(--site-card);
   border: 1px solid var(--site-field-line);
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   color: var(--site-ink);
   font-family: var(--site-text);
   font-size: 1rem;
@@ -149,7 +149,7 @@
 /* The reveal button inside the password box (PasswordField, Admin.css). */
 .site-paper.auth-paper .password-toggle {
   right: 2px;
-  border-radius: 8px;
+  border-radius: var(--radius-chip);
   color: var(--site-muted);
 }
 
@@ -190,7 +190,7 @@
 .site-paper.auth-paper .auth-message {
   margin-bottom: 1.5rem;
   padding: 0.875rem 1rem;
-  border-radius: 10px;
+  border-radius: var(--radius-panel);
   font-size: 0.9375rem;
   font-weight: 500;
   line-height: 1.5;
@@ -215,7 +215,7 @@
 .site-paper.auth-paper .google-sign-in {
   background: #ffffff;
   border-color: #747775;
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   color: #1f1f1f;
 }
 
@@ -253,7 +253,7 @@
 @media (width < 40rem) {
   .site-paper.auth-paper .auth-card {
     padding: 1.5rem;
-    border-radius: 12px;
+    border-radius: var(--radius-panel);
   }
 
   .site-paper.auth-paper .auth-title {

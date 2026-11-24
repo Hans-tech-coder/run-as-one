@@ -73,7 +73,7 @@ export default function HomeEventBrowser({
 
         <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
           {searchable && (
-            <div className="flex h-12 w-full items-center gap-2 rounded-[10px] border border-site-line bg-site-card px-3 focus-within:border-site-ink sm:w-72">
+            <div className="flex h-12 w-full items-center gap-2 rounded-panel border border-site-line bg-site-card px-3 focus-within:border-site-ink sm:w-72">
               <Search className="shrink-0 text-site-muted" size={18} aria-hidden="true" />
               <label htmlFor="home-event-search" className="sr-only">
                 Search Races by Name or Place
@@ -91,7 +91,7 @@ export default function HomeEventBrowser({
                   type="button"
                   onClick={() => setQuery('')}
                   aria-label="Clear search"
-                  className="-mr-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-none bg-transparent p-0 text-site-ink hover:bg-site-surface"
+                  className="-mr-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-control border-none bg-transparent p-0 text-site-ink hover:bg-site-surface"
                 >
                   <X size={18} />
                 </button>
@@ -136,8 +136,8 @@ function EmptyState({
   onClear: () => void;
 }) {
   return (
-    <div className="flex flex-col items-center rounded-[14px] border border-site-line bg-site-card px-6 py-10 text-center sm:px-10">
-      <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-site-surface text-site-ink" aria-hidden="true">
+    <div className="flex flex-col items-center rounded-panel border border-site-line bg-site-card px-6 py-10 text-center sm:px-10">
+      <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-control bg-site-surface text-site-ink" aria-hidden="true">
         {query ? <SearchX size={22} /> : <Calendar size={22} />}
       </span>
       <h3 className="site-h3">{query ? 'No Races Match That' : 'No Races Posted Yet'}</h3>

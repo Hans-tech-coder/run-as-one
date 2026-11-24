@@ -147,7 +147,7 @@ export default async function Home({ params }: { params: Promise<{ site: string 
 function OrganizerBand() {
   return (
     <section className="site-wrap pb-14 md:pb-20" aria-labelledby="organizers">
-      <div className="grid grid-cols-1 gap-6 rounded-[14px] bg-site-surface px-6 py-8 sm:px-10 sm:py-10 md:grid-cols-12 md:items-center md:gap-8">
+      <div className="grid grid-cols-1 gap-6 rounded-panel bg-site-surface px-6 py-8 sm:px-10 sm:py-10 md:grid-cols-12 md:items-center md:gap-8">
         <div className="md:col-span-8">
           <h2 id="organizers" className="site-h2">Organizing a Race?</h2>
           <p className="site-lead mt-3 max-w-[56ch]">

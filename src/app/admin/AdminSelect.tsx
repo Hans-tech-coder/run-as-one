@@ -267,7 +267,7 @@ export default function AdminSelect({
             aria-label={listboxLabel}
             className={`absolute z-50 left-0 right-0 ${
               placement.up ? "bottom-full mb-2" : "top-full mt-2"
-            } overflow-y-auto overscroll-contain rounded-[12px] border border-[var(--ink-15)] bg-[var(--dash-panel-solid)] shadow-[0_16px_40px_var(--dash-shadow)] py-1`}
+            } overflow-y-auto overscroll-contain rounded-panel border border-[var(--ink-15)] bg-[var(--dash-panel-solid)] shadow-[0_16px_40px_var(--dash-shadow)] py-1`}
             style={{ maxHeight: `${placement.maxHeight}px` }}
           >
             {options.map((option, index) => {

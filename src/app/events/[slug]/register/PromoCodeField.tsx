@@ -108,7 +108,7 @@ export default function PromoCodeField({
 
       {promo ? (
         <div
-          className={`flex items-center gap-3 rounded-[8px] border px-4 py-3 min-h-[48px] ${
+          className={`flex items-center gap-3 rounded-control border px-4 py-3 min-h-[48px] ${
             applied
               ? "border-emerald-400/40 bg-emerald-400/10"
               : "border-white/10 bg-black/30"
@@ -168,7 +168,7 @@ export default function PromoCodeField({
             type="button"
             onClick={check}
             disabled={checking || !normalizePromoCode(code)}
-            className="shrink-0 rounded-[8px] border border-white/15 bg-white/5 px-5 min-h-[48px] font-bold text-sm text-white transition-colors hover:bg-white/10 disabled:opacity-40 disabled:pointer-events-none"
+            className="shrink-0 rounded-control border border-white/15 bg-white/5 px-5 min-h-[48px] font-bold text-sm text-white transition-colors hover:bg-white/10 disabled:opacity-40 disabled:pointer-events-none"
           >
             {checking ? "Checking" : "Apply"}
           </button>

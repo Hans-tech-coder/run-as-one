@@ -100,7 +100,7 @@ function HomeAddressCard({
   const id = addressPartFieldId("province");
   return (
     <div className="input-group full-width">
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+      <div className="flex flex-wrap items-center gap-3 rounded-panel border border-white/10 bg-white/[0.03] px-4 py-3">
         <Home size={16} className="shrink-0 text-accent-orange" aria-hidden="true" />
         <div className="min-w-0 flex-1 basis-48">
           <p className="m-0 text-xs text-secondary">Deliver to {label}</p>
@@ -111,7 +111,7 @@ function HomeAddressCard({
           type="button"
           onClick={onChange}
           aria-describedby={error ? `${id}-error` : undefined}
-          className="shrink-0 inline-flex items-center gap-2 rounded-[8px] border border-white/15 bg-white/5 px-4 min-h-[44px] font-bold text-sm text-white transition-colors hover:bg-white/10"
+          className="shrink-0 inline-flex items-center gap-2 rounded-control border border-white/15 bg-white/5 px-4 min-h-[44px] font-bold text-sm text-white transition-colors hover:bg-white/10"
         >
           <Pencil size={14} aria-hidden="true" />
           Change

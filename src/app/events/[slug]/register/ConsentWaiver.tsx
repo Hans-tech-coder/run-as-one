@@ -95,11 +95,11 @@ export default function ConsentWaiver({
           onChange={(e) => onChange(e.target.checked)}
           required
         />
-        {/* 6px, not the theme's rounded-md: at 20px square that reads as a
+        {/* 6px, not the theme's rounded-control: at 20px square that reads as a
             circle, and the wizard already uses circles for radio choices. */}
         <span
           aria-hidden="true"
-          className={`shrink-0 w-5 h-5 rounded-[6px] border-2 flex items-center justify-center transition-all peer-focus-visible:ring-2 peer-focus-visible:ring-accent-orange peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-black ${
+          className={`shrink-0 w-5 h-5 rounded-control border-2 flex items-center justify-center transition-all peer-focus-visible:ring-2 peer-focus-visible:ring-accent-orange peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-black ${
             checked
               ? "border-accent-orange bg-accent-orange"
               : "border-white/30 group-hover:border-white/50"
@@ -136,7 +136,7 @@ export default function ConsentWaiver({
           aria-describedby={
             signatureError ? SIGNATURE_ERROR_ID : SIGNATURE_HINT_ID
           }
-          className={`w-full bg-black/40 border rounded-xl p-4 text-white placeholder-gray-500 transition-all focus:outline-none ${
+          className={`w-full bg-black/40 border rounded-control p-4 text-white placeholder-gray-500 transition-all focus:outline-none ${
             signatureError
               ? "border-red-500/60 focus:border-red-500"
               : "border-white/10 focus:border-accent-blue"

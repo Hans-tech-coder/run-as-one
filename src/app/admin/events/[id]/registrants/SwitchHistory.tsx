@@ -52,7 +52,7 @@ export function SwitchHistoryList({
         const status = asLogisticsChangeStatus(change.status);
         const way = switchDirectionLabel(change);
         return (
-          <li key={change.id} className="rounded-lg border border-[var(--dash-hairline)] p-3 flex flex-col gap-1">
+          <li key={change.id} className="rounded-panel border border-[var(--dash-hairline)] p-3 flex flex-col gap-1">
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <span className="flex items-center gap-1.5 font-medium text-primary">
                 {way.from} <ArrowRight size={14} aria-label="to" /> {way.to}

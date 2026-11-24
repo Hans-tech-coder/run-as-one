@@ -139,7 +139,7 @@ export default function CancelOrderModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="cancel-order-modal-title"
-        className={`t-modal admin-modal-panel w-full max-w-lg bg-[var(--dash-panel-solid)] border border-red-500/20 rounded-2xl shadow-2xl flex flex-col ${visible ? 'is-open' : 'is-closing'}`}
+        className={`t-modal admin-modal-panel w-full max-w-lg bg-[var(--dash-panel-solid)] border border-red-500/20 rounded-panel shadow-2xl flex flex-col ${visible ? 'is-open' : 'is-closing'}`}
       >
         <div className="p-6 max-sm:px-4 max-sm:py-3 border-b border-[var(--dash-border)] flex justify-between items-start gap-4 shrink-0">
           <div className="min-w-0">
@@ -152,7 +152,7 @@ export default function CancelOrderModal({
             type="button"
             onClick={close}
             aria-label="Close"
-            className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-full text-secondary hover:text-primary transition-colors bg-transparent border-none cursor-pointer p-0"
+            className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-control text-secondary hover:text-primary transition-colors bg-transparent border-none cursor-pointer p-0"
           >
             <X size={20} />
           </button>
@@ -174,7 +174,7 @@ export default function CancelOrderModal({
                 return (
                   <label
                     key={value}
-                    className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-[var(--ink-30)] ${
+                    className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-control border px-3 py-2 text-sm transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-[var(--ink-30)] ${
                       selected
                         ? 'border-accent-blue bg-accent-blue/10 text-primary font-medium'
                         : 'border-[var(--dash-border)] bg-[var(--ink-02)] text-[var(--ink-85)] hover:border-[var(--ink-20)]'
@@ -214,7 +214,7 @@ export default function CancelOrderModal({
                 rows={2}
                 autoFocus
                 placeholder="e.g. Runner moved to the 10K and registered again."
-                className="w-full bg-[var(--dash-surface)] border border-[var(--dash-border)] rounded-lg px-4 py-3 text-base text-primary placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--ink-30)] resize-y"
+                className="w-full bg-[var(--dash-surface)] border border-[var(--dash-border)] rounded-control px-4 py-3 text-base text-primary placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--ink-30)] resize-y"
               />
               <p className="text-xs text-[var(--text-muted)] m-0 flex justify-between gap-3">
                 <span>Saved in the activity trail with the cancel.</span>
@@ -237,7 +237,7 @@ export default function CancelOrderModal({
             onClick={confirm}
             disabled={saving || missing !== null}
             title={missing ?? undefined}
-            className="px-5 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
+            className="px-5 py-2 bg-red-500 hover:bg-red-600 text-white rounded-control text-sm font-medium transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
           >
             {saving ? <BusyLabel>Cancelling</BusyLabel> : 'Cancel Order'}
           </button>

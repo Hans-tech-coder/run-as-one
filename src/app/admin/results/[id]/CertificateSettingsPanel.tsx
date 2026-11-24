@@ -125,7 +125,7 @@ export default function CertificateSettingsPanel({
         </div>
 
         {template && (
-          <div className="mt-8 border border-[var(--dash-border)] rounded-lg p-4 sm:p-6">
+          <div className="mt-8 border border-[var(--dash-border)] rounded-panel p-4 sm:p-6">
             <div className="flex flex-col lg:flex-row gap-8">
               <div className="w-full lg:w-1/3 flex flex-col gap-6 order-2 lg:order-none">
                 {parsed.v === 2 ? (
@@ -191,7 +191,7 @@ function DesignedControls({ settings, onChange }: {
               type="button"
               aria-pressed={active}
               onClick={() => set({ top: preset.top, bottom: preset.bottom })}
-              className={`min-h-11 rounded-lg border px-3 py-2 text-left ${active ? 'border-[var(--accent-blue-text)] bg-[var(--dash-hover)]' : 'border-[var(--dash-border)]'}`}
+              className={`min-h-11 rounded-control border px-3 py-2 text-left ${active ? 'border-[var(--accent-blue-text)] bg-[var(--dash-hover)]' : 'border-[var(--dash-border)]'}`}
             >
               <span className="block text-sm font-semibold text-primary">{preset.label}</span>
               <span className="block text-xs text-secondary">{preset.hint}</span>
@@ -225,7 +225,7 @@ function DesignedControls({ settings, onChange }: {
             type="color"
             value={accent}
             onChange={(e) => set({ accent: e.target.value.toLowerCase() })}
-            className="h-11 w-14 shrink-0 cursor-pointer rounded-md border border-[var(--dash-border)] bg-transparent"
+            className="h-11 w-14 shrink-0 cursor-pointer rounded-control border border-[var(--dash-border)] bg-transparent"
           />
           <span className="font-mono text-sm text-primary">{accent.toUpperCase()}</span>
           {settings.accent && (
@@ -283,7 +283,7 @@ function LegacyControls({ settings, onChange, onUpgrade }: {
 }) {
   return (
     <>
-      <div className="rounded-lg border border-[var(--dash-border)] p-4">
+      <div className="rounded-panel border border-[var(--dash-border)] p-4">
         <h3 className="text-base font-bold text-primary">Old Three-Line Layout</h3>
         <p className="text-secondary text-sm mt-1 mb-4">
           This event still prints only the name, time and category in plain text. The designed layout adds the
@@ -347,21 +347,21 @@ function CertificatePreview({ template, settings, event }: {
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="text-lg font-bold text-primary">Preview</h3>
-        <div className="flex items-center gap-1 rounded-lg border border-[var(--dash-border)] p-1" role="group" aria-label="Sample runner">
+        <div className="flex items-center gap-1 rounded-panel border border-[var(--dash-border)] p-1" role="group" aria-label="Sample runner">
           {(['typical', 'long'] as const).map((key) => (
             <button
               key={key}
               type="button"
               aria-pressed={sample === key}
               onClick={() => setSample(key)}
-              className={`min-h-9 rounded-md px-3 text-sm ${sample === key ? 'bg-[var(--dash-hover)] text-primary font-semibold' : 'text-secondary'}`}
+              className={`min-h-9 rounded-chip px-3 text-sm ${sample === key ? 'bg-[var(--dash-hover)] text-primary font-semibold' : 'text-secondary'}`}
             >
               {key === 'typical' ? 'Sample Runner' : 'Long Name'}
             </button>
           ))}
         </div>
       </div>
-      <div className="relative w-full aspect-[1.414] rounded-md border border-[var(--dash-border)] overflow-hidden bg-[var(--dash-sunken)]">
+      <div className="relative w-full aspect-[1.414] rounded-panel border border-[var(--dash-border)] overflow-hidden bg-[var(--dash-sunken)]">
         {pdfUrl && (
           <iframe
             src={`${pdfUrl}#toolbar=0&navpanes=0&view=Fit`}

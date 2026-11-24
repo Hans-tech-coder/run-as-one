@@ -55,7 +55,7 @@ export default function RegistrantsDataTable<T>({
   const rows = table.getRowModel().rows;
 
   return (
-    <div className="dash-desktop-only border border-[var(--dash-border)] rounded-lg overflow-hidden bg-transparent">
+    <div className="dash-desktop-only border border-[var(--dash-border)] rounded-panel overflow-hidden bg-transparent">
       <Table>
         <TableHeader className="bg-transparent">
           {table.getHeaderGroups().map(headerGroup => (

@@ -165,7 +165,7 @@ export default function RunnerAddressFields({
 
         {sharing ? (
           <div className="input-group full-width">
-            <div className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+            <div className="flex items-start gap-3 rounded-panel border border-white/10 bg-white/[0.03] px-4 py-3">
               <Home size={16} className="mt-0.5 shrink-0 text-accent-orange" aria-hidden="true" />
               <p className="m-0 text-sm leading-relaxed text-white break-words min-w-0">
                 {shared || (

@@ -30,7 +30,7 @@ export default function TrackRunnerCard({ runner }: { runner: TrackRunner }) {
   ];
 
   return (
-    <article className="overflow-hidden rounded-[14px] border border-site-line bg-site-surface">
+    <article className="overflow-hidden rounded-panel border border-site-line bg-site-surface">
       <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-site-line bg-site-surface px-4 py-3 sm:px-5">
         <h3 className="m-0 min-w-0 break-words text-base font-semibold tracking-wide text-site-ink">{runner.name}</h3>
         <span className="font-mono text-xs font-semibold text-secondary">{runner.ref}</span>

@@ -119,7 +119,7 @@ export default function RegistrationOpeningPicker({
           return (
             <label
               key={option.title}
-              className={`relative flex cursor-pointer flex-col gap-3 rounded-xl border p-4 sm:p-5 transition-colors focus-within:border-accent-blue focus-within:ring-2 focus-within:ring-accent-blue/40 ${
+              className={`relative flex cursor-pointer flex-col gap-3 rounded-panel border p-4 sm:p-5 transition-colors focus-within:border-accent-blue focus-within:ring-2 focus-within:ring-accent-blue/40 ${
                 isSelected
                   ? 'border-accent-blue bg-accent-blue/10'
                   : 'border-[var(--dash-border)] bg-[var(--ink-02)] hover:border-[var(--ink-20)]'
@@ -147,7 +147,7 @@ export default function RegistrationOpeningPicker({
               />
               <div className="flex items-center gap-3">
                 <span
-                  className={`rounded-lg p-2 ${
+                  className={`rounded-panel p-2 ${
                     isSelected ? 'bg-accent-blue/20 text-accent-blue-ink' : 'bg-[var(--ink-05)] text-secondary'
                   }`}
                 >
@@ -162,7 +162,7 @@ export default function RegistrationOpeningPicker({
       </div>
 
       {scheduled && (
-        <div className="flex flex-col gap-4 rounded-xl border border-[var(--dash-border)] bg-[var(--dash-sunken)] p-4 sm:p-5">
+        <div className="flex flex-col gap-4 rounded-panel border border-[var(--dash-border)] bg-[var(--dash-sunken)] p-4 sm:p-5">
           {/* min-w-0 on each field: the native time input carries an
               intrinsic width of its own, and without it a grid track holds
               that width open past a 360px screen's edge. */}

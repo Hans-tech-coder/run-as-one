@@ -122,7 +122,7 @@ export default function EventsTabs({
 
   return (
     <nav aria-label="Races" className="flex shrink-0">
-      <div ref={barRef} className="site-tabs t-tabs relative inline-flex rounded-full p-1">
+      <div ref={barRef} className="site-tabs t-tabs relative inline-flex rounded-panel p-1">
         <span ref={pillRef} className="t-tabs-pill" aria-hidden="true" />
         {TABS.map((tab) => {
           const current = tab.view === view;
@@ -131,11 +131,11 @@ export default function EventsTabs({
               key={tab.view}
               view={tab.view}
               aria-current={current ? 'page' : undefined}
-              className="t-tab inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-full px-5 sm:px-6 text-[0.9375rem] font-semibold no-underline"
+              className="t-tab inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-chip px-5 sm:px-6 text-[0.9375rem] font-semibold no-underline"
             >
               {tab.label}
               {counts && (
-                <span className="t-tab-count tabular-nums rounded-full px-2 py-0.5 text-xs">
+                <span className="t-tab-count tabular-nums rounded-chip px-2 py-0.5 text-xs">
                   {counts[tab.view]}
                 </span>
               )}

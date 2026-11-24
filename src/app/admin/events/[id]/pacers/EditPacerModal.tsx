@@ -81,7 +81,7 @@ export default function EditPacerModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="pacer-edit-title"
-        className="admin-modal-panel bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-xl w-full max-w-md overflow-clip"
+        className="admin-modal-panel bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-panel w-full max-w-md overflow-clip"
       >
         <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-2 max-sm:px-4 max-sm:pt-3 shrink-0">
           <h2 id="pacer-edit-title" className="text-xl font-bold m-0 min-w-0">
@@ -90,7 +90,7 @@ export default function EditPacerModal({
           <button
             type="button"
             onClick={onClose}
-            className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-full text-secondary hover:text-primary"
+            className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-control text-secondary hover:text-primary"
             aria-label="Close"
           >
             <X size={20} />

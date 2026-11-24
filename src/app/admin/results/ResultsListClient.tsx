@@ -185,7 +185,7 @@ export default function ResultsListClient({
         )}
       </div>
 
-      <div className="dash-desktop-only border border-[var(--dash-border)] rounded-lg overflow-hidden bg-transparent">
+      <div className="dash-desktop-only border border-[var(--dash-border)] rounded-panel overflow-hidden bg-transparent">
         <Table>
           <TableHeader className="bg-transparent">
             {table.getHeaderGroups().map(headerGroup => (
@@ -249,7 +249,7 @@ export default function ResultsListClient({
           ]}
           actions={row => renderActions(row.original, 'ml-auto')}
           empty={
-            <div className="border border-[var(--dash-border)] rounded-lg py-16 px-4 text-center text-[var(--text-muted)]">
+            <div className="border border-[var(--dash-border)] rounded-panel py-16 px-4 text-center text-[var(--text-muted)]">
               {emptyMessage}
             </div>
           }

@@ -202,7 +202,7 @@
 
 .race-slot-bar {
   height: 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-chip);
   overflow: hidden;
   background: var(--ink-06);
 }
@@ -278,7 +278,7 @@
 .race-garment-tag {
   padding: 1px 8px;
   border: 1px solid var(--dash-hairline);
-  border-radius: 999px;
+  border-radius: var(--radius-chip);
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--text-secondary);
@@ -317,7 +317,7 @@
   gap: 2px;
   padding: 10px 6px;
   border: 1px solid var(--dash-hairline);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-chip);
   background: var(--dash-panel-solid);
 }
 
@@ -359,7 +359,7 @@
   justify-content: center;
   width: 40px;
   height: 40px;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-control);
   background: color-mix(in srgb, var(--accent-blue) 12%, transparent);
   color: var(--accent-blue-text);
 }

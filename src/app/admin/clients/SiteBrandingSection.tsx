@@ -148,7 +148,7 @@ export default function SiteBrandingSection({
         Site &amp; Branding
       </h4>
       <form
-        className="rounded-[12px] border border-[var(--dash-border)] bg-[var(--dash-surface)] p-4 flex flex-col gap-4"
+        className="rounded-panel border border-[var(--dash-border)] bg-[var(--dash-surface)] p-4 flex flex-col gap-4"
         onSubmit={handleSubmit}
         noValidate
       >

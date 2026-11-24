@@ -34,7 +34,7 @@ export default function ChangeBankProof({
   if (proofIn && !replacing) {
     return (
       <div className="flex flex-col gap-4">
-        <div className="flex items-start gap-3 rounded-[16px] border border-emerald-400/20 bg-emerald-400/5 p-4 text-left">
+        <div className="flex items-start gap-3 rounded-panel border border-emerald-400/20 bg-emerald-400/5 p-4 text-left">
           <CircleCheck size={20} className="mt-0.5 shrink-0 text-emerald-400" aria-hidden="true" />
           <p className="m-0 text-sm leading-relaxed text-site-muted">
             We received your proof, reference <strong className="text-site-ink [overflow-wrap:anywhere]">{submittedReference}</strong>.

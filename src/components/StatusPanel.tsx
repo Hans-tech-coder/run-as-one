@@ -20,7 +20,7 @@ export function StatusPanel({
 }) {
   return (
     <div
-      className={`status-panel relative w-full overflow-hidden rounded-[24px] border border-white/[0.08] bg-gradient-to-br from-white/[0.04] to-white/[0.01] p-6 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)] sm:p-10 ${className}`}
+      className={`status-panel relative w-full overflow-hidden rounded-panel border border-white/[0.08] bg-gradient-to-br from-white/[0.04] to-white/[0.01] p-6 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)] sm:p-10 ${className}`}
     >
       <div
         aria-hidden="true"
@@ -38,7 +38,7 @@ export function StatusPanel({
 /** The rounded-square icon plate that sits above a StatusPanel's headline. */
 export function IconBadge({ children }: { children: React.ReactNode }) {
   return (
-    <div className="status-icon flex h-16 w-16 items-center justify-center rounded-[20px] border border-accent-orange/20 bg-accent-orange/10 text-accent-orange shadow-[0_0_20px_rgba(255,107,0,0.15)]">
+    <div className="status-icon flex h-16 w-16 items-center justify-center rounded-panel border border-accent-orange/20 bg-accent-orange/10 text-accent-orange shadow-[0_0_20px_rgba(255,107,0,0.15)]">
       {children}
     </div>
   );

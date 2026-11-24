@@ -177,7 +177,7 @@ export default function FeedbackForm({ pagePath }: { pagePath: string | null }) 
 
         {/* The page they came from, stated rather than collected silently. */}
         {pagePath && (
-          <p className="m-0 rounded-[10px] bg-site-surface px-4 py-3 text-sm text-site-muted">
+          <p className="m-0 rounded-control bg-site-surface px-4 py-3 text-sm text-site-muted">
             We will attach the page you came from —{" "}
             <span className="break-all font-mono text-site-ink">{pagePath}</span> — and
             your browser version, so an issue is easier to trace.

@@ -150,7 +150,7 @@ function RecordPayment({
   };
 
   return (
-    <div className="space-y-3 rounded-lg border border-[var(--dash-border)] p-3">
+    <div className="space-y-3 rounded-panel border border-[var(--dash-border)] p-3">
       <p className="m-0 text-xs text-secondary">
         Record the ₱{formatPesos(change.amount)} the runner sent by GCash or bank transfer. This moves them to{' '}
         {change.toCategory} at once and emails them.
@@ -187,7 +187,7 @@ function RecordPayment({
           type="button"
           onClick={save}
           disabled={saving}
-          className="px-4 min-h-11 bg-[var(--dash-inverse-bg)] text-[var(--dash-inverse-fg)] rounded-lg text-sm font-medium hover:bg-[var(--dash-inverse-hover)] disabled:opacity-50 inline-flex items-center justify-center"
+          className="px-4 min-h-11 bg-[var(--dash-inverse-bg)] text-[var(--dash-inverse-fg)] rounded-control text-sm font-medium hover:bg-[var(--dash-inverse-hover)] disabled:opacity-50 inline-flex items-center justify-center"
         >
           {saving ? <BusyLabel>Recording</BusyLabel> : `Record ₱${formatPesos(change.amount)} and Move`}
         </button>

@@ -68,7 +68,7 @@ export default function GuardianConsent({
   return (
     <section
       aria-labelledby={`${nameId}-heading`}
-      className="guardian-reveal col-span-full rounded-[16px] border border-accent-orange/30 bg-accent-orange/5 p-5"
+      className="guardian-reveal col-span-full rounded-panel border border-accent-orange/30 bg-accent-orange/5 p-5"
     >
       <div className="flex items-center gap-2 mb-1">
         <UserRoundCheck
@@ -129,7 +129,7 @@ export default function GuardianConsent({
         />
         <span
           aria-hidden="true"
-          className={`mt-0.5 shrink-0 w-5 h-5 rounded-[6px] border-2 flex items-center justify-center transition-all peer-focus-visible:ring-2 peer-focus-visible:ring-accent-orange peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-black ${
+          className={`mt-0.5 shrink-0 w-5 h-5 rounded-control border-2 flex items-center justify-center transition-all peer-focus-visible:ring-2 peer-focus-visible:ring-accent-orange peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-black ${
             consent
               ? "border-accent-orange bg-accent-orange"
               : consentError

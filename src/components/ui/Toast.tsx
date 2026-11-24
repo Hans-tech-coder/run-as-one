@@ -44,14 +44,14 @@ export default function Toast({
 
   return (
     <div
-      className={`t-toast pointer-events-auto w-full sm:w-[22rem] bg-[var(--dash-panel-solid)] border ${v.panel} rounded-xl shadow-2xl p-4 flex items-start gap-3 ${
+      className={`t-toast pointer-events-auto w-full sm:w-[22rem] bg-[var(--dash-panel-solid)] border ${v.panel} rounded-panel shadow-2xl p-4 flex items-start gap-3 ${
         open ? "is-open" : ""
       }`}
       /* A failure has to interrupt whatever the screen reader is reading; a
          "Promotion paused" can wait its turn. */
       role={variant === "error" || variant === "danger" ? "alert" : "status"}
     >
-      <div className={`p-2 ${v.badge} rounded-full shrink-0 flex`}>
+      <div className={`p-2 ${v.badge} rounded-control shrink-0 flex`}>
         {pending ? (
           <RunnerLoader size="sm" tone="current" label="" />
         ) : (

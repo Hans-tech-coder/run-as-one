@@ -101,7 +101,7 @@ export default function MobileSortMenu<T>({
         <div
           role="group"
           aria-label="Sort the list"
-          className="toolbar-popover absolute left-0 mt-2 w-72 bg-[var(--dash-popover)] border border-[var(--dash-border)] rounded-md p-2 z-50 shadow-2xl"
+          className="toolbar-popover absolute left-0 mt-2 w-72 bg-[var(--dash-popover)] border border-[var(--dash-border)] rounded-control p-2 z-50 shadow-2xl"
         >
           <p className="m-0 px-2 pt-1 pb-2 text-xs font-semibold uppercase tracking-wider text-secondary">
             Sort By
@@ -128,7 +128,7 @@ export default function MobileSortMenu<T>({
                             column.toggleSorting(desc);
                             setIsOpen(false);
                           }}
-                          className={`flex items-center justify-center gap-1 h-8 px-2.5 rounded-md border text-xs transition-colors cursor-pointer max-sm:min-w-11 ${
+                          className={`flex items-center justify-center gap-1 h-8 px-2.5 rounded-chip border text-xs transition-colors cursor-pointer max-sm:min-w-11 ${
                             isOn
                               ? 'border-[var(--ink-30)] bg-[var(--ink-10)] text-primary'
                               : 'border-[var(--dash-border)] bg-transparent text-secondary hover:bg-[var(--dash-hover)] hover:text-primary'
@@ -152,7 +152,7 @@ export default function MobileSortMenu<T>({
                 table.resetSorting(true);
                 setIsOpen(false);
               }}
-              className="mt-1 w-full flex items-center px-2 py-1.5 rounded-md text-sm text-secondary bg-transparent border-0 border-t border-[var(--dash-hairline)] hover:bg-[var(--dash-hover)] hover:text-primary transition-colors cursor-pointer"
+              className="mt-1 w-full flex items-center px-2 py-1.5 rounded-control text-sm text-secondary bg-transparent border-0 border-t border-[var(--dash-hairline)] hover:bg-[var(--dash-hover)] hover:text-primary transition-colors cursor-pointer"
             >
               Clear Sort
             </button>

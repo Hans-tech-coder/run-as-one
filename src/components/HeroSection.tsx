@@ -85,7 +85,7 @@ export default function HeroSection({
           </p>
           <Link
             href={href}
-            className="group block overflow-hidden rounded-[14px] bg-site-surface"
+            className="group block overflow-hidden rounded-control bg-site-surface"
             aria-label={`${nextRace.title}, ${when}, ${where}`}
           >
             <EventImage

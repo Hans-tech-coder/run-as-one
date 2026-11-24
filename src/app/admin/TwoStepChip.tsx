@@ -13,7 +13,7 @@ import { ShieldCheck } from 'lucide-react';
  */
 export default function TwoStepChip() {
   return (
-    <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-[var(--ink-10)] px-2 py-0.5 text-[11px] font-semibold text-secondary">
+    <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-chip bg-[var(--ink-10)] px-2 py-0.5 text-[11px] font-semibold text-secondary">
       <ShieldCheck size={12} aria-hidden="true" />
       Two-Step On
     </span>

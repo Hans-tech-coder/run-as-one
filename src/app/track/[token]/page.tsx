@@ -86,7 +86,7 @@ function Notice({ icon, title, body }: { icon: React.ReactNode; title: string; b
         <div className="mt-8 flex justify-center">
           <Link
             href="/track"
-            className="btn-gradient group w-full justify-center whitespace-nowrap rounded-[10px] px-8 py-4 text-center text-base no-underline sm:w-auto"
+            className="btn-gradient group w-full justify-center whitespace-nowrap rounded-control px-8 py-4 text-center text-base no-underline sm:w-auto"
           >
             <span>Look Up My Registration</span>
             <ChevronRight size={18} aria-hidden="true" className="shrink-0 transition-transform group-hover:translate-x-1" />

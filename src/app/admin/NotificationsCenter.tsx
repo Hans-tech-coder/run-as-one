@@ -553,7 +553,7 @@ function NotificationsSkeleton() {
       <SkeletonBar className="h-3 w-24 mx-5 mt-4 mb-2" />
       {Array.from({ length: 5 }, (_, i) => (
         <div key={i} className="flex items-start gap-3 px-5 py-3">
-          <SkeletonBar className="h-10 w-10 rounded-xl shrink-0" />
+          <SkeletonBar className="h-10 w-10 rounded-panel shrink-0" />
           <div className="flex-1 flex flex-col gap-2 pt-1">
             <SkeletonBar className="h-3.5 w-2/5" />
             <SkeletonBar className="h-3 w-11/12" />

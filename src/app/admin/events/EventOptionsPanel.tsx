@@ -138,7 +138,7 @@ export default function EventOptionsPanel({
                 return (
                   <label
                     key={option.value}
-                    className={`relative flex flex-col gap-3 rounded-xl border p-4 sm:p-5 transition-colors ${
+                    className={`relative flex flex-col gap-3 rounded-panel border p-4 sm:p-5 transition-colors ${
                       locked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
                     } ${
                       isSelected
@@ -157,7 +157,7 @@ export default function EventOptionsPanel({
                     />
                     <div className="flex items-center gap-3">
                       <span
-                        className={`rounded-lg p-2 ${
+                        className={`rounded-panel p-2 ${
                           isSelected ? 'bg-accent-blue/20 text-accent-blue-ink' : 'bg-[var(--ink-05)] text-secondary'
                         }`}
                       >
@@ -181,7 +181,7 @@ export default function EventOptionsPanel({
 
         <div className="flex flex-col gap-6">
           {options.map((row, idx) => (
-            <div key={idx} className="rounded-xl border border-[var(--dash-border)] bg-[var(--ink-02)] p-4 sm:p-5">
+            <div key={idx} className="rounded-panel border border-[var(--dash-border)] bg-[var(--ink-02)] p-4 sm:p-5">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-sm font-medium text-secondary uppercase tracking-wider">
                   {words.rowLabel} {idx + 1}

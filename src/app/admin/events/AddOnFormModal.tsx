@@ -132,7 +132,7 @@ function Segment({ on, onClick, children }: { on: boolean; onClick: () => void; 
       type="button"
       aria-pressed={on}
       onClick={onClick}
-      className={`flex min-h-11 items-center gap-1.5 rounded-[8px] px-3 py-2 text-sm font-bold transition-colors max-sm:flex-1 max-sm:justify-center ${
+      className={`flex min-h-11 items-center gap-1.5 rounded-chip px-3 py-2 text-sm font-bold transition-colors max-sm:flex-1 max-sm:justify-center ${
         on ? 'bg-[var(--ink-10)] text-primary' : 'text-secondary hover:text-primary'
       }`}
     >
@@ -215,7 +215,7 @@ export default function AddOnFormModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="add-on-form-title"
-        className="admin-modal-panel bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-xl w-full max-w-lg overflow-clip"
+        className="admin-modal-panel bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-panel w-full max-w-lg overflow-clip"
       >
         <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-2 max-sm:px-4 max-sm:pt-3 shrink-0">
           <h2 id="add-on-form-title" className="text-xl font-bold m-0 flex items-center gap-2 min-w-0">
@@ -225,7 +225,7 @@ export default function AddOnFormModal({
           <button
             type="button"
             onClick={onClose}
-            className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-full text-secondary hover:text-primary"
+            className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-control text-secondary hover:text-primary"
             aria-label="Close"
           >
             <X size={20} />
@@ -413,7 +413,7 @@ export default function AddOnFormModal({
                 <div
                   role="group"
                   aria-labelledby="add-on-scope-label"
-                  className="flex flex-wrap gap-1 rounded-[10px] border border-[var(--dash-border)] bg-[var(--dash-surface)] p-1"
+                  className="flex flex-wrap gap-1 rounded-panel border border-[var(--dash-border)] bg-[var(--dash-surface)] p-1"
                 >
                   <Segment on={draft.categoryIds.length === 0} onClick={() => set({ categoryIds: [] })}>
                     All Categories
@@ -446,7 +446,7 @@ export default function AddOnFormModal({
                 role="group"
                 aria-labelledby="add-on-seller-label"
                 aria-describedby="add-on-seller-hint"
-                className="flex flex-wrap gap-1 rounded-[10px] border border-[var(--dash-border)] bg-[var(--dash-surface)] p-1"
+                className="flex flex-wrap gap-1 rounded-panel border border-[var(--dash-border)] bg-[var(--dash-surface)] p-1"
               >
                 {ADD_ON_SELLERS.map(seller => (
                   <Segment key={seller} on={draft.soldBy === seller} onClick={() => set({ soldBy: seller })}>

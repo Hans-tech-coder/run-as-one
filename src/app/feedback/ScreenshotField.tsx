@@ -107,18 +107,18 @@ export default function ScreenshotField({
       </label>
 
       {file ? (
-        <div className="flex items-center gap-4 rounded-[12px] border border-site-line bg-site-surface p-3">
+        <div className="flex items-center gap-4 rounded-panel border border-site-line bg-site-surface p-3">
           {previewUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- a local data URL; next/image cannot optimise it
             <img
               src={previewUrl}
               alt="The screenshot you attached"
-              className="h-20 w-20 shrink-0 rounded-[10px] border border-site-line bg-site-card object-cover sm:h-24 sm:w-24"
+              className="h-20 w-20 shrink-0 rounded-panel border border-site-line bg-site-card object-cover sm:h-24 sm:w-24"
             />
           ) : (
             <div
               aria-hidden="true"
-              className="h-20 w-20 shrink-0 rounded-[10px] border border-site-line bg-site-card sm:h-24 sm:w-24"
+              className="h-20 w-20 shrink-0 rounded-panel border border-site-line bg-site-card sm:h-24 sm:w-24"
             />
           )}
           <div className="min-w-0 flex-1">
@@ -165,7 +165,7 @@ export default function ScreenshotField({
             onChange={(e) => pick(e.target.files?.[0])}
           />
           <div className="relative z-10 flex flex-col items-center gap-1">
-            <div className="mb-1 flex h-11 w-11 items-center justify-center rounded-full bg-site-surface text-site-ink">
+            <div className="mb-1 flex h-11 w-11 items-center justify-center rounded-control bg-site-surface text-site-ink">
               <ImagePlus size={20} aria-hidden="true" />
             </div>
             <div className="text-[0.9375rem] font-semibold text-site-ink">

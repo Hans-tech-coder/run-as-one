@@ -89,7 +89,7 @@
   max-width: 28px;
   height: var(--bar);
   margin-inline: auto;
-  border-radius: 4px 4px 0 0;
+  border-radius: var(--radius-chip) var(--radius-chip) 0 0;
   background: var(--accent-blue);
   transition: opacity 120ms ease;
 }
@@ -106,7 +106,7 @@
   z-index: 1;
   display: none;
   padding: 4px 8px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-panel);
   background: var(--text-primary);
   color: var(--dash-panel-solid);
   font-size: 0.75rem;
@@ -172,7 +172,7 @@
   padding: 8px 6px;
   text-align: center;
   border: 1px solid var(--dash-hairline);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-control);
   background: var(--dash-panel-solid);
 }
 

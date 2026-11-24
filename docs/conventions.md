@@ -638,16 +638,17 @@
   for a new-tab file — `sameTab` for a `tel:` / `sms:` / `mailto:` link, which
   a new tab would leave blank — `danger`, `disabled`), which swallows the row's click and
   keys and renders nothing for an empty list. A single action stays a labelled
-  chip (*View Details* on the Remittances list).
+  chip (*View Details* on the Remittances list; *E-Cert* on the public full
+  leaderboard, whose old ⋮ also held *View Details* — what tapping the row
+  already did).
 - **A row's action menu is portalled to `<body>`.** Every card and table in the
   app clips its own overflow (rounded corners, horizontal scrollers), so a menu
   laid out inside the row is cut off on the last rows. The admin menus
-  (`admin/events/EventActionsMenu` and its siblings) and the public leaderboard's
-  `ActionMenu` (`results/[slug]/full/FullResultsClient`) all render into
+  (`admin/events/EventActionsMenu` and its siblings) all render into
   `document.body` with `position: fixed`, place themselves from the trigger's
-  `getBoundingClientRect()`, reposition on scroll and resize, and — the
-  leaderboard's — flip above the trigger when the space below it cannot hold the
-  menu. Copy that rather than an `absolute top-full` menu. The three admin
+  `getBoundingClientRect()`, and reposition on scroll and resize. (The public
+  leaderboard's portalled `ActionMenu`, which also flipped above the trigger,
+  was replaced 2026-11-24 by a single *E-Cert* button.) Copy that rather than an `absolute top-full` menu. The three admin
   menus share one width — `.action-dropdown-menu` is **210px**, wide enough for
   the longest label plus its icon and the pending dots — and
   `.action-dropdown-item` is `white-space: nowrap`, so an item never wraps onto
@@ -849,7 +850,7 @@
   mid-stride — and the speed lines pulse in place.
 - **No gradient buttons inside the admin.** Every action in the dashboard —
   toolbar, panel header, form footer, modal submit — wears `.btn-light`
-  (`Admin.css`): an **inverse pill** — on the dark theme `#e4e4e7` fill,
+  (`Admin.css`): an **inverse button** (the control corner) — on the dark theme `#e4e4e7` fill,
   `#09090b` label, white on hover; on the light theme zinc-900 with a zinc-50
   label, black on hover (`--dash-inverse-*`) — inverting the ground it sits
   on, so the one thing worth pressing is the highest-contrast thing on the
@@ -876,8 +877,8 @@
   *Browse Other Races* on the registration gate and the event page's on-hold
   panel, *Back to Home* on the 404, the support address on `/coming-soon` and
   the legal pages — that button is `.btn-secondary`, never a hand-rolled set
-  of Tailwind borders. It copies `.btn-gradient`'s geometry exactly (16px
-  radius, 48px minimum, the same padding and its 640px step, 700-weight
+  of Tailwind borders. It copies `.btn-gradient`'s geometry exactly (the control
+  corner, 48px minimum, the same padding and its 640px step, 700-weight
   uppercase at 0.05em, the same 2px lift on hover) and differs only in the
   surface: white-at-4% glass with a `--glass-border` edge that warms to orange
   on hover. The pair must read as one set, so pass it only layout utilities
@@ -1057,6 +1058,47 @@
     a link takes the class too (its chrome is reset). Nav links, the legal
     jump list and the 404's onward cards are not text links and keep their
     own looks; the old `.auth-link` and `.feedback-mail` are gone.
+  - **The corner scale is three steps, for the whole app** (Paper pages and
+    the admin), defined once in the `@theme static` block of `globals.css`:
+    **`--radius-chip` 4px** (a chip, a badge, a count, a tag, a status label),
+    **`--radius-control` 6px** (a button, a field, a select, a dropdown
+    trigger, a pager or icon button, a segmented switch's outer edge), and
+    **`--radius-panel` 8px** (a card, a table, a menu or popover, a modal, a
+    sheet, a form card, a choice card, a drop zone, a notice box). CSS reads
+    them as `var(--radius-*)`; Tailwind gives `rounded-chip`,
+    `rounded-control`, `rounded-panel` (and `rounded-t-panel` and so on). A
+    menu item or a segment inside a padded container takes the container's
+    corner less the padding, floor 2px (`.lb-menu__item` is
+    `calc(var(--radius-panel) - 4px)`). There are **no pills**: no 999px, no
+    `rounded-full`, no hard-coded `rounded-[NNpx]` on a container, control or
+    chip. The old `--radius-sm/md/lg/xl/2xl/3xl` (and so `rounded-md`,
+    `-lg`, `-xl`, `-2xl`, `-3xl`) are folded onto the scale so a leftover
+    cannot bring a soft corner back, but new code uses the three names.
+    **Only what is drawn as a circle stays round:** the winners board's
+    medals, status dots of 12px or less, avatars, radio inputs (ring and
+    dot), a toggle switch's track and thumb, the loaders' spinners, the
+    zoom-lightbox page dots, and the blurred decorative glow blobs. Icon
+    tiles (a success mark, an empty-state icon, a step number), close
+    buttons and the footer's social links are squared like any other
+    control or panel. Emails (`email-document.ts`) and the e-certificate PDF
+    artwork are outside the scale.
+  - **The full leaderboard's pointer rules** (`.lb-*` in `site.css`,
+    `/results/[slug]/full`): only what opens something answers the pointer,
+    and everything of a kind answers alike. `.lb-control` — every bordered
+    control (Category, Gender, rows per page, the pager): hover darkens the
+    edge to the ink, press fills the surface, a disabled one does not answer.
+    A row's *E-Cert* is a **text link, not a bordered button**:
+    `.site-link site-link--arrow site-link--still` on a `<button>` — accent
+    text, the underline drawing on hover, a leading certificate icon
+    (`FileBadge`) that stays put (`--still`), a 44px target; `aria-busy`
+    keeps it legible while it draws.
+    `.lb-menu` /
+    `.lb-menu__item` — the open menus (`--roomy` for the 8px-padded filter
+    menu). `.lb-row` — a table row, the same as the winners board's rows
+    (surface on hover, a step darker on press, an inset focus ring, the name
+    turning accent); the table around the rows no longer reacts. `.lb-card` —
+    a phone card, with the same 2px lift as `.site-card`. All off under
+    `prefers-reduced-motion`.
   - **The navbar is a solid strip** (`.site-nav`, 64/72px, `--nav-offset` is its
     height on Paper) with a drawn underline on the current link; the phone menu
     is a full-width sheet under it. **The footer is the ink band**

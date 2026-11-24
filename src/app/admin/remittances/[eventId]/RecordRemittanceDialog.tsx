@@ -187,7 +187,7 @@ export default function RecordRemittanceDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="remittance-form-title"
-        className={`t-modal admin-modal-panel w-full max-w-xl bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${open ? 'is-open' : ''} ${closing ? 'is-closing' : ''}`}
+        className={`t-modal admin-modal-panel w-full max-w-xl bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-panel shadow-2xl flex flex-col max-h-[90vh] ${open ? 'is-open' : ''} ${closing ? 'is-closing' : ''}`}
       >
         <div className="p-6 border-b border-[var(--dash-border)] flex justify-between items-start gap-4 shrink-0">
           <div className="min-w-0">
@@ -337,7 +337,7 @@ export default function RecordRemittanceDialog({
               Receipt <span className="text-secondary font-normal">(Optional)</span>
             </span>
             {proof ? (
-              <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--dash-border)] bg-[var(--dash-sunken)] px-4 py-3">
+              <div className="flex items-center justify-between gap-3 rounded-panel border border-[var(--dash-border)] bg-[var(--dash-sunken)] px-4 py-3">
                 <span className="text-sm text-primary min-w-0 truncate">{proof.name}</span>
                 <button
                   type="button"

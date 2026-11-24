@@ -43,7 +43,7 @@ export default function DeliveryAreaPanel({
               key={tier.zone}
               type="button"
               aria-pressed={active}
-              className={`border rounded-[16px] p-5 transition-all flex justify-between items-center gap-4 text-left cursor-pointer ${
+              className={`border rounded-panel p-5 transition-all flex justify-between items-center gap-4 text-left cursor-pointer ${
                 active
                   ? "border-accent-blue bg-accent-blue/10"
                   : "border-white/10 bg-black/40 hover:border-white/30 hover:bg-white/5"
@@ -92,13 +92,13 @@ function DeliveryFeeNote({
   return (
     <section
       aria-labelledby="delivery-fee-note-title"
-      className="full-width rounded-[16px] border border-white/10 bg-white/[0.03] p-4 sm:p-5"
+      className="full-width rounded-panel border border-white/10 bg-white/[0.03] p-4 sm:p-5"
       style={{ gridColumn: "1 / -1" }}
     >
       <div className="flex items-start gap-3">
         <span
           aria-hidden="true"
-          className="shrink-0 w-9 h-9 rounded-full bg-accent-blue/10 text-accent-blue flex items-center justify-center"
+          className="shrink-0 w-9 h-9 rounded-control bg-accent-blue/10 text-accent-blue flex items-center justify-center"
         >
           <Truck size={18} />
         </span>
@@ -129,7 +129,7 @@ function DeliveryFeeNote({
                       {province}
                     </span>
                     {active && (
-                      <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-accent-blue/15 px-2 py-0.5 text-[11px] font-semibold text-accent-blue">
+                      <span className="shrink-0 inline-flex items-center gap-1 rounded-chip bg-accent-blue/15 px-2 py-0.5 text-[11px] font-semibold text-accent-blue">
                         <Check size={12} strokeWidth={3} aria-hidden="true" />
                         Your Fee
                       </span>

@@ -71,7 +71,7 @@ export const searchMembers: FilterFn<TeamMemberRow> = (row, _columnId, filterVal
 
 export function YouChip() {
   return (
-    <span className="shrink-0 whitespace-nowrap rounded-full bg-[var(--ink-10)] px-2 py-0.5 text-[11px] font-semibold text-secondary">
+    <span className="shrink-0 whitespace-nowrap rounded-chip bg-[var(--ink-10)] px-2 py-0.5 text-[11px] font-semibold text-secondary">
       You
     </span>
   );

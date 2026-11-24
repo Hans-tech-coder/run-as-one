@@ -32,7 +32,7 @@
   padding: 0.75rem 1rem;
   background: var(--site-card);
   border: 1px solid var(--site-field-line);
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   color: var(--site-ink);
   font-family: var(--site-text);
   font-size: 1rem;
@@ -58,8 +58,8 @@
 .site-paper .inquiry .form-hint { font-size: 0.8125rem; line-height: 1.5; color: var(--site-muted); }
 .site-paper .inquiry .form-optional { font-weight: 500; color: var(--site-muted); }
 /* PhoneField's box on this form, the same 10px as the fields beside it. */
-.site-paper .inquiry .input-group .control-shell { border-radius: 10px; }
-.site-paper .inquiry .input-group .control-shell > button:first-child { border-radius: 10px 0 0 10px; }
+.site-paper .inquiry .input-group .control-shell { border-radius: var(--radius-control); }
+.site-paper .inquiry .input-group .control-shell > button:first-child { border-radius: var(--radius-control) 0 0 var(--radius-control); }
 
 /* ── The step's head ──────────────────────────────────────────── */
 .site-paper .inquiry .apply-steps { margin-bottom: 1.75rem; }
@@ -88,7 +88,7 @@
 /* ── Choice cards (the services, the consent line) ─────────────── */
 .site-paper .inquiry .apply-choice {
   border: 1.5px solid var(--site-line-strong);
-  border-radius: 12px;
+  border-radius: var(--radius-panel);
   background: var(--site-card);
 }
 @media (hover: hover) {
@@ -137,7 +137,7 @@
 /* ── The problem count, the buttons, the links ────────────────── */
 .site-paper .inquiry .apply-problem {
   border: 1px solid color-mix(in srgb, var(--status-danger) 35%, transparent);
-  border-radius: 10px;
+  border-radius: var(--radius-panel);
   background: color-mix(in srgb, var(--status-danger) 6%, var(--site-card));
   font-family: var(--site-text);
   color: var(--status-danger);

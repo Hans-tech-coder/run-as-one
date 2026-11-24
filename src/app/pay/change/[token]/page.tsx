@@ -177,7 +177,7 @@ export default async function ChangePayPage({
           </p>
         </div>
 
-        <dl className="mx-auto mt-8 grid w-full max-w-md grid-cols-1 gap-0 overflow-hidden rounded-[14px] border border-site-line bg-site-card">
+        <dl className="mx-auto mt-8 grid w-full max-w-md grid-cols-1 gap-0 overflow-hidden rounded-panel border border-site-line bg-site-card">
           {rows.map(([label, value]) => (
             <div key={label} className="flex items-baseline justify-between gap-4 border-b border-site-line px-4 py-3 last:border-b-0">
               <dt className="shrink-0 text-sm text-site-muted">{label}</dt>
@@ -186,7 +186,7 @@ export default async function ChangePayPage({
           ))}
         </dl>
 
-        <dl className="mx-auto mt-4 grid w-full max-w-md grid-cols-1 gap-0 overflow-hidden rounded-[14px] border border-site-line bg-site-card">
+        <dl className="mx-auto mt-4 grid w-full max-w-md grid-cols-1 gap-0 overflow-hidden rounded-panel border border-site-line bg-site-card">
           {money.map(([label, centavos]) => (
             <div key={label} className="flex items-baseline justify-between gap-4 border-b border-site-line px-4 py-3">
               <dt className="min-w-0 text-sm text-site-muted">{label}</dt>

@@ -81,7 +81,7 @@ export default function ShipKitsAddress(props: ShipKitsState) {
         </div>
       ) : (
         <div className="space-y-2">
-          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--dash-border)] bg-[var(--ink-02)] px-4 py-3">
+          <div className="flex flex-wrap items-center gap-3 rounded-panel border border-[var(--dash-border)] bg-[var(--ink-02)] px-4 py-3">
             <Home size={16} className="shrink-0 text-[var(--accent-blue-text)]" aria-hidden="true" />
             <div className="min-w-0 flex-1 basis-48">
               <p className="text-xs text-secondary">Deliver to {homeLabel}</p>
@@ -90,7 +90,7 @@ export default function ShipKitsAddress(props: ShipKitsState) {
             <button
               type="button"
               onClick={props.typeOwnAddress}
-              className="shrink-0 inline-flex items-center gap-2 rounded-lg border border-[var(--dash-border)] bg-[var(--ink-05)] px-4 min-h-11 text-sm font-semibold text-primary transition-colors hover:bg-[var(--ink-10)] cursor-pointer"
+              className="shrink-0 inline-flex items-center gap-2 rounded-control border border-[var(--dash-border)] bg-[var(--ink-05)] px-4 min-h-11 text-sm font-semibold text-primary transition-colors hover:bg-[var(--ink-10)] cursor-pointer"
             >
               <Pencil size={14} aria-hidden="true" />
               Change
@@ -143,7 +143,7 @@ export default function ShipKitsAddress(props: ShipKitsState) {
           />
           <span
             aria-hidden="true"
-            className={`shrink-0 w-5 h-5 rounded-[6px] border-2 flex items-center justify-center transition-colors peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--ink-30)] ${
+            className={`shrink-0 w-5 h-5 rounded-control border-2 flex items-center justify-center transition-colors peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--ink-30)] ${
               address.otherReceiver ? 'border-accent-blue bg-accent-blue' : 'border-[var(--ink-30)] group-hover:border-[var(--ink-50)]'
             }`}
           >

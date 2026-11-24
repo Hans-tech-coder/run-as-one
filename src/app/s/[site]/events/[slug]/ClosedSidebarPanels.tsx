@@ -43,9 +43,9 @@ export function RaceIsOver({
   };
 }) {
   return (
-    <div className="rounded-[14px] border border-site-line bg-site-card p-5 sm:p-6">
+    <div className="rounded-panel border border-site-line bg-site-card p-5 sm:p-6">
       <div className="flex items-center gap-3 mb-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-site-surface text-site-ink">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-site-surface text-site-ink">
           <CalendarCheck2 size={20} />
         </div>
         <h2 className="site-h3 text-xl">Registration Closed</h2>
@@ -93,9 +93,9 @@ export function RegistrationOnHold({
   message: string;
 }) {
   return (
-    <div className="rounded-[14px] border border-site-line bg-site-card p-5 sm:p-6">
+    <div className="rounded-panel border border-site-line bg-site-card p-5 sm:p-6">
       <div className="flex items-center gap-3 mb-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-site-surface text-site-ink">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-site-surface text-site-ink">
           {icon}
         </div>
         <h2 className="site-h3 text-xl">{heading}</h2>

@@ -48,7 +48,7 @@ export default function GroupLimitNotice({
     <div
       id={id}
       role="status"
-      className="mt-4 flex items-start gap-3 rounded-[16px] border border-emerald-400/30 bg-emerald-400/[0.07] p-5"
+      className="mt-4 flex items-start gap-3 rounded-panel border border-emerald-400/30 bg-emerald-400/[0.07] p-5"
     >
       <CheckCircle2
         size={22}

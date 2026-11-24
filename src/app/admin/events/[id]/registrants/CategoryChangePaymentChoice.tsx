@@ -104,7 +104,7 @@ export default function CategoryChangePaymentChoice({
             return (
               <label
                 key={option.value}
-                className={`flex min-h-11 items-start gap-3 rounded-lg border px-3 py-2.5 transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-[var(--ink-30)] ${
+                className={`flex min-h-11 items-start gap-3 rounded-control border px-3 py-2.5 transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-[var(--ink-30)] ${
                   selected
                       ? 'cursor-pointer border-accent-blue bg-accent-blue/10'
                       : 'cursor-pointer border-[var(--dash-border)] bg-[var(--ink-02)] hover:border-[var(--ink-20)]'
@@ -138,7 +138,7 @@ export default function CategoryChangePaymentChoice({
       </fieldset>
 
       {choice === CHANGE_PAYMENT_CHOICES.OUTSIDE_PAID && (
-        <div className="space-y-3 rounded-lg border border-[var(--dash-border)] p-3">
+        <div className="space-y-3 rounded-panel border border-[var(--dash-border)] p-3">
           <div className="space-y-1.5">
             <label htmlFor="category-change-transaction" className="block text-secondary">
               GCash or Bank Reference Number
@@ -207,7 +207,7 @@ export function ProofPicker({
           </div>
         </div>
       ) : (
-        <div className="flex items-center justify-between gap-3 rounded-lg border border-[var(--dash-border)] bg-[var(--ink-02)] px-3 py-2">
+        <div className="flex items-center justify-between gap-3 rounded-panel border border-[var(--dash-border)] bg-[var(--ink-02)] px-3 py-2">
           <span className="min-w-0 text-sm text-primary [overflow-wrap:anywhere]">{file.name}</span>
           <button
             type="button"

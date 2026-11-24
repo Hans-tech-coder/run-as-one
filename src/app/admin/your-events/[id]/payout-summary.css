@@ -39,7 +39,7 @@
   min-width: 0;
   padding: 12px 14px;
   border: 1px solid var(--dash-hairline);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-panel);
 }
 
 /* What is still owed is the figure a client opens the section for. */

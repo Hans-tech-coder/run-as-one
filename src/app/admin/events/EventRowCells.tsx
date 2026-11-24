@@ -171,7 +171,7 @@ export function CategoryChips({ categories }: { categories?: CategoryChip[] }) {
         return (
           <li
             key={category.id}
-            className="max-w-full truncate whitespace-nowrap rounded-full border border-[var(--dash-border)] bg-[var(--ink-05)] px-2.5 py-0.5 text-xs text-primary"
+            className="max-w-full truncate whitespace-nowrap rounded-chip border border-[var(--dash-border)] bg-[var(--ink-05)] px-2.5 py-0.5 text-xs text-primary"
           >
             {category.name}
             {showDistance && <span className="text-secondary">{` · ${distance}`}</span>}

@@ -239,7 +239,7 @@ function CountBadge({
           layout={!reduced}
           aria-hidden
           className={cn(
-            "pointer-events-none absolute z-10 grid place-items-center rounded-full ring-2 ring-[var(--bg-dark)]",
+            "pointer-events-none absolute z-10 grid place-items-center rounded-chip ring-2 ring-[var(--bg-dark)]",
             COLORS[color],
           )}
           style={{
@@ -317,7 +317,7 @@ export function NotificationBell({
       type="button"
       data-slot="notification-bell"
       className={cn(
-        "relative grid place-items-center rounded-full outline-none transition-[transform,background-color,border-color,color] duration-150 active:scale-90 focus-visible:ring-2 focus-visible:ring-[var(--accent-blue)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-dark)] motion-reduce:active:scale-100",
+        "relative grid place-items-center rounded-control outline-none transition-[transform,background-color,border-color,color] duration-150 active:scale-90 focus-visible:ring-2 focus-visible:ring-[var(--accent-blue)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-dark)] motion-reduce:active:scale-100",
         SURFACE,
         GLYPH,
         className,

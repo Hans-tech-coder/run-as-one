@@ -89,7 +89,7 @@ export function UploadStep({
 
         {prepared && (
           <div
-            className="flex w-full items-start gap-3 rounded-lg border border-[var(--dash-border)] bg-[var(--ink-02)] p-4"
+            className="flex w-full items-start gap-3 rounded-panel border border-[var(--dash-border)] bg-[var(--ink-02)] p-4"
             role="status"
           >
             <CheckCircle2 size={20} className="mt-0.5 shrink-0 text-[var(--status-success)]" aria-hidden="true" />

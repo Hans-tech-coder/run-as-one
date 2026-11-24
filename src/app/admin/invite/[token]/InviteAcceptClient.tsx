@@ -143,13 +143,13 @@ export default function InviteAcceptClient({
             {events.map(event => (
               <li
                 key={`${event.title}-${event.roleLabel}`}
-                className="flex items-center gap-3 rounded-[10px] border border-site-line bg-site-bg px-4 py-3"
+                className="flex items-center gap-3 rounded-panel border border-site-line bg-site-bg px-4 py-3"
               >
                 <CalendarCheck size={16} className="shrink-0 text-site-accent" aria-hidden="true" />
                 <span className="min-w-0 flex-1 truncate text-sm font-semibold text-site-ink">
                   {event.title}
                 </span>
-                <span className="shrink-0 whitespace-nowrap rounded-full bg-site-card px-2.5 py-0.5 text-xs font-semibold text-secondary">
+                <span className="shrink-0 whitespace-nowrap rounded-chip bg-site-card px-2.5 py-0.5 text-xs font-semibold text-secondary">
                   {event.roleLabel}
                 </span>
               </li>

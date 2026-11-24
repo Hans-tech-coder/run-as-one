@@ -285,7 +285,7 @@ export default function ProofLightbox({
   // 44px on a phone, where the tools are a bar under the image and a thumb
   // rather than a pointer presses them.
   const toolBtn =
-    'flex items-center justify-center w-10 h-10 max-sm:w-11 max-sm:h-11 rounded-lg border border-[var(--dash-border)] bg-[var(--ink-05)] text-[var(--ink-85)] ' +
+    'flex items-center justify-center w-10 h-10 max-sm:w-11 max-sm:h-11 rounded-control border border-[var(--dash-border)] bg-[var(--ink-05)] text-[var(--ink-85)] ' +
     'hover:bg-[var(--ink-10)] hover:text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed ' +
     'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ink)]';
 
@@ -302,7 +302,7 @@ export default function ProofLightbox({
       onMouseDown={e => { if (e.target === e.currentTarget) requestClose(); }}
     >
       <div
-        className={`t-modal w-full h-full max-w-6xl flex flex-col rounded-2xl max-sm:rounded-none border border-[var(--dash-border)] max-sm:border-0 bg-[var(--dash-panel-solid)] shadow-2xl overflow-hidden ${frameState}`}
+        className={`t-modal w-full h-full max-w-6xl flex flex-col rounded-panel max-sm:rounded-none border border-[var(--dash-border)] max-sm:border-0 bg-[var(--dash-panel-solid)] shadow-2xl overflow-hidden ${frameState}`}
         role="dialog"
         aria-modal="true"
         aria-label={`Proof of payment for order ${orderRef}`}
@@ -334,7 +334,7 @@ export default function ProofLightbox({
                 <button
                   type="button"
                   onClick={reset}
-                  className="hidden sm:flex items-center justify-center min-w-[4rem] h-10 px-2 rounded-lg border border-[var(--dash-border)] bg-[var(--ink-05)] text-xs font-medium text-[var(--ink-85)] tabular-nums hover:bg-[var(--ink-10)] hover:text-primary transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ink)]"
+                  className="hidden sm:flex items-center justify-center min-w-[4rem] h-10 px-2 rounded-control border border-[var(--dash-border)] bg-[var(--ink-05)] text-xs font-medium text-[var(--ink-85)] tabular-nums hover:bg-[var(--ink-10)] hover:text-primary transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ink)]"
                   title="Reset the view (0)"
                 >
                   {Math.round(scale * 100)}%

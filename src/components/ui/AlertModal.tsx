@@ -117,7 +117,7 @@ export default function AlertModal({
       onClick={busy ? undefined : onCancel}
     >
       <div
-        className={`t-modal w-full max-w-md bg-[var(--dash-panel-solid)] border ${v.panel} rounded-2xl shadow-2xl p-6 flex flex-col gap-6 ${
+        className={`t-modal w-full max-w-md bg-[var(--dash-panel-solid)] border ${v.panel} rounded-panel shadow-2xl p-6 flex flex-col gap-6 ${
           open ? "is-open" : ""
         } ${closing ? "is-closing" : ""}`}
         role={showCancel ? "alertdialog" : "dialog"}
@@ -127,7 +127,7 @@ export default function AlertModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start gap-4">
-          <div className={`p-3 ${v.badge} rounded-full shrink-0 mt-1`}>
+          <div className={`p-3 ${v.badge} rounded-control shrink-0 mt-1`}>
             <v.Icon size={24} strokeWidth={2} />
           </div>
           <div className="flex flex-col gap-2">
@@ -160,7 +160,7 @@ export default function AlertModal({
             onClick={onConfirm}
             disabled={busy}
             aria-busy={busy || undefined}
-            className={`inline-flex items-center px-5 py-2 rounded-lg disabled:cursor-wait text-sm font-medium transition-colors ${v.confirmBtn}`}
+            className={`inline-flex items-center px-5 py-2 rounded-control disabled:cursor-wait text-sm font-medium transition-colors ${v.confirmBtn}`}
           >
             {confirmLabel ?? v.confirmLabel}
           </button>

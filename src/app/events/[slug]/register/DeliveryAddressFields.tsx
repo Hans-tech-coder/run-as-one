@@ -159,7 +159,7 @@ export default function DeliveryAddressFields({
             />
             <span
               aria-hidden="true"
-              className={`shrink-0 w-5 h-5 rounded-[6px] border-2 flex items-center justify-center transition-all peer-focus-visible:ring-2 peer-focus-visible:ring-accent-orange peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-black ${
+              className={`shrink-0 w-5 h-5 rounded-control border-2 flex items-center justify-center transition-all peer-focus-visible:ring-2 peer-focus-visible:ring-accent-orange peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-black ${
                 value.otherReceiver
                   ? "border-accent-orange bg-accent-orange"
                   : "border-white/30 group-hover:border-white/50"

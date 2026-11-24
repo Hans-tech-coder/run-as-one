@@ -79,7 +79,7 @@ export default function ShipKitsPanel({ isClosing, onClose, ...input }: Props) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="ship-kits-title"
-        className={`t-modal admin-modal-panel admin-modal-sheet w-full max-w-xl bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-clip ${isOpen ? 'is-open' : ''} ${isClosing ? 'is-closing' : ''}`}
+        className={`t-modal admin-modal-panel admin-modal-sheet w-full max-w-xl bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-panel shadow-2xl flex flex-col max-h-[90vh] overflow-clip ${isOpen ? 'is-open' : ''} ${isClosing ? 'is-closing' : ''}`}
       >
         <div className="p-6 max-sm:px-4 max-sm:py-3 border-b border-[var(--dash-border)] flex justify-between items-start gap-4 shrink-0">
           <div className="min-w-0">
@@ -93,7 +93,7 @@ export default function ShipKitsPanel({ isClosing, onClose, ...input }: Props) {
             type="button"
             onClick={close}
             aria-label="Close"
-            className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-full text-secondary hover:text-primary transition-colors bg-transparent border-none cursor-pointer p-0"
+            className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-control text-secondary hover:text-primary transition-colors bg-transparent border-none cursor-pointer p-0"
           >
             <X size={20} />
           </button>
@@ -165,7 +165,7 @@ export default function ShipKitsPanel({ isClosing, onClose, ...input }: Props) {
               type="button"
               onClick={state.save}
               disabled={!canSave}
-              className="px-6 py-2 min-h-11 bg-[var(--dash-inverse-bg)] text-[var(--dash-inverse-fg)] rounded-lg text-sm font-medium hover:bg-[var(--dash-inverse-hover)] transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
+              className="px-6 py-2 min-h-11 bg-[var(--dash-inverse-bg)] text-[var(--dash-inverse-fg)] rounded-control text-sm font-medium hover:bg-[var(--dash-inverse-hover)] transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
             >
               {isSaving ? <BusyLabel>{needsPayment && !state.alreadyPaid ? 'Sending' : 'Switching'}</BusyLabel> : saveLabel}
             </button>

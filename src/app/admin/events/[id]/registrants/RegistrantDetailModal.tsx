@@ -74,14 +74,14 @@ export default function RegistrantDetailModal({
           role="dialog"
           aria-modal="true"
           aria-labelledby="registrant-details-title"
-          className="admin-modal-panel admin-modal-sheet bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-clip shadow-2xl"
+          className="admin-modal-panel admin-modal-sheet bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-panel w-full max-w-2xl max-h-[90vh] flex flex-col overflow-clip shadow-2xl"
         >
           <div className="flex justify-between items-center gap-4 p-6 max-sm:px-4 max-sm:py-3 border-b border-[var(--dash-border)] shrink-0">
             <h3 id="registrant-details-title" className="text-xl font-semibold text-primary">Registrant Details</h3>
             <button
               onClick={() => onClose()}
               aria-label="Close"
-              className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-full text-secondary hover:text-primary transition-colors"
+              className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-control text-secondary hover:text-primary transition-colors"
             >
               <X size={20} />
             </button>
@@ -221,7 +221,7 @@ export default function RegistrantDetailModal({
                   )}
                 </div>
                 {runner.remarks ? (
-                  <div className="rounded-lg border border-[var(--dash-border)] bg-[var(--dash-surface)] p-4">
+                  <div className="rounded-panel border border-[var(--dash-border)] bg-[var(--dash-surface)] p-4">
                     <p className="text-sm text-primary whitespace-pre-wrap m-0">{runner.remarks}</p>
                     {(runner.remarksBy || runner.remarksAt) && (
                       <p className="text-xs text-[var(--text-muted)] mt-3 m-0">
@@ -295,7 +295,7 @@ export default function RegistrantDetailModal({
                       type="button"
                       onClick={() => onOpenProof(runner)}
                       aria-label="Open the proof of payment full screen"
-                      className="group relative w-full rounded-lg overflow-hidden border border-[var(--dash-border)] max-h-[300px] max-sm:max-h-none flex items-center justify-center bg-[var(--dash-sunken)] cursor-zoom-in p-0 hover:border-[var(--ink-30)] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ink)]"
+                      className="group relative w-full rounded-control overflow-hidden border border-[var(--dash-border)] max-h-[300px] max-sm:max-h-none flex items-center justify-center bg-[var(--dash-sunken)] cursor-zoom-in p-0 hover:border-[var(--ink-30)] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ink)]"
                     >
                       {/*
                         Receipts are private blobs — there is no permanently valid
@@ -326,7 +326,7 @@ export default function RegistrantDetailModal({
                       </span>
                     </button>
                   ) : (
-                    <div className="border border-dashed border-[var(--ink-20)] rounded-lg p-8 flex flex-col items-center justify-center text-[var(--text-muted)]">
+                    <div className="border border-dashed border-[var(--ink-20)] rounded-panel p-8 flex flex-col items-center justify-center text-[var(--text-muted)]">
                       <Eye size={24} className="mb-2 opacity-50" />
                       <p className="text-sm">No proof attached yet</p>
                     </div>

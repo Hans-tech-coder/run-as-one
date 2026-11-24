@@ -135,7 +135,7 @@ export default function SwitchConfirm(props: SwitchConfirmProps) {
           showErrors={showErrors}
           defaultCountry={DEFAULT_COUNTRY}
         />
-        <div className="flex items-baseline justify-between gap-4 rounded-[14px] border border-site-line bg-site-card px-4 py-3">
+        <div className="flex items-baseline justify-between gap-4 rounded-panel border border-site-line bg-site-card px-4 py-3">
           <span className="text-sm text-site-muted">
             {props.onlineMethod && plan.fee > 0 ? 'Delivery and Transaction Fee' : 'Delivery Fee'}
           </span>
@@ -154,7 +154,7 @@ export default function SwitchConfirm(props: SwitchConfirmProps) {
           type="button"
           onClick={confirm}
           disabled={busy}
-          className="btn-gradient justify-center rounded-[16px] px-8 py-4 text-base disabled:opacity-60"
+          className="btn-gradient justify-center rounded-control px-8 py-4 text-base disabled:opacity-60"
         >
           {busy ? <BusyLabel>Saving</BusyLabel> : 'Confirm Details'}
         </button>
@@ -169,7 +169,7 @@ export default function SwitchConfirm(props: SwitchConfirmProps) {
     <div className="flex flex-col gap-6 text-left">
       <StepLabel n={2} title={proofIn ? 'Payment Proof Submitted' : 'Pay for the Delivery'} />
 
-      <dl className="m-0 grid grid-cols-1 overflow-hidden rounded-[14px] border border-site-line bg-site-card">
+      <dl className="m-0 grid grid-cols-1 overflow-hidden rounded-panel border border-site-line bg-site-card">
         <Row label="Ships To" value={details.place || 'The address on your order'} />
         {details.landmark && <Row label="Landmark" value={details.landmark} />}
         <Row
@@ -192,7 +192,7 @@ export default function SwitchConfirm(props: SwitchConfirmProps) {
         )}
       </dl>
 
-      <dl className="m-0 grid grid-cols-1 overflow-hidden rounded-[14px] border border-site-line bg-site-card">
+      <dl className="m-0 grid grid-cols-1 overflow-hidden rounded-panel border border-site-line bg-site-card">
         <Row label="Delivery Fee" value={peso(saved.fee)} />
         {saved.totalCharged > saved.fee && <Row label="Transaction Fee" value={peso(saved.totalCharged - saved.fee)} />}
         <div className="flex items-baseline justify-between gap-4 bg-site-surface px-4 py-4">
@@ -217,7 +217,7 @@ export default function SwitchConfirm(props: SwitchConfirmProps) {
         )
       ) : proofIn && !replacing ? (
         <div className="flex flex-col gap-4">
-          <div className="flex items-start gap-3 rounded-[16px] border border-emerald-400/20 bg-emerald-400/5 p-4">
+          <div className="flex items-start gap-3 rounded-panel border border-emerald-400/20 bg-emerald-400/5 p-4">
             <CircleCheck size={20} className="mt-0.5 shrink-0 text-emerald-400" aria-hidden="true" />
             <p className="m-0 text-sm leading-relaxed text-site-muted">
               We received your proof, reference <strong className="text-site-ink">{props.submittedReference}</strong>. We

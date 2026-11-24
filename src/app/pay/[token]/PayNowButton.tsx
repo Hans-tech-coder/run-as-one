@@ -70,7 +70,7 @@ export default function PayNowButton({
         type="button"
         onClick={pay}
         disabled={busy}
-        className="btn-gradient min-h-[44px] w-full justify-center rounded-[16px] px-8 py-4 text-base disabled:cursor-wait disabled:opacity-70"
+        className="btn-gradient min-h-[44px] w-full justify-center rounded-control px-8 py-4 text-base disabled:cursor-wait disabled:opacity-70"
       >
         {busy ? (
           <BusyLabel>Opening PayMongo</BusyLabel>

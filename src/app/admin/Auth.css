@@ -101,7 +101,7 @@
   min-height: 44px;
   padding: 0 0.5rem;
   margin-left: -0.5rem;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-control);
   color: var(--text-secondary);
   font-family: var(--font-body);
   font-size: 0.875rem;
@@ -138,7 +138,7 @@
    reading the page. The offset keeps the ring clear of the stacked wordmark. */
 .auth-logo-link {
   display: inline-flex;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-control);
   text-decoration: none;
   transition: opacity var(--duration-fast) var(--ease-smooth-out);
 }
@@ -159,7 +159,7 @@
   position: relative;
   z-index: 10;
   padding: var(--space-2xl);
-  border-radius: var(--radius-2xl);
+  border-radius: var(--radius-panel);
   background: rgba(10, 10, 10, 0.6);
   backdrop-filter: blur(30px);
   -webkit-backdrop-filter: blur(30px);
@@ -241,7 +241,7 @@
   /* The dashboard's field border (Admin.css `.form-input`). This read the
      never-defined --color-border, so the boxes had no edge at all. */
   border: 1px solid var(--dash-border);
-  border-radius: 12px;
+  border-radius: var(--radius-control);
   color: var(--text-primary);
   font-family: var(--font-body);
   font-size: 1rem;
@@ -274,7 +274,7 @@
   width: 100%;
   margin-top: var(--space-md);
   padding: var(--space-md);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-control);
   font-size: 1rem;
   letter-spacing: 0.05em;
   box-shadow: 0 10px 20px rgba(255, 107, 0, 0.2);
@@ -290,7 +290,7 @@
 /* Error/Success messages */
 .auth-message {
   padding: var(--space-md);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-panel);
   margin-bottom: var(--space-lg);
   font-size: 0.875rem;
   font-weight: 500;
@@ -327,7 +327,7 @@
   .auth-card {
     width: 100%;
     padding: var(--space-lg);
-    border-radius: var(--radius-xl);
+    border-radius: var(--radius-panel);
   }
 
   /* Closer to the card it belongs to, where the page is short of height. */
@@ -498,14 +498,14 @@
    box on a slightly lighter ground, and every field on this card is a 12px
    box on a darker one. Nothing else about the control is touched. */
 .auth-card .input-group .control-shell {
-  border-radius: 12px;
+  border-radius: var(--radius-control);
   background: rgba(0, 0, 0, 0.4);
 }
 
 /* The country button is flush with the shell's left edge, so its corners have
    to follow the shell's. */
 .auth-card .input-group .control-shell > button:first-child {
-  border-radius: 12px 0 0 12px;
+  border-radius: var(--radius-control) 0 0 var(--radius-control);
 }
 
 /* ── Choice cards ───────────────────────────────────────────────────────
@@ -532,7 +532,7 @@
   gap: 0.75rem;
   min-height: 44px;
   padding: 0.875rem 1rem;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-panel);
   border: 1px solid var(--dash-border);
   background: rgba(0, 0, 0, 0.3);
   cursor: pointer;
@@ -579,7 +579,7 @@
   margin-top: 0.125rem;
   /* 6px, not the theme's rounded-md: at 20px square that reads as a circle,
      and a circle here would promise that only one may be picked. */
-  border-radius: 6px;
+  border-radius: var(--radius-chip);
   border: 2px solid rgba(255, 255, 255, 0.28);
   display: flex;
   align-items: center;
@@ -677,7 +677,7 @@
 .apply-choice__tag {
   display: inline-block;
   padding: 0.0625rem 0.4375rem;
-  border-radius: 999px;
+  border-radius: var(--radius-chip);
   border: 1px solid rgba(255, 255, 255, 0.24);
   font-size: 0.625rem;
   font-weight: 600;
@@ -695,7 +695,7 @@
   align-items: flex-start;
   gap: 0.625rem;
   padding: 0.875rem 1rem;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-panel);
   border: 1px solid rgba(255, 77, 79, 0.28);
   background: rgba(255, 77, 79, 0.1);
   font-family: var(--font-body);
@@ -763,7 +763,7 @@
   width: 3.5rem;
   height: 3.5rem;
   margin-bottom: var(--space-md);
-  border-radius: 50%;
+  border-radius: var(--radius-panel);
   color: #52c41a;
   background: rgba(82, 196, 26, 0.12);
   border: 1px solid rgba(82, 196, 26, 0.28);
@@ -793,7 +793,7 @@
   flex-shrink: 0;
   width: 1.5rem;
   height: 1.5rem;
-  border-radius: 50%;
+  border-radius: var(--radius-chip);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -843,7 +843,7 @@
   padding: 0 12px;
   background: #131314;
   border: 1px solid #8e918f;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-control);
   color: #e3e3e3;
   font-size: 14px;
   line-height: 20px;

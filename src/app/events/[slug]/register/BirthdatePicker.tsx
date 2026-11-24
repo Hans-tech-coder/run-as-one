@@ -356,7 +356,7 @@ export default function BirthdatePicker({
                     onFocus={() => {
                       if (!isFocus) setFocusDay(day);
                     }}
-                    className={`birthdate-day flex h-11 w-full max-w-11 sm:h-10 sm:max-w-10 items-center justify-center rounded-full text-sm tabular-nums transition-colors focus:outline-none focus-visible:shadow-[0_0_0_2px_var(--accent-blue)] ${
+                    className={`birthdate-day flex h-11 w-full max-w-11 sm:h-10 sm:max-w-10 items-center justify-center rounded-control text-sm tabular-nums transition-colors focus:outline-none focus-visible:shadow-[0_0_0_2px_var(--accent-blue)] ${
                       isSelected
                         ? "bg-accent-orange font-semibold text-white"
                         : isFuture
@@ -405,7 +405,7 @@ export default function BirthdatePicker({
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? errorId : undefined}
           onClick={() => (isOpen ? close() : open())}
-          className="control-shell w-full flex items-center gap-2 rounded-[8px] border border-white/10 bg-black/30 px-4 min-h-[48px] text-left transition-all focus:outline-none focus:border-accent-blue focus:bg-black/40 focus:shadow-[0_0_0_3px_rgba(43,192,255,0.2)]"
+          className="control-shell w-full flex items-center gap-2 rounded-control border border-white/10 bg-black/30 px-4 min-h-[48px] text-left transition-all focus:outline-none focus:border-accent-blue focus:bg-black/40 focus:shadow-[0_0_0_3px_rgba(43,192,255,0.2)]"
         >
           <span
             id={valueId}
@@ -426,7 +426,7 @@ export default function BirthdatePicker({
           <div
             {...dialogProps}
             data-origin="top-left"
-            className={`t-dropdown ${isShown ? "is-open" : "is-closing"} absolute z-30 left-0 mt-2 w-[20rem] max-w-[calc(100vw-2rem)] rounded-[12px] border border-white/15 bg-[#0d0d0f] p-3 shadow-[0_16px_40px_rgba(0,0,0,0.6)]`}
+            className={`t-dropdown ${isShown ? "is-open" : "is-closing"} absolute z-30 left-0 mt-2 w-[20rem] max-w-[calc(100vw-2rem)] rounded-panel border border-white/15 bg-[#0d0d0f] p-3 shadow-[0_16px_40px_rgba(0,0,0,0.6)]`}
           >
             {calendar}
           </div>
@@ -444,7 +444,7 @@ export default function BirthdatePicker({
             />
             <div
               {...dialogProps}
-              className={`date-sheet ${isShown ? "is-open" : "is-closing"} absolute inset-x-0 bottom-0 rounded-t-[20px] border-t border-white/15 bg-[#0d0d0f] px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-[0_-16px_40px_rgba(0,0,0,0.6)]`}
+              className={`date-sheet ${isShown ? "is-open" : "is-closing"} absolute inset-x-0 bottom-0 rounded-t-panel border-t border-white/15 bg-[#0d0d0f] px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-[0_-16px_40px_rgba(0,0,0,0.6)]`}
             >
               <div className="mb-3 flex items-center justify-between">
                 <span className="text-sm font-semibold text-white">
@@ -454,7 +454,7 @@ export default function BirthdatePicker({
                   type="button"
                   onClick={() => close(true)}
                   aria-label="Close calendar"
-                  className="-mr-2 flex h-11 w-11 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:shadow-[0_0_0_2px_var(--accent-blue)]"
+                  className="-mr-2 flex h-11 w-11 items-center justify-center rounded-control text-white/70 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:shadow-[0_0_0_2px_var(--accent-blue)]"
                 >
                   <X size={20} aria-hidden="true" />
                 </button>

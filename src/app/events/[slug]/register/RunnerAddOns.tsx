@@ -82,7 +82,7 @@ export default function RunnerAddOns({
       </p>
 
       {notice && (
-        <p role="status" className="m-0 mb-3 rounded-xl border border-amber-400/30 bg-amber-400/[0.07] px-4 py-2.5 text-sm text-amber-100">
+        <p role="status" className="m-0 mb-3 rounded-panel border border-amber-400/30 bg-amber-400/[0.07] px-4 py-2.5 text-sm text-amber-100">
           {notice}
         </p>
       )}
@@ -103,7 +103,7 @@ export default function RunnerAddOns({
           return (
             <div
               key={addOn.id}
-              className={`rounded-[14px] border p-3 sm:p-4 transition-colors ${
+              className={`rounded-panel border p-3 sm:p-4 transition-colors ${
                 pick ? "border-accent-orange bg-accent-orange/[0.06]" : "border-white/10 bg-black/40"
               } ${!pickable && !pick ? "opacity-70" : ""}`}
             >
@@ -116,10 +116,10 @@ export default function RunnerAddOns({
                     type="button"
                     onClick={() => setPosterFor(addOn)}
                     aria-label={`View ${addOn.name}`}
-                    className="w-16 h-16 sm:w-20 sm:h-20 relative shrink-0 rounded-xl overflow-hidden border border-white/10 bg-black/40 group/thumb"
+                    className="w-16 h-16 sm:w-20 sm:h-20 relative shrink-0 rounded-control overflow-hidden border border-white/10 bg-black/40 group/thumb"
                   >
                     <img src={poster} alt="" loading="lazy" className="w-full h-full object-cover" />
-                    <span className="absolute bottom-1 right-1 w-6 h-6 rounded-lg bg-black/75 ring-1 ring-white/15 flex items-center justify-center text-white group-hover/thumb:bg-accent-orange transition-colors">
+                    <span className="absolute bottom-1 right-1 w-6 h-6 rounded-panel bg-black/75 ring-1 ring-white/15 flex items-center justify-center text-white group-hover/thumb:bg-accent-orange transition-colors">
                       <Maximize2 size={12} aria-hidden="true" />
                     </span>
                   </button>
@@ -134,12 +134,12 @@ export default function RunnerAddOns({
                       ₱{formatPesos(addOn.price)}
                     </span>
                     {status && (
-                      <span className="text-xs font-bold text-white/70 bg-white/10 border border-white/10 px-2.5 py-0.5 rounded-full uppercase tracking-wide">
+                      <span className="text-xs font-bold text-white/70 bg-white/10 border border-white/10 px-2.5 py-0.5 rounded-chip uppercase tracking-wide">
                         {status}
                       </span>
                     )}
                     {!status && addOn.left !== null && addOn.left <= 10 && (
-                      <span className="text-xs font-bold text-accent-orange bg-accent-orange/15 px-2.5 py-0.5 rounded-full uppercase tracking-wide">
+                      <span className="text-xs font-bold text-accent-orange bg-accent-orange/15 px-2.5 py-0.5 rounded-chip uppercase tracking-wide">
                         {addOn.left} Left
                       </span>
                     )}
@@ -155,7 +155,7 @@ export default function RunnerAddOns({
                   aria-label={pick ? `Remove ${addOn.name}` : `Add ${addOn.name}`}
                   disabled={!pick && !pickable}
                   onClick={() => (pick ? remove(addOn.id) : add(addOn))}
-                  className={`basis-full sm:basis-auto shrink-0 min-h-11 min-w-[5.5rem] px-3 rounded-xl text-sm font-bold uppercase tracking-wide inline-flex items-center justify-center gap-1.5 transition-colors ${
+                  className={`basis-full sm:basis-auto shrink-0 min-h-11 min-w-[5.5rem] px-3 rounded-control text-sm font-bold uppercase tracking-wide inline-flex items-center justify-center gap-1.5 transition-colors ${
                     pick
                       ? "bg-accent-orange/15 text-accent-orange border border-accent-orange hover:bg-accent-orange/25"
                       : pickable
@@ -238,7 +238,7 @@ function QuantityStepper({
   onChange: (next: number) => void;
 }) {
   const labelId = useId();
-  const step = "w-11 h-11 rounded-xl border border-white/15 text-white flex items-center justify-center transition-colors hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed";
+  const step = "w-11 h-11 rounded-control border border-white/15 text-white flex items-center justify-center transition-colors hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed";
   return (
     <div className="input-group">
       <span className="block mb-2 text-sm text-secondary" id={labelId}>

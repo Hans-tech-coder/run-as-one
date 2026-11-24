@@ -67,7 +67,7 @@ export default function OrderSummary({
   const freeRunners = new Set(parts.flatMap((part) => part.freeRunners));
 
   return (
-    <div className="order-summary mt-6 bg-black/40 rounded-[16px] p-4 sm:p-6 border border-white/5">
+    <div className="order-summary mt-6 bg-black/40 rounded-panel p-4 sm:p-6 border border-white/5">
       <h4 className="mb-4 text-white font-bold tracking-wide uppercase text-sm">
         Order Summary
       </h4>
@@ -86,7 +86,7 @@ export default function OrderSummary({
                   {/* Which person the group deal made free, on their own row,
                       so the deduction below lands on someone visible. */}
                   {freeRunners.has(idx) && (
-                    <span className="text-[10px] font-bold uppercase tracking-wide text-emerald-400 bg-emerald-400/10 rounded px-1.5 py-0.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wide text-emerald-400 bg-emerald-400/10 rounded-chip px-1.5 py-0.5">
                       Free
                     </span>
                   )}

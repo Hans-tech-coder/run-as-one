@@ -28,7 +28,7 @@ export default function ActivityCards({
   return (
     <div className="dash-mobile-only">
       {days.length === 0 ? (
-        <div className="border border-[var(--dash-border)] rounded-lg py-12 px-4 text-center text-[var(--text-muted)]">{emptyMessage}</div>
+        <div className="border border-[var(--dash-border)] rounded-panel py-12 px-4 text-center text-[var(--text-muted)]">{emptyMessage}</div>
       ) : (
         <div className="flex flex-col gap-4">
           {days.map(group => (

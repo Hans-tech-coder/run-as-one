@@ -67,7 +67,7 @@ export default function SizeGuideModal({
           <button
             type="button"
             onClick={() => setZoomOpen(true)}
-            className="relative block w-full mb-4 rounded-lg overflow-hidden border border-white/10 bg-white/5 cursor-zoom-in"
+            className="relative block w-full mb-4 rounded-control overflow-hidden border border-white/10 bg-white/5 cursor-zoom-in"
             aria-label="View size chart full screen"
           >
             <img
@@ -75,7 +75,7 @@ export default function SizeGuideModal({
               alt="Size chart"
               className="w-full h-auto max-h-[60vh] object-contain"
             />
-            <span className="pointer-events-none absolute bottom-2.5 right-2.5 inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-black/70 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur-md shadow-lg">
+            <span className="pointer-events-none absolute bottom-2.5 right-2.5 inline-flex items-center gap-1.5 rounded-chip border border-white/20 bg-black/70 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur-md shadow-lg">
               <Maximize2 size={12} /> Zoom
             </span>
           </button>
@@ -86,14 +86,14 @@ export default function SizeGuideModal({
             return (
               <div
                 key={row.size}
-                className={`relative rounded-lg border p-2.5 text-center ${
+                className={`relative rounded-panel border p-2.5 text-center ${
                   costsMore
                     ? "border-accent-orange/50 bg-accent-orange/10"
                     : "border-white/10 bg-white/5"
                 }`}
               >
                 {costsMore && (
-                  <span className="absolute -top-2 -right-1.5 text-[9px] leading-none font-bold text-white bg-accent-orange rounded-full px-1.5 py-1">
+                  <span className="absolute -top-2 -right-1.5 text-[9px] leading-none font-bold text-white bg-accent-orange rounded-chip px-1.5 py-1">
                     +&#8369;{formatPesos(upcharge)}
                   </span>
                 )}
@@ -107,7 +107,7 @@ export default function SizeGuideModal({
         </div>
         )}
 
-        <div className="bg-dark/50 border border-blue px-4 py-3 rounded-lg text-xs text-secondary leading-relaxed">
+        <div className="bg-dark/50 border border-blue px-4 py-3 rounded-panel text-xs text-secondary leading-relaxed">
           <span className="text-accent-blue font-medium">Tip:</span>{" "}
           Between sizes? Size up{imageUrl ? "." : <> &mdash; one chart covers both the singlet
           and the shirt.</>}

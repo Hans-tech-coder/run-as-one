@@ -5,6 +5,10 @@ import { User, Hash } from 'lucide-react';
 import type { Row } from '@tanstack/react-table';
 import { toWholeSeconds } from '@/lib/race-time';
 import { runnerResultPath } from '@/lib/event-slug';
+import type { CertificateEvent } from '@/lib/e-certificate';
+
+/** The event as the leaderboard uses it: its slug for result links, the rest for certificates. */
+export type LeaderboardEvent = CertificateEvent & { slug: string };
 
 export interface Result {
   id: string;
@@ -34,7 +38,7 @@ export function rankLabel(rank: number | null | undefined): string {
  */
 export function PacerTag() {
   return (
-    <span className="shrink-0 whitespace-nowrap bg-site-surface text-site-accent px-2 py-0.5 rounded-md text-[10px] font-bold border border-site-action">
+    <span className="shrink-0 whitespace-nowrap bg-site-surface text-site-accent px-2 py-0.5 rounded-chip text-[10px] font-bold border border-site-action">
       Pacer
     </span>
   );
@@ -53,7 +57,7 @@ export default function FullResultsCards({
   actionsFor,
 }: {
   rows: Row<Result>[];
-  event: any;
+  event: LeaderboardEvent;
   openResult: (path: string) => void;
   openOnKey: (e: React.KeyboardEvent, path: string) => void;
   actionsFor: (r: Result, path: string) => React.ReactNode;
@@ -61,7 +65,7 @@ export default function FullResultsCards({
   return (
     <div className="lg:hidden grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
       {rows.length === 0 ? (
-        <div className="md:col-span-2 bg-site-card border border-site-line p-8 rounded-[14px] text-center text-secondary/70 italic">
+        <div className="md:col-span-2 bg-site-card border border-site-line p-8 rounded-panel text-center text-secondary/70 italic">
           No results found matching your filters.
         </div>
       ) : (
@@ -76,14 +80,16 @@ export default function FullResultsCards({
               aria-label={`Open ${r.name}'s result`}
               onClick={() => openResult(path)}
               onKeyDown={(e) => openOnKey(e, path)}
-              className="block no-underline rounded-[18px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--site-focus)]"
+              // `.lb-card` (site.css): a Paper card's panel corner and the lift
+              // every linked Paper card gives on hover.
+              className="lb-card block no-underline"
             >
-              <div className="relative h-full rounded-[18px] bg-site-card border border-site-line p-4 hover:border-site-line hover:bg-site-surface transition-all duration-300 group/row cursor-pointer overflow-hidden">
+              <div className="relative h-full p-4 overflow-hidden">
                 <div className="flex items-start gap-3 relative z-10">
                   {/* A runner's name is untrusted length: it truncates here
                       and is spelled out in full on their own result. */}
                   <div className="flex-1 min-w-0 pt-0.5">
-                    <h3 className="font-bold text-site-ink text-base leading-snug truncate group-hover/row:text-site-accent transition-colors" title={r.name}>
+                    <h3 className="lb-row__name font-bold text-site-ink text-base leading-snug truncate" title={r.name}>
                       {r.name}
                     </h3>
                     {/* One line, always: the chip gives way and truncates
@@ -98,7 +104,7 @@ export default function FullResultsCards({
                         <User size={12} className="text-site-muted shrink-0" /> {r.gender}
                       </span>
                       {r.isPacer && <PacerTag />}
-                      <span className="min-w-0 truncate whitespace-nowrap bg-site-surface text-site-accent px-2 py-0.5 rounded-md text-[10px] font-bold border border-site-line" title={r.category.name}>
+                      <span className="min-w-0 truncate whitespace-nowrap bg-site-surface text-site-accent px-2 py-0.5 rounded-chip text-[10px] font-bold border border-site-line" title={r.category.name}>
                         {r.category.name}
                       </span>
                     </div>

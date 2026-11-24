@@ -60,7 +60,7 @@ export default function CategoryChangeQuote({
 }) {
   const needsPayment = quote.status === CATEGORY_CHANGE_STATUSES.AWAITING_PAYMENT;
   return (
-    <section aria-labelledby="category-change-quote" className="rounded-xl border border-[var(--dash-border)] bg-[var(--dash-sunken)] p-4">
+    <section aria-labelledby="category-change-quote" className="rounded-panel border border-[var(--dash-border)] bg-[var(--dash-sunken)] p-4">
       <h4 id="category-change-quote" className="m-0 mb-2 flex items-center gap-2 text-sm font-semibold text-primary">
         {current.name} <ArrowRight size={14} aria-hidden="true" /> {target.name}
       </h4>

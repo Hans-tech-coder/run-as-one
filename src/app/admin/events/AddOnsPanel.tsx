@@ -138,7 +138,7 @@ export default function AddOnsPanel({ eventId }: { eventId: string }) {
             <BusyLabel>Loading Add-Ons</BusyLabel>
           </p>
         ) : addOns.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-[var(--ink-15)] bg-[var(--ink-02)] p-6 max-sm:p-4 text-center">
+          <div className="rounded-panel border border-dashed border-[var(--ink-15)] bg-[var(--ink-02)] p-6 max-sm:p-4 text-center">
             <ShoppingBag size={28} className="mx-auto mb-3 opacity-50" />
             <p className="text-sm m-0 mb-1">No add-ons on this event.</p>
             <p className="text-xs opacity-70 m-0">
@@ -161,10 +161,10 @@ export default function AddOnsPanel({ eventId }: { eventId: string }) {
               return (
                 <li
                   key={addOn.id}
-                  className={`rounded-xl border border-[var(--dash-border)] bg-[var(--ink-02)] p-4 max-sm:p-3 ${addOn.active ? '' : 'opacity-80'}`}
+                  className={`rounded-panel border border-[var(--dash-border)] bg-[var(--ink-02)] p-4 max-sm:p-3 ${addOn.active ? '' : 'opacity-80'}`}
                 >
                   <div className="flex items-start gap-4 max-sm:gap-3">
-                    <div className="w-16 h-16 max-sm:w-14 max-sm:h-14 shrink-0 rounded-lg overflow-hidden border border-[var(--dash-border)] bg-[var(--ink-05)] flex items-center justify-center">
+                    <div className="w-16 h-16 max-sm:w-14 max-sm:h-14 shrink-0 rounded-panel overflow-hidden border border-[var(--dash-border)] bg-[var(--ink-05)] flex items-center justify-center">
                       {addOn.imageUrls[0] ? (
                         <img src={addOn.imageUrls[0]} alt="" className="w-full h-full object-cover" loading="lazy" />
                       ) : (

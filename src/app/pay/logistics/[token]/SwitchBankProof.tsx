@@ -94,7 +94,7 @@ export default function SwitchBankProof({
 
   if (bankAccounts.length === 0) {
     return (
-      <p role="alert" className="m-0 rounded-[16px] border border-accent-orange/30 bg-accent-orange/10 p-4 text-sm text-site-ink">
+      <p role="alert" className="m-0 rounded-panel border border-accent-orange/30 bg-accent-orange/10 p-4 text-sm text-site-ink">
         The accounts to pay into are not ready yet. Reply to our email and we will send you where to pay.
       </p>
     );
@@ -102,7 +102,7 @@ export default function SwitchBankProof({
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-start gap-3 rounded-[16px] border border-accent-blue/20 bg-accent-blue/5 p-4">
+      <div className="flex items-start gap-3 rounded-panel border border-accent-blue/20 bg-accent-blue/5 p-4">
         <Landmark size={20} className="mt-0.5 shrink-0 text-accent-blue" aria-hidden="true" />
         <p className="m-0 text-sm leading-relaxed text-site-muted">
           Send exactly <strong className="text-site-ink">{amount}</strong> by GCash or bank transfer to one of these
@@ -116,7 +116,7 @@ export default function SwitchBankProof({
             key={account.id}
             type="button"
             onClick={() => setBank(account)}
-            className="min-h-[44px] rounded-[14px] border border-site-line bg-site-card p-4 text-center transition-colors hover:border-accent-blue hover:bg-site-surface"
+            className="min-h-[44px] rounded-control border border-site-line bg-site-card p-4 text-center transition-colors hover:border-accent-blue hover:bg-site-surface"
           >
             <span className="block text-lg font-bold text-site-ink">{account.bankName}</span>
             <span className="block text-sm text-site-muted">
@@ -128,7 +128,7 @@ export default function SwitchBankProof({
 
       <div>
         {!file ? (
-          <div className="relative rounded-[14px] border-2 border-dashed border-[var(--site-line-strong)] bg-site-card p-6 text-center transition-colors hover:border-site-ink hover:bg-site-surface">
+          <div className="relative rounded-panel border-2 border-dashed border-[var(--site-line-strong)] bg-site-card p-6 text-center transition-colors hover:border-site-ink hover:bg-site-surface">
             <input
               id="switch-proof"
               type="file"
@@ -149,7 +149,7 @@ export default function SwitchBankProof({
             </p>
           </div>
         ) : (
-          <div className="flex items-center justify-between gap-3 rounded-[14px] border border-site-line bg-site-surface p-4">
+          <div className="flex items-center justify-between gap-3 rounded-panel border border-site-line bg-site-surface p-4">
             <div className="flex min-w-0 items-center gap-3">
               {file.type === PDF_TYPE ? (
                 <FileText size={22} className="shrink-0 text-accent-blue" aria-hidden="true" />
@@ -162,7 +162,7 @@ export default function SwitchBankProof({
               type="button"
               onClick={() => setFile(null)}
               aria-label="Remove the screenshot"
-              className="inline-flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full text-site-muted transition-colors hover:bg-red-500/10 hover:text-red-400"
+              className="inline-flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-control text-site-muted transition-colors hover:bg-red-500/10 hover:text-red-400"
             >
               <X size={20} aria-hidden="true" />
             </button>
@@ -213,7 +213,7 @@ export default function SwitchBankProof({
           type="button"
           onClick={submit}
           disabled={busy}
-          className="btn-gradient justify-center rounded-[16px] px-8 py-4 text-base disabled:opacity-60"
+          className="btn-gradient justify-center rounded-control px-8 py-4 text-base disabled:opacity-60"
         >
           {busy ? <BusyLabel>Sending</BusyLabel> : replacing ? 'Replace My Proof' : 'Submit My Proof'}
         </button>

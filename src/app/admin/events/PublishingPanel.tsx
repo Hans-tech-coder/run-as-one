@@ -132,7 +132,7 @@ export default function PublishingPanel({
           {/* What the two answers mean together, in runners' terms. Live, so
               it changes as the cards are clicked. */}
           <p
-            className="flex items-start gap-3 rounded-xl border border-accent-blue/30 bg-accent-blue/10 px-4 py-3 text-sm text-primary m-0"
+            className="flex items-start gap-3 rounded-panel border border-accent-blue/30 bg-accent-blue/10 px-4 py-3 text-sm text-primary m-0"
             aria-live="polite"
           >
             <Info size={18} aria-hidden="true" className="shrink-0 mt-0.5 text-accent-blue-ink" />

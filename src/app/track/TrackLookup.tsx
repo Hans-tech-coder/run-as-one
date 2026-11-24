@@ -115,7 +115,7 @@ export default function TrackLookup({ help }: { help: TrackHelp }) {
     <form
       onSubmit={submit}
       noValidate
-      className="glass-panel relative w-full overflow-clip rounded-[14px] border border-site-line bg-site-card p-5 sm:p-8"
+      className="glass-panel relative w-full overflow-clip rounded-panel border border-site-line bg-site-card p-5 sm:p-8"
     >
       <div className="relative z-10 flex flex-col gap-5">
         <div className="input-group">
@@ -171,7 +171,7 @@ export default function TrackLookup({ help }: { help: TrackHelp }) {
             ref={missRef}
             role="status"
             tabIndex={-1}
-            className="flex flex-col gap-3 rounded-[12px] border border-site-line bg-site-surface px-4 py-3 text-sm text-site-ink outline-none"
+            className="flex flex-col gap-3 rounded-panel border border-site-line bg-site-surface px-4 py-3 text-sm text-site-ink outline-none"
           >
             <p className="m-0 flex items-start gap-2.5">
               <MapPinned size={18} aria-hidden="true" className="mt-0.5 shrink-0 text-site-accent" />
@@ -192,7 +192,7 @@ export default function TrackLookup({ help }: { help: TrackHelp }) {
             ref={missRef}
             role="alert"
             tabIndex={-1}
-            className="flex items-start gap-2.5 rounded-[12px] border border-red-400/25 bg-red-400/[0.08] px-4 py-3 text-sm text-[var(--status-danger)] outline-none"
+            className="flex items-start gap-2.5 rounded-panel border border-red-400/25 bg-red-400/[0.08] px-4 py-3 text-sm text-[var(--status-danger)] outline-none"
           >
             <AlertCircle size={18} aria-hidden="true" className="mt-0.5 shrink-0 text-[var(--status-danger)]" />
             <span>{miss}</span>

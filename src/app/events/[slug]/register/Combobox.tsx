@@ -202,7 +202,7 @@ export default function Combobox({
             id={listboxId}
             role="listbox"
             aria-label={listboxLabel}
-            className="absolute z-30 left-0 right-0 mt-2 max-h-64 overflow-y-auto rounded-[12px] border border-white/15 bg-[#0d0d0f] shadow-[0_16px_40px_rgba(0,0,0,0.6)] py-1"
+            className="absolute z-30 left-0 right-0 mt-2 max-h-64 overflow-y-auto rounded-panel border border-white/15 bg-[#0d0d0f] shadow-[0_16px_40px_rgba(0,0,0,0.6)] py-1"
           >
             {rows.map((row, index) => (
               <li

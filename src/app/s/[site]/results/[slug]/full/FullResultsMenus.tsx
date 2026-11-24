@@ -1,16 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback, useSyncExternalStore } from 'react';
-import { createPortal } from 'react-dom';
-import Link from 'next/link';
-import { ChevronDown, Check } from 'lucide-react';
-import RunnerLoader from '@/components/ui/RunnerLoader';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { ChevronDown, Check, FileBadge } from 'lucide-react';
 import BusyLabel from '@/components/ui/BusyLabel';
-import { cssDurationMs } from '@/lib/css-duration';
 
 /**
- * The full leaderboard's small menus — the Category and Gender filters and a
- * row's ⋮ actions — and the dismissal they share. Split out of
+ * The full leaderboard's small menus — the Category and Gender filters — the
+ * dismissal they share, and a row's E-Cert button. Split out of
  * FullResultsClient.tsx (AGENTS.md: split before you edit) when the results
  * pages moved to the Paper look, so the leaderboard file holds the table and
  * this one holds the menus.
@@ -76,16 +72,16 @@ export function FilterDropdown({ title, options, selected, onToggle, align = 'le
         onClick={toggle}
         aria-haspopup="true"
         aria-expanded={isOpen}
-        className="w-full h-11 flex items-center justify-between sm:justify-start gap-2 bg-site-card border border-[var(--site-field-line)] px-4 rounded-xl text-sm text-site-ink hover:border-site-ink transition-colors"
+        className="lb-control w-full h-11 flex items-center justify-between sm:justify-start gap-2 px-4 text-sm"
       >
         <span className="flex items-center gap-2">
-          {title} {selected.length > 0 && <span className="bg-site-action text-[var(--site-action-ink)] text-[10px] leading-none px-1.5 py-1 rounded-full">{selected.length}</span>}
+          {title} {selected.length > 0 && <span className="bg-site-action text-[var(--site-action-ink)] text-[10px] leading-none px-1.5 py-1 rounded-chip">{selected.length}</span>}
         </span>
         <ChevronDown size={14} className={`shrink-0 transition-transform duration-[250ms] ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       <div
-        className={`t-dropdown absolute top-full mt-2 w-56 max-w-[calc(100vw-2rem)] bg-site-card border border-site-line rounded-xl shadow-[0_16px_36px_-18px_rgb(20_25_43/0.35)] z-50 overflow-hidden ${align === 'right' ? 'right-0 sm:left-0 sm:right-auto' : 'left-0'} ${isOpen ? 'is-open' : ''} ${isClosing ? 'is-closing' : ''}`}
+        className={`t-dropdown lb-menu lb-menu--roomy absolute top-full mt-2 w-56 max-w-[calc(100vw-2rem)] z-50 overflow-hidden ${align === 'right' ? 'right-0 sm:left-0 sm:right-auto' : 'left-0'} ${isOpen ? 'is-open' : ''} ${isClosing ? 'is-closing' : ''}`}
         data-origin={align === 'right' ? 'top-right' : 'top-left'}
       >
         <div className="max-h-60 overflow-y-auto p-2 scrollbar-thin">
@@ -98,7 +94,7 @@ export function FilterDropdown({ title, options, selected, onToggle, align = 'le
                 type="button"
                 onClick={() => onToggle(opt)}
                 aria-pressed={isSelected}
-                className="w-full text-left flex items-center justify-between gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-site-surface transition-colors"
+                className="lb-menu__item w-full text-left flex items-center justify-between gap-2 px-3 py-2.5 text-sm"
               >
                 <span className={`truncate ${isSelected ? 'text-site-accent font-medium' : 'text-secondary'}`}>{opt}</span>
                 {isSelected && <Check size={14} className="text-site-accent shrink-0" />}
@@ -111,169 +107,40 @@ export function FilterDropdown({ title, options, selected, onToggle, align = 'le
   );
 }
 
-// Custom Action Menu using transitions-dev.
-// The menu is rendered into <body> and positioned against the trigger's viewport
-// rect, because the results card and its horizontal scroller both clip their
-// overflow — a menu laid out inside the row was cut off on the last rows. It
-// also flips above the trigger when the space below it cannot hold the menu.
-// View E-Cert opens the certificate here, over the leaderboard: it used to be
+// A row's one action: open the runner's e-certificate here, over the
+// leaderboard. It was a ⋮ menu of View Details and View E-Cert, but View
+// Details did what tapping the row already does, so the menu cost a click for
+// nothing; now the certificate is a labelled button of its own. It used to be
 // a link to the runner's page with ?cert=1, so the reader lost their place in
-// the list for a dialog they could have had where they were. The menu stays
-// open, its item saying the certificate is being drawn, until it is ready.
-export function ActionMenu({ path, onViewCert, isGenerating }: { path: string, onViewCert: () => Promise<void>, isGenerating: boolean }) {
-  const MENU_WIDTH = 160;   // matches w-40
-  const MENU_HEIGHT = 104;  // the two items plus padding, used before the first measure
-  const GAP = 8;            // the old mt-2
-  const EDGE = 8;           // breathing room against the viewport edges
-
-  const [isOpen, setIsOpen] = useState(false);
-  // True once in the browser, where there is a <body> to portal into; false
-  // on the server render. A store read rather than a set-state-in-effect.
-  const mounted = useSyncExternalStore(noSubscribe, () => true, () => false);
-  const [placement, setPlacement] = useState<{ top: number, left: number, origin: 'top-right' | 'bottom-right' }>({
-    top: 0,
-    left: 0,
-    origin: 'top-right',
-  });
-
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-
-  const updatePosition = useCallback(() => {
-    const button = buttonRef.current;
-    if (!button) return;
-
-    const rect = button.getBoundingClientRect();
-    const height = menuRef.current?.offsetHeight || MENU_HEIGHT;
-
-    const roomBelow = window.innerHeight - rect.bottom - GAP - EDGE;
-    const roomAbove = rect.top - GAP - EDGE;
-    const flipUp = height > roomBelow && roomAbove >= height;
-
-    setPlacement({
-      top: flipUp ? rect.top - GAP - height : rect.bottom + GAP,
-      left: Math.min(
-        Math.max(rect.right - MENU_WIDTH, EDGE),
-        Math.max(window.innerWidth - MENU_WIDTH - EDGE, EDGE)
-      ),
-      origin: flipUp ? 'bottom-right' : 'top-right',
-    });
-  }, []);
-
-  const close = useCallback(() => {
-    const el = menuRef.current;
-    if (!el) {
-      setIsOpen(false);
-      return;
-    }
-    const closeMs = cssDurationMs('--dropdown-close-dur', 150);
-
-    el.classList.remove('is-open');
-    el.classList.add('is-closing');
-    setTimeout(() => setIsOpen(false), closeMs);
-  }, []);
-
-  // Once the menu is in the DOM its real height is known, so measure again and
-  // play the open transition on the next frame.
-  useEffect(() => {
-    if (!isOpen) return;
-    updatePosition();
-    const frame = requestAnimationFrame(() => {
-      menuRef.current?.classList.remove('is-closing');
-      menuRef.current?.classList.add('is-open');
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [isOpen, updatePosition]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    function handleClickOutside(event: MouseEvent) {
-      const target = event.target as Node;
-      if (menuRef.current?.contains(target) || buttonRef.current?.contains(target)) return;
-      close();
-    }
-    function handleScrollOrResize() {
-      updatePosition();
-    }
-
-    document.addEventListener('mousedown', handleClickOutside);
-    window.addEventListener('scroll', handleScrollOrResize, true);
-    window.addEventListener('resize', handleScrollOrResize);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      window.removeEventListener('scroll', handleScrollOrResize, true);
-      window.removeEventListener('resize', handleScrollOrResize);
-    };
-  }, [isOpen, close, updatePosition]);
-
-  const toggle = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (isOpen) {
-      close();
-    } else {
-      updatePosition();
-      setIsOpen(true);
-    }
-  };
-
-  const menu = (
-    <div
-      ref={menuRef}
-      onClick={(e) => e.stopPropagation()}
-      className="t-dropdown fixed w-40 bg-site-card border border-site-line rounded-xl shadow-[0_16px_36px_-18px_rgb(20_25_43/0.35)] overflow-hidden"
-      data-origin={placement.origin}
-      style={{ top: placement.top, left: placement.left, zIndex: 9999 }}
-    >
-      <div className="p-1">
-        <Link
-          href={path}
-          onClick={(e) => e.stopPropagation()}
-          className="w-full text-left block px-3 py-2.5 text-sm text-site-ink rounded-lg hover:bg-site-surface transition-colors"
-        >
-          View Details
-        </Link>
-        <button
-          type="button"
-          onClick={async (e) => {
-            e.stopPropagation();
-            await onViewCert();
-            close();
-          }}
-          disabled={isGenerating}
-          aria-busy={isGenerating || undefined}
-          className="w-full text-left flex items-center gap-2 px-3 py-2.5 text-sm text-site-accent font-medium rounded-lg hover:bg-site-surface disabled:hover:bg-transparent disabled:cursor-wait transition-colors"
-        >
-          {isGenerating ? <BusyLabel>Generating</BusyLabel> : 'View E-Cert'}
-        </button>
-      </div>
-    </div>
-  );
-
+// the list for a dialog they could have had where they were. While the
+// certificate is drawn the button says so, and the dialog opens when it is
+// ready. It stops the press, so the row underneath does not open the result.
+export function CertButton({ name, onViewCert, isGenerating }: { name: string, onViewCert: () => Promise<void>, isGenerating: boolean }) {
   return (
-    <>
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={toggle}
-        className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-site-surface transition-colors text-secondary hover:text-site-ink"
-        title="Actions"
-        aria-label="Result actions"
-        aria-haspopup="true"
-        aria-expanded={isOpen}
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
-      </button>
-
-      {/* Into the Paper frame when there is one, so the menu wears the page's
-          tokens; the frame carries no transform, so fixed positioning holds. */}
-      {mounted && isOpen && createPortal(menu, document.querySelector('.site-paper') ?? document.body)}
-    </>
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        void onViewCert();
+      }}
+      onKeyDown={(e) => e.stopPropagation()}
+      disabled={isGenerating}
+      aria-busy={isGenerating || undefined}
+      aria-label={`View ${name}'s e-certificate`}
+      // A text link, not a bordered button (the owner's call): `.site-link`'s
+      // accent text and drawn underline say it can be pressed, the certificate
+      // icon says what it opens, and `--arrow` gives it a 44px target.
+      // `--still` keeps a leading icon from nudging on hover.
+      className="site-link site-link--arrow site-link--still text-sm whitespace-nowrap"
+    >
+      {isGenerating ? (
+        <BusyLabel>Generating</BusyLabel>
+      ) : (
+        <>
+          <FileBadge size={17} aria-hidden="true" />
+          <span>E-Cert</span>
+        </>
+      )}
+    </button>
   );
-}
-
-/** useSyncExternalStore's subscribe for a value that never changes. */
-function noSubscribe() {
-  return () => {};
 }

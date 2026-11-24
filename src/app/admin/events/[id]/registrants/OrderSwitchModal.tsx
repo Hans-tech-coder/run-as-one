@@ -74,7 +74,7 @@ function WaitingSwitch({ change }: { change: LogisticsChangeView }) {
       : paymentMethodLabel(change.paymentMethod)
     : null;
   return (
-    <div className="rounded-lg border border-[var(--dash-hairline)] bg-[var(--ink-02)] p-3 flex flex-col gap-1 text-sm">
+    <div className="rounded-panel border border-[var(--dash-hairline)] bg-[var(--ink-02)] p-3 flex flex-col gap-1 text-sm">
       {change.awaitsAddress ? (
         // Revision 3b T12: sent with no address; the fee follows the runner's.
         <p className="m-0 font-medium text-primary">Waiting for the runner to give the address on the link</p>
@@ -155,7 +155,7 @@ export default function OrderSwitchModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="order-switch-title"
-        className={`t-modal admin-modal-panel admin-modal-sheet w-full max-w-xl bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-clip ${isOpen ? 'is-open' : ''} ${isClosing ? 'is-closing' : ''}`}
+        className={`t-modal admin-modal-panel admin-modal-sheet w-full max-w-xl bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-panel shadow-2xl flex flex-col max-h-[90vh] overflow-clip ${isOpen ? 'is-open' : ''} ${isClosing ? 'is-closing' : ''}`}
       >
         <div className="p-6 max-sm:px-4 max-sm:py-3 border-b border-[var(--dash-border)] flex justify-between items-start gap-4 shrink-0">
           <div className="min-w-0">
@@ -170,7 +170,7 @@ export default function OrderSwitchModal({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-full text-secondary hover:text-primary transition-colors bg-transparent border-none cursor-pointer p-0"
+            className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-control text-secondary hover:text-primary transition-colors bg-transparent border-none cursor-pointer p-0"
           >
             <X size={20} />
           </button>

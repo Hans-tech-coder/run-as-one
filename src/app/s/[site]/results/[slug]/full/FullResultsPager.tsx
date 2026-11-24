@@ -5,7 +5,9 @@ import { ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } f
 import type { Table } from '@tanstack/react-table';
 import { useDismissableMenu } from './FullResultsMenus';
 
-const PAGER_BUTTON = "w-10 h-10 flex items-center justify-center rounded-xl bg-site-card border border-site-line text-site-ink disabled:opacity-30 disabled:cursor-not-allowed hover:bg-site-surface transition-colors";
+// `.lb-control` (site.css): the same edge, hover and press as the filters, and
+// no hover at all while disabled.
+const PAGER_BUTTON = "lb-control w-10 h-10 flex items-center justify-center";
 
 /**
  * The full leaderboard's foot: rows per page and the pager. Split out of
@@ -38,13 +40,13 @@ export default function FullResultsPager<T>({
             onClick={toggle}
             aria-haspopup="true"
             aria-expanded={isOpen}
-            className="h-10 flex items-center gap-1.5 bg-site-card px-3.5 rounded-xl border border-[var(--site-field-line)] text-site-ink hover:border-site-ink transition-colors"
+            className="lb-control h-10 flex items-center gap-1.5 px-3.5"
           >
             {pageSize}
             <ChevronDown size={14} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
           </button>
           <div
-            className={`t-dropdown absolute bottom-full left-0 mb-2 w-24 bg-site-card border border-site-line rounded-xl shadow-[0_16px_36px_-18px_rgb(20_25_43/0.35)] z-50 overflow-hidden ${isOpen ? 'is-open' : ''} ${isClosing ? 'is-closing' : ''}`}
+            className={`t-dropdown lb-menu absolute bottom-full left-0 mb-2 w-24 p-1 z-50 overflow-hidden ${isOpen ? 'is-open' : ''} ${isClosing ? 'is-closing' : ''}`}
             data-origin="bottom-left"
           >
             {[10, 25, 50, 100].map(size => (
@@ -52,7 +54,8 @@ export default function FullResultsPager<T>({
                 key={size}
                 type="button"
                 onClick={() => { turnPage(() => table.setPageSize(size)); close(); }}
-                className={`w-full text-left px-3 py-2.5 text-sm hover:bg-site-surface ${pageSize === size ? 'text-site-accent font-medium bg-site-surface' : 'text-site-ink'}`}
+                aria-current={pageSize === size || undefined}
+                className={`lb-menu__item w-full text-left px-3 py-2 text-sm ${pageSize === size ? 'text-site-accent font-medium' : 'text-site-ink'}`}
               >
                 {size}
               </button>

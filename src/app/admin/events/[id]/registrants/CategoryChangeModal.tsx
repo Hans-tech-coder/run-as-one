@@ -125,7 +125,7 @@ export default function CategoryChangeModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="category-change-title"
-        className={`t-modal admin-modal-panel admin-modal-sheet w-full max-w-xl bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-clip ${isOpen ? 'is-open' : ''} ${isClosing ? 'is-closing' : ''}`}
+        className={`t-modal admin-modal-panel admin-modal-sheet w-full max-w-xl bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-panel shadow-2xl flex flex-col max-h-[90vh] overflow-clip ${isOpen ? 'is-open' : ''} ${isClosing ? 'is-closing' : ''}`}
       >
         <div className="p-6 max-sm:px-4 max-sm:py-3 border-b border-[var(--dash-border)] flex justify-between items-start gap-4 shrink-0">
           <div className="min-w-0">
@@ -140,7 +140,7 @@ export default function CategoryChangeModal({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-full text-secondary hover:text-primary transition-colors bg-transparent border-none cursor-pointer p-0"
+            className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-control text-secondary hover:text-primary transition-colors bg-transparent border-none cursor-pointer p-0"
           >
             <X size={20} />
           </button>
@@ -155,7 +155,7 @@ export default function CategoryChangeModal({
           )}
 
           {preview && refused && (
-            <div role="alert" className="flex gap-3 rounded-lg border border-orange-500/30 bg-orange-500/10 p-3 text-primary">
+            <div role="alert" className="flex gap-3 rounded-panel border border-orange-500/30 bg-orange-500/10 p-3 text-primary">
               <TriangleAlert size={18} className="shrink-0 text-[var(--status-warning)]" aria-hidden="true" />
               <p className="m-0">{refused.message}</p>
             </div>
@@ -176,7 +176,7 @@ export default function CategoryChangeModal({
                     return (
                       <label
                         key={category.id}
-                        className={`flex min-h-11 items-start gap-3 rounded-lg border px-3 py-2.5 transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-[var(--ink-30)] ${
+                        className={`flex min-h-11 items-start gap-3 rounded-control border px-3 py-2.5 transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-[var(--ink-30)] ${
                           disabled
                             ? 'cursor-not-allowed border-[var(--dash-border)] bg-[var(--ink-02)] opacity-60'
                             : selected
@@ -238,7 +238,7 @@ export default function CategoryChangeModal({
               )}
 
               {downgradeHeld && (
-                <div role="alert" className="flex gap-3 rounded-lg border border-orange-500/30 bg-orange-500/10 p-3 text-primary">
+                <div role="alert" className="flex gap-3 rounded-panel border border-orange-500/30 bg-orange-500/10 p-3 text-primary">
                   <TriangleAlert size={18} className="shrink-0 text-[var(--status-warning)]" aria-hidden="true" />
                   <p className="m-0">{DOWNGRADE_ON_HOLD_COPY}</p>
                 </div>
@@ -274,7 +274,7 @@ export default function CategoryChangeModal({
                       Runner Paid a Different Amount?
                     </button>
                   ) : (
-                    <div className="space-y-3 rounded-lg border border-[var(--dash-border)] p-3">
+                    <div className="space-y-3 rounded-panel border border-[var(--dash-border)] p-3">
                       <div className="space-y-1.5">
                         <label htmlFor="category-change-basis" className="block text-secondary">
                           What the Runner Really Paid for {current.name} (₱)
@@ -361,7 +361,7 @@ export default function CategoryChangeModal({
               type="button"
               onClick={onSave}
               disabled={!canSave}
-              className="px-6 py-2 min-h-11 bg-[var(--dash-inverse-bg)] text-[var(--dash-inverse-fg)] rounded-lg text-sm font-medium hover:bg-[var(--dash-inverse-hover)] transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
+              className="px-6 py-2 min-h-11 bg-[var(--dash-inverse-bg)] text-[var(--dash-inverse-fg)] rounded-control text-sm font-medium hover:bg-[var(--dash-inverse-hover)] transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
             >
               {isSaving ? <BusyLabel>{needsPayment && paymentChoice !== CHANGE_PAYMENT_CHOICES.OUTSIDE_PAID ? 'Holding Seat' : 'Changing'}</BusyLabel> : saveLabel}
             </button>

@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-50 pages · 100 API routes · 172 modules in `src/lib` · 722 files · 125,631 lines
+50 pages · 100 API routes · 172 modules in `src/lib` · 723 files · 125,624 lines
 
 ---
 
@@ -69,7 +69,7 @@ The route, the server component behind it, and the client components beside it.
 | `/s/[site]/results` | [`/s/[site]/results/page.tsx`](../src/app/s/[site]/results/page.tsx) | — |
 | `/s/[site]/results/[slug]` | [`/s/[site]/results/[slug]/page.tsx`](../src/app/s/[site]/results/[slug]/page.tsx) | — |
 | `/s/[site]/results/[slug]/[bib]` | [`/s/[site]/results/[slug]/[bib]/page.tsx`](../src/app/s/[site]/results/[slug]/[bib]/page.tsx) | `ECertificateGenerator.tsx` |
-| `/s/[site]/results/[slug]/full` | [`/s/[site]/results/[slug]/full/page.tsx`](../src/app/s/[site]/results/[slug]/full/page.tsx) | `FullResultsCards.tsx` `FullResultsClient.tsx` `FullResultsMenus.tsx` `FullResultsPager.tsx` |
+| `/s/[site]/results/[slug]/full` | [`/s/[site]/results/[slug]/full/page.tsx`](../src/app/s/[site]/results/[slug]/full/page.tsx) | `FullResultsCards.tsx` `FullResultsClient.tsx` `FullResultsMenus.tsx` `FullResultsPager.tsx` `fullResultsView.ts` |
 | `/terms` | [`/terms/page.tsx`](../src/app/terms/page.tsx) | — |
 | `/track` | [`/track/page.tsx`](../src/app/track/page.tsx) | `TrackHelpCard.tsx` `TrackLookup.tsx` `TrackResult.tsx` `TrackRunnerCard.tsx` `TrackStatusCard.tsx` |
 | `/track/[token]` | [`/track/[token]/page.tsx`](../src/app/track/[token]/page.tsx) | — |
@@ -403,6 +403,7 @@ when a task touches one, split it before editing rather than after.
 | 472 | [`src/app/admin/settings/TwoFactorPanel.tsx`](../src/app/admin/settings/TwoFactorPanel.tsx) |
 | 472 | [`src/app/events/[slug]/register/BirthdatePicker.tsx`](../src/app/events/[slug]/register/BirthdatePicker.tsx) |
 | 470 | [`src/app/admin/events/[id]/registrants/RunnerEditModal.tsx`](../src/app/admin/events/[id]/registrants/RunnerEditModal.tsx) |
+| 452 | [`src/app/s/[site]/results/[slug]/full/FullResultsClient.tsx`](../src/app/s/[site]/results/[slug]/full/FullResultsClient.tsx) |
 | 441 | [`src/lib/actor.ts`](../src/lib/actor.ts) |
 | 436 | [`src/app/admin/events/[id]/edit/page.tsx`](../src/app/admin/events/[id]/edit/page.tsx) |
 | 431 | [`src/lib/activity.ts`](../src/lib/activity.ts) |

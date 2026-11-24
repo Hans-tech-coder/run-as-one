@@ -300,7 +300,7 @@ function RedemptionsPlaceholder() {
       {[0, 1, 2].map(i => (
         <div
           key={i}
-          className="flex items-start justify-between gap-4 rounded-lg border border-[var(--dash-border)] bg-[var(--dash-surface)] p-4 mb-3 last:mb-0"
+          className="flex items-start justify-between gap-4 rounded-panel border border-[var(--dash-border)] bg-[var(--dash-surface)] p-4 mb-3 last:mb-0"
         >
           <span className="flex flex-col gap-2 min-w-0 flex-1">
             <SkeletonBar className="h-4 w-32" />
@@ -450,7 +450,7 @@ function VoucherCodes({
         {group.codes.map(voucher => (
           <span
             key={voucher.id}
-            className={`rounded-md border px-2.5 py-1 font-mono text-xs ${
+            className={`rounded-chip border px-2.5 py-1 font-mono text-xs ${
               voucher.usageCount > 0
                 ? 'border-[var(--dash-hairline)] bg-[var(--ink-05)] text-secondary line-through'
                 : 'border-[var(--dash-border)] bg-[var(--dash-field)] text-primary'
@@ -827,7 +827,7 @@ export default function PromoCodesClient({
                 type="checkbox"
                 checked={isChecked}
                 onChange={table.getToggleAllPageRowsSelectedHandler()}
-                className="appearance-none w-4 h-4 rounded border border-[var(--ink-20)] bg-transparent checked:bg-[var(--ink)] checked:border-[var(--ink)] cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ink-20)]"
+                className="appearance-none w-4 h-4 rounded-chip border border-[var(--ink-20)] bg-transparent checked:bg-[var(--ink)] checked:border-[var(--ink)] cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ink-20)]"
               />
               {isChecked && <Check className="absolute text-[var(--dash-inverse-fg)] pointer-events-none" size={12} strokeWidth={3} />}
             </div>
@@ -843,7 +843,7 @@ export default function PromoCodesClient({
                 type="checkbox"
                 checked={isChecked}
                 onChange={row.getToggleSelectedHandler()}
-                className="appearance-none w-4 h-4 rounded border border-[var(--ink-20)] bg-transparent checked:bg-[var(--ink)] checked:border-[var(--ink)] cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ink-20)]"
+                className="appearance-none w-4 h-4 rounded-chip border border-[var(--ink-20)] bg-transparent checked:bg-[var(--ink)] checked:border-[var(--ink)] cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ink-20)]"
               />
               {isChecked && <Check className="absolute text-[var(--dash-inverse-fg)] pointer-events-none" size={12} strokeWidth={3} />}
             </div>
@@ -1156,17 +1156,17 @@ export default function PromoCodesClient({
                 <Columns size={16} /> View
               </button>
               {isViewOpen && (
-                <div className="toolbar-popover absolute right-0 mt-2 bg-[var(--dash-popover)] border border-[var(--dash-border)] rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
+                <div className="toolbar-popover absolute right-0 mt-2 bg-[var(--dash-popover)] border border-[var(--dash-border)] rounded-control p-2 min-w-[150px] z-50 shadow-2xl">
                   {table.getAllLeafColumns().filter(col => col.getCanHide()).map(column => (
-                    <label key={column.id} className="flex items-center gap-2 px-2 py-1.5 hover:bg-[var(--ink-05)] cursor-pointer rounded-md text-sm text-primary">
-                      <div className={`w-4 h-4 border border-[var(--dash-border)] rounded-sm flex items-center justify-center ${column.getIsVisible() ? 'bg-[var(--ink-10)]' : ''}`}>
+                    <label key={column.id} className="flex items-center gap-2 px-2 py-1.5 hover:bg-[var(--ink-05)] cursor-pointer rounded-control text-sm text-primary">
+                      <div className={`w-4 h-4 border border-[var(--dash-border)] rounded-chip flex items-center justify-center ${column.getIsVisible() ? 'bg-[var(--ink-10)]' : ''}`}>
                         <input
                           type="checkbox"
                           checked={column.getIsVisible()}
                           onChange={column.getToggleVisibilityHandler()}
                           className="opacity-0 absolute w-0 h-0"
                         />
-                        {column.getIsVisible() && <div className="w-2 h-2 bg-[var(--ink)] rounded-sm" />}
+                        {column.getIsVisible() && <div className="w-2 h-2 bg-[var(--ink)] rounded-chip" />}
                       </div>
                       <span className="capitalize">{COLUMN_LABELS[column.id] ?? column.id}</span>
                     </label>
@@ -1186,7 +1186,7 @@ export default function PromoCodesClient({
         </div>
 
         {/* Table Area — from `lg` up; the cards below take its place under it. */}
-        <div className="dash-desktop-only border border-[var(--dash-border)] rounded-lg overflow-hidden bg-transparent">
+        <div className="dash-desktop-only border border-[var(--dash-border)] rounded-panel overflow-hidden bg-transparent">
           <Table>
             <TableHeader className="bg-transparent">
               {table.getHeaderGroups().map(headerGroup => (
@@ -1391,7 +1391,7 @@ export default function PromoCodesClient({
               </>
             )}
             empty={
-              <div className="border border-[var(--dash-border)] rounded-lg py-16 px-4 text-center text-[var(--text-muted)]">
+              <div className="border border-[var(--dash-border)] rounded-panel py-16 px-4 text-center text-[var(--text-muted)]">
                 {groups.length === 0
                   ? 'No promotions yet. A code you create here is redeemed by runners in the registration wizard, and an automatic promotion applies on its own.'
                   : 'No promotion matches that search.'}
@@ -1429,7 +1429,7 @@ export default function PromoCodesClient({
           role="dialog"
           aria-modal="true"
           aria-labelledby="promo-redemptions-title"
-          className={`t-modal admin-modal-panel w-full max-w-2xl bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${isRedemptionsOpen ? 'is-open' : ''} ${isRedemptionsClosing ? 'is-closing' : ''}`}
+          className={`t-modal admin-modal-panel w-full max-w-2xl bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-panel shadow-2xl flex flex-col max-h-[90vh] ${isRedemptionsOpen ? 'is-open' : ''} ${isRedemptionsClosing ? 'is-closing' : ''}`}
         >
           <div className="p-6 max-sm:px-4 max-sm:py-3 border-b border-[var(--dash-border)] flex justify-between items-start gap-4 shrink-0">
             <div className="min-w-0">
@@ -1448,7 +1448,7 @@ export default function PromoCodesClient({
                 the header's height and the icon's place. */}
             <button
               onClick={closeRedemptions}
-              className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-full text-secondary hover:text-primary transition-colors bg-transparent border-none cursor-pointer"
+              className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-control text-secondary hover:text-primary transition-colors bg-transparent border-none cursor-pointer"
               aria-label="Close"
             >
               <X size={20} />
@@ -1484,7 +1484,7 @@ export default function PromoCodesClient({
                   <Link
                     key={order.id}
                     href={`/admin/events/${order.eventId}/registrants?search=${encodeURIComponent(order.orderRef)}`}
-                    className="flex items-start justify-between gap-4 rounded-lg border border-[var(--dash-border)] bg-[var(--dash-surface)] p-4 no-underline transition-colors hover:border-[var(--ink-20)] hover:bg-[var(--ink-05)]"
+                    className="flex items-start justify-between gap-4 rounded-panel border border-[var(--dash-border)] bg-[var(--dash-surface)] p-4 no-underline transition-colors hover:border-[var(--ink-20)] hover:bg-[var(--ink-05)]"
                   >
                     <span className="flex flex-col gap-1 min-w-0">
                       <span className="font-mono text-sm font-bold text-primary flex items-center gap-2 [overflow-wrap:anywhere]">
@@ -1563,7 +1563,7 @@ export default function PromoCodesClient({
             role="dialog"
             aria-modal="true"
             aria-labelledby="promo-form-title"
-            className="admin-modal-panel bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-xl w-full max-w-2xl overflow-clip"
+            className="admin-modal-panel bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-panel w-full max-w-2xl overflow-clip"
           >
             <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-2 max-sm:px-4 max-sm:pt-3 shrink-0">
               <h2 id="promo-form-title" className="text-xl font-bold m-0 flex items-center gap-2 min-w-0">
@@ -1573,7 +1573,7 @@ export default function PromoCodesClient({
               <button
                 type="button"
                 onClick={() => setShowModal(false)}
-                className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-full text-secondary hover:text-primary"
+                className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-control text-secondary hover:text-primary"
                 aria-label="Close"
               >
                 <X size={20} />
@@ -1745,7 +1745,7 @@ export default function PromoCodesClient({
                   <div
                     role="group"
                     aria-labelledby="promo-scope-label"
-                    className="flex flex-wrap gap-1 rounded-[10px] border border-[var(--dash-border)] bg-[var(--dash-surface)] p-1"
+                    className="flex flex-wrap gap-1 rounded-panel border border-[var(--dash-border)] bg-[var(--dash-surface)] p-1"
                   >
                     {[
                       { id: null as string | null, label: 'All Categories', distance: '' },
@@ -1767,14 +1767,14 @@ export default function PromoCodesClient({
                           onClick={() =>
                             option.id === null ? set({ categoryIds: [] }) : toggleCategory(option.id)
                           }
-                          className={`flex min-h-11 items-center gap-1.5 rounded-[8px] px-3 py-2 text-sm font-bold transition-colors max-sm:flex-1 max-sm:justify-center ${
+                          className={`flex min-h-11 items-center gap-1.5 rounded-chip px-3 py-2 text-sm font-bold transition-colors max-sm:flex-1 max-sm:justify-center ${
                             on ? 'bg-[var(--ink-10)] text-primary' : 'text-secondary hover:text-primary'
                           }`}
                         >
                           {on && <Check size={14} aria-hidden="true" className="shrink-0" />}
                           <span>{option.label}</span>
                           {option.distance && (
-                            <span className="rounded-full bg-[var(--ink-10)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-secondary">
+                            <span className="rounded-chip bg-[var(--ink-10)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-secondary">
                               {option.distance}
                             </span>
                           )}
@@ -1832,7 +1832,7 @@ export default function PromoCodesClient({
                         return (
                           <div
                             key={category.id}
-                            className="rounded-[10px] border border-[var(--dash-border)] bg-[var(--dash-surface)] p-3"
+                            className="rounded-panel border border-[var(--dash-border)] bg-[var(--dash-surface)] p-3"
                           >
                             {/* One stacked block per category below `sm`: the
                                 name on its own line, then the list price, then
@@ -1845,7 +1845,7 @@ export default function PromoCodesClient({
                                   {category.name}
                                 </span>
                                 {category.distance && (
-                                  <span className="shrink-0 rounded-full bg-[var(--ink-10)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-secondary">
+                                  <span className="shrink-0 rounded-chip bg-[var(--ink-10)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-secondary">
                                     {category.distance}
                                   </span>
                                 )}
@@ -2009,7 +2009,7 @@ export default function PromoCodesClient({
                     is too narrow for all three on one row — measured on the
                     field, not the screen, since a desktop modal is narrow
                     too — it becomes a column of 44px rows. */}
-                <div className="flex @max-[25rem]:flex-col rounded-[10px] border border-[var(--dash-border)] bg-[var(--dash-surface)] p-1">
+                <div className="flex @max-[25rem]:flex-col rounded-panel border border-[var(--dash-border)] bg-[var(--dash-surface)] p-1">
                   {CLAIMS.map(option => {
                     // A discounted category price is drawn onto the options a
                     // runner is choosing between, so it cannot be something
@@ -2030,7 +2030,7 @@ export default function PromoCodesClient({
                         disabled={unavailable}
                         onClick={() => { setClaim(option.value); setFieldError(null); }}
                         aria-pressed={claim === option.value}
-                        className={`flex-auto whitespace-nowrap rounded-[8px] px-3 py-2 @max-[25rem]:min-h-11 text-sm font-bold transition-colors ${
+                        className={`flex-auto whitespace-nowrap rounded-chip px-3 py-2 @max-[25rem]:min-h-11 text-sm font-bold transition-colors ${
                           claim === option.value
                             ? 'bg-[var(--ink-10)] text-primary'
                             : unavailable

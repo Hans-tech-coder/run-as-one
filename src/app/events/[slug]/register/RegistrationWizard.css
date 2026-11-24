@@ -47,14 +47,14 @@
 .mini-image {
   width: 80px;
   height: 80px;
-  border-radius: 12px;
+  border-radius: var(--radius-control);
   object-fit: cover;
 }
 
 .order-summary {
   background: rgba(0, 0, 0, 0.2);
   padding: 1.5rem;
-  border-radius: 16px;
+  border-radius: var(--radius-panel);
 }
 
 .summary-line {
@@ -118,7 +118,7 @@
 .category-card {
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 16px;
+  border-radius: var(--radius-panel);
   padding: 1.5rem;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -160,7 +160,7 @@
   border: 1px dashed rgba(255, 255, 255, 0.2);
   color: var(--text-primary);
   padding: 1rem;
-  border-radius: 12px;
+  border-radius: var(--radius-control);
   cursor: pointer;
   transition: all 0.2s ease;
   font-family: var(--font-sans);
@@ -203,7 +203,7 @@
 .logistics-card {
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 16px;
+  border-radius: var(--radius-panel);
   padding: 24px;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -277,7 +277,7 @@
   margin-top: 32px;
   background: rgba(0, 0, 0, 0.2);
   padding: 24px;
-  border-radius: 12px;
+  border-radius: var(--radius-panel);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -287,7 +287,7 @@
 .bank-details-card {
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-panel);
   padding: 1.5rem;
   margin-bottom: 2rem;
 }
@@ -323,7 +323,7 @@
 
 .upload-zone {
   border: 2px dashed rgba(255, 255, 255, 0.2);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-panel);
   padding: 3rem 2rem;
   text-align: center;
   transition: all 0.3s ease;
@@ -375,7 +375,7 @@
   justify-content: space-between;
   background: rgba(255, 255, 255, 0.05);
   padding: 1rem;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-panel);
   margin-top: 1rem;
   border: 1px solid var(--glass-border);
 }
@@ -417,7 +417,7 @@
   color: #ff4d4f;
   cursor: pointer;
   padding: 0.5rem;
-  border-radius: 50%;
+  border-radius: var(--radius-control);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -436,7 +436,7 @@
 
 .bank-option-card {
   padding: 1.5rem;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-panel);
   cursor: pointer;
   transition: all 0.3s ease;
   border: 1px solid var(--glass-border);
@@ -474,7 +474,7 @@
 .modal-content {
   background: #1a1a1a;
   padding: 1.5rem;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-panel);
   max-width: 400px;
   width: 100%;
   max-height: 100%;
@@ -517,7 +517,7 @@
    cannot widen it (utilities are layered, this file is not). */
 .poster-lightbox {
   background: #1a1a1a;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-panel);
   border: 1px solid var(--glass-border);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
   animation: slideUp 0.3s ease forwards;

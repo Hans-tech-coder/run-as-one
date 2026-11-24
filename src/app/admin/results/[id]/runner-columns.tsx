@@ -27,7 +27,7 @@ function SelectBox({ checked, onChange }: { checked: boolean; onChange: (event: 
           type="checkbox"
           checked={checked}
           onChange={onChange}
-          className="appearance-none w-4 h-4 rounded border border-[var(--ink-20)] bg-transparent checked:bg-[var(--ink)] checked:border-[var(--ink)] cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ink-20)]"
+          className="appearance-none w-4 h-4 rounded-chip border border-[var(--ink-20)] bg-transparent checked:bg-[var(--ink)] checked:border-[var(--ink)] cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ink-20)]"
         />
         {checked && <Check className="absolute text-[var(--dash-inverse-fg)] pointer-events-none" size={12} strokeWidth={3} />}
       </div>

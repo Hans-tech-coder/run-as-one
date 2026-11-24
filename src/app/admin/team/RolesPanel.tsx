@@ -52,7 +52,7 @@ export default function RolesPanel() {
           <RolePicker />
         </div>
 
-        <div className="dash-desktop-only border border-[var(--dash-border)] rounded-lg overflow-x-auto">
+        <div className="dash-desktop-only border border-[var(--dash-border)] rounded-panel overflow-x-auto">
           <Table>
             <TableHeader className="bg-transparent">
               <TableRow className="border-b border-[var(--dash-border)] hover:bg-transparent">

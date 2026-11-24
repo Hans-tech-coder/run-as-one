@@ -86,7 +86,7 @@ export default function SheetMappingPanel({
       className="admin-panel mb-8 border border-[var(--dash-border)] hover:border-accent-blue/30 transition-colors"
       style={{ overflow: 'visible' }}
     >
-      <div className="admin-panel-header border-b border-[var(--dash-border)] flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[var(--ink-02)] p-5 rounded-t-[var(--radius-xl)]">
+      <div className="admin-panel-header border-b border-[var(--dash-border)] flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[var(--ink-02)] p-5 rounded-t-panel">
         <div className="flex flex-col min-w-0 max-md:self-stretch">
           <h4 className="font-bold text-lg text-primary flex items-center gap-2 min-w-0 [overflow-wrap:anywhere]">
             <FileSpreadsheet size={18} className="text-accent-blue-ink shrink-0" /> {sheetName}

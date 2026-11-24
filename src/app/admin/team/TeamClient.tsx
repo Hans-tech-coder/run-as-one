@@ -499,7 +499,7 @@ export default function TeamClient({
                 aria-label="Select every row on this page"
                 checked={isChecked}
                 onChange={table.getToggleAllPageRowsSelectedHandler()}
-                className="appearance-none w-4 h-4 rounded border border-[var(--ink-20)] bg-transparent checked:bg-[var(--ink)] checked:border-[var(--ink)] cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ink-20)]"
+                className="appearance-none w-4 h-4 rounded-chip border border-[var(--ink-20)] bg-transparent checked:bg-[var(--ink)] checked:border-[var(--ink)] cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ink-20)]"
               />
               {isChecked && <Check className="absolute text-[var(--dash-inverse-fg)] pointer-events-none" size={12} strokeWidth={3} />}
             </div>
@@ -516,7 +516,7 @@ export default function TeamClient({
                 aria-label={`Select ${row.original.name}`}
                 checked={isChecked}
                 onChange={row.getToggleSelectedHandler()}
-                className="appearance-none w-4 h-4 rounded border border-[var(--ink-20)] bg-transparent checked:bg-[var(--ink)] checked:border-[var(--ink)] cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ink-20)]"
+                className="appearance-none w-4 h-4 rounded-chip border border-[var(--ink-20)] bg-transparent checked:bg-[var(--ink)] checked:border-[var(--ink)] cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ink-20)]"
               />
               {isChecked && <Check className="absolute text-[var(--dash-inverse-fg)] pointer-events-none" size={12} strokeWidth={3} />}
             </div>
@@ -662,17 +662,17 @@ export default function TeamClient({
                 <Columns size={16} /> View
               </button>
               {isViewOpen && (
-                <div className="toolbar-popover absolute right-0 mt-2 bg-[var(--dash-popover)] border border-[var(--dash-border)] rounded-md p-2 min-w-[150px] z-50 shadow-2xl">
+                <div className="toolbar-popover absolute right-0 mt-2 bg-[var(--dash-popover)] border border-[var(--dash-border)] rounded-control p-2 min-w-[150px] z-50 shadow-2xl">
                   {table.getAllLeafColumns().filter(col => col.getCanHide()).map(column => (
-                    <label key={column.id} className="flex items-center gap-2 px-2 py-1.5 hover:bg-[var(--ink-05)] cursor-pointer rounded-md text-sm text-primary">
-                      <div className={`w-4 h-4 border border-[var(--dash-border)] rounded-sm flex items-center justify-center ${column.getIsVisible() ? 'bg-[var(--ink-10)]' : ''}`}>
+                    <label key={column.id} className="flex items-center gap-2 px-2 py-1.5 hover:bg-[var(--ink-05)] cursor-pointer rounded-control text-sm text-primary">
+                      <div className={`w-4 h-4 border border-[var(--dash-border)] rounded-chip flex items-center justify-center ${column.getIsVisible() ? 'bg-[var(--ink-10)]' : ''}`}>
                         <input
                           type="checkbox"
                           checked={column.getIsVisible()}
                           onChange={column.getToggleVisibilityHandler()}
                           className="opacity-0 absolute w-0 h-0"
                         />
-                        {column.getIsVisible() && <div className="w-2 h-2 bg-[var(--ink)] rounded-sm" />}
+                        {column.getIsVisible() && <div className="w-2 h-2 bg-[var(--ink)] rounded-chip" />}
                       </div>
                       <span>{COLUMN_LABELS[column.id] ?? column.id}</span>
                     </label>
@@ -694,7 +694,7 @@ export default function TeamClient({
         </div>
 
         {/* Table Area — from `lg` up; the cards below take its place under it. */}
-        <div className="dash-desktop-only border border-[var(--dash-border)] rounded-lg overflow-x-auto bg-transparent">
+        <div className="dash-desktop-only border border-[var(--dash-border)] rounded-panel overflow-x-auto bg-transparent">
           <Table>
             <TableHeader className="bg-transparent">
               {table.getHeaderGroups().map(headerGroup => (
@@ -791,7 +791,7 @@ export default function TeamClient({
               )
             }
             empty={
-              <div className="border border-[var(--dash-border)] rounded-lg py-16 px-4 text-center text-[var(--text-muted)]">
+              <div className="border border-[var(--dash-border)] rounded-panel py-16 px-4 text-center text-[var(--text-muted)]">
                 Nobody on the team matches that search.
               </div>
             }
@@ -828,7 +828,7 @@ export default function TeamClient({
             role="dialog"
             aria-modal="true"
             aria-labelledby="team-form-title"
-            className={`t-modal admin-modal-panel w-full max-w-xl bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${isModalOpen ? 'is-open' : ''} ${isModalClosing ? 'is-closing' : ''}`}
+            className={`t-modal admin-modal-panel w-full max-w-xl bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-panel shadow-2xl flex flex-col max-h-[90vh] ${isModalOpen ? 'is-open' : ''} ${isModalClosing ? 'is-closing' : ''}`}
           >
             <div className="p-6 border-b border-[var(--dash-border)] flex justify-between items-start gap-4 shrink-0">
               <div className="min-w-0">
@@ -934,7 +934,7 @@ export default function TeamClient({
                       {draft.assignments.map((assignment, index) => (
                         <div
                           key={assignment.key}
-                          className="rounded-[10px] border border-[var(--dash-border)] bg-[var(--dash-surface)] p-3 flex flex-col gap-1"
+                          className="rounded-panel border border-[var(--dash-border)] bg-[var(--dash-surface)] p-3 flex flex-col gap-1"
                         >
                           <div className="grid gap-x-3 sm:grid-cols-2">
                             <AdminSelect

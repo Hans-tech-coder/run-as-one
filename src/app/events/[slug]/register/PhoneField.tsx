@@ -212,7 +212,7 @@ export default function PhoneField({
 
       <div ref={wrapperRef} className="relative">
         <div
-          className="control-shell flex items-stretch rounded-[8px] border border-white/10 bg-black/30 focus-within:border-accent-blue focus-within:shadow-[0_0_0_3px_rgba(43,192,255,0.2)] transition-all"
+          className="control-shell flex items-stretch rounded-control border border-white/10 bg-black/30 focus-within:border-accent-blue focus-within:shadow-[0_0_0_3px_rgba(43,192,255,0.2)] transition-all"
           aria-invalid={error ? true : undefined}
         >
           <button
@@ -221,7 +221,7 @@ export default function PhoneField({
             aria-haspopup="listbox"
             aria-expanded={isOpen}
             aria-label={`Country code: ${country.name} +${country.dial}`}
-            className="flex items-center gap-1.5 pl-3 pr-2 shrink-0 text-white hover:bg-white/5 rounded-l-[8px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue"
+            className="flex items-center gap-1.5 pl-3 pr-2 shrink-0 text-white hover:bg-white/5 rounded-l-control transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue"
           >
             <Flag country={country} />
             <span className="text-sm font-medium">+{country.dial}</span>
@@ -259,7 +259,7 @@ export default function PhoneField({
         </div>
 
         {isOpen && (
-          <div className="absolute z-30 left-0 right-0 mt-2 rounded-[12px] border border-white/15 bg-[#0d0d0f] shadow-[0_16px_40px_rgba(0,0,0,0.6)] overflow-hidden">
+          <div className="absolute z-30 left-0 right-0 mt-2 rounded-panel border border-white/15 bg-[#0d0d0f] shadow-[0_16px_40px_rgba(0,0,0,0.6)] overflow-hidden">
             <div className="flex items-center gap-2 px-3 py-2 border-b border-white/10">
               <Search size={14} className="text-secondary shrink-0" aria-hidden="true" />
               <input

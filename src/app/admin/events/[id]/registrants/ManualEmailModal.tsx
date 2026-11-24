@@ -240,7 +240,7 @@ export default function ManualEmailModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="email-modal-title"
-        className={`t-modal admin-modal-panel w-full max-w-2xl bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${isEmailOpen ? 'is-open' : ''} ${isEmailClosing ? 'is-closing' : ''}`}
+        className={`t-modal admin-modal-panel w-full max-w-2xl bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-panel shadow-2xl flex flex-col max-h-[90vh] ${isEmailOpen ? 'is-open' : ''} ${isEmailClosing ? 'is-closing' : ''}`}
       >
         <div className="p-6 max-sm:px-4 max-sm:py-3 border-b border-[var(--dash-border)] flex justify-between items-start gap-4 shrink-0">
           <div className="min-w-0">
@@ -260,7 +260,7 @@ export default function ManualEmailModal({
           <button
             onClick={closeEmailModal}
             aria-label="Close"
-            className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-full text-secondary hover:text-primary transition-colors bg-transparent border-none cursor-pointer p-0"
+            className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-control text-secondary hover:text-primary transition-colors bg-transparent border-none cursor-pointer p-0"
           >
             <X size={20} />
           </button>
@@ -275,7 +275,7 @@ export default function ManualEmailModal({
 
           {!isLoadingEmail && emailMessage && (
             <>
-              <div className="rounded-lg border border-[var(--dash-border)] bg-[var(--dash-surface)] p-4 space-y-3 text-sm">
+              <div className="rounded-panel border border-[var(--dash-border)] bg-[var(--dash-surface)] p-4 space-y-3 text-sm">
                 <span className="flex flex-col">
                   <span className="text-[var(--text-muted)]">To</span>
                   <span className="text-primary font-medium break-all select-all">{emailMessage.to}</span>
@@ -304,7 +304,7 @@ export default function ManualEmailModal({
                 </p>
               )}
 
-              <div className="rounded-lg overflow-hidden border border-[var(--dash-border)] bg-[var(--dash-sunken)]">
+              <div className="rounded-panel overflow-hidden border border-[var(--dash-border)] bg-[var(--dash-sunken)]">
                 <iframe
                   srcDoc={previewEmailHtml(emailMessage.html)}
                   sandbox=""
@@ -317,7 +317,7 @@ export default function ManualEmailModal({
                 <button
                   type="button"
                   onClick={handleCopyFormattedEmail}
-                  className="flex items-center gap-2 px-4 py-2 bg-[var(--dash-inverse-bg)] text-[var(--dash-inverse-fg)] rounded-lg text-sm font-medium hover:bg-[var(--dash-inverse-hover)] transition-colors border-none cursor-pointer max-sm:flex-1 max-sm:basis-full max-sm:justify-center max-sm:min-h-11"
+                  className="flex items-center gap-2 px-4 py-2 bg-[var(--dash-inverse-bg)] text-[var(--dash-inverse-fg)] rounded-control text-sm font-medium hover:bg-[var(--dash-inverse-hover)] transition-colors border-none cursor-pointer max-sm:flex-1 max-sm:basis-full max-sm:justify-center max-sm:min-h-11"
                 >
                   <Copy size={16} />
                   {copyState === 'copied'
@@ -329,7 +329,7 @@ export default function ManualEmailModal({
                 <button
                   type="button"
                   onClick={handleOpenInMailApp}
-                  className="flex items-center gap-2 px-4 py-2 border border-[var(--dash-border)] text-primary rounded-lg text-sm font-medium hover:bg-[var(--ink-05)] transition-colors bg-transparent cursor-pointer max-sm:flex-1 max-sm:basis-full max-sm:justify-center max-sm:min-h-11"
+                  className="flex items-center gap-2 px-4 py-2 border border-[var(--dash-border)] text-primary rounded-control text-sm font-medium hover:bg-[var(--ink-05)] transition-colors bg-transparent cursor-pointer max-sm:flex-1 max-sm:basis-full max-sm:justify-center max-sm:min-h-11"
                 >
                   <ExternalLink size={16} /> Open in My Email App
                 </button>

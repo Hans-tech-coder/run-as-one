@@ -61,7 +61,7 @@ export default function NewResultsClient({
               return (
                 <label
                   key={option.value}
-                  className={`relative flex cursor-pointer flex-col gap-3 rounded-xl border p-4 sm:p-5 transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent-blue ${
+                  className={`relative flex cursor-pointer flex-col gap-3 rounded-panel border p-4 sm:p-5 transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent-blue ${
                     isSelected
                       ? 'border-accent-blue bg-accent-blue/10'
                       : 'border-[var(--dash-border)] bg-[var(--ink-02)] hover:border-[var(--ink-20)]'
@@ -77,7 +77,7 @@ export default function NewResultsClient({
                   />
                   <div className="flex items-center gap-3">
                     <span
-                      className={`rounded-lg p-2 ${
+                      className={`rounded-panel p-2 ${
                         isSelected ? 'bg-accent-blue/20 text-accent-blue-ink' : 'bg-[var(--ink-05)] text-secondary'
                       }`}
                     >

@@ -39,7 +39,7 @@
 .admin-brand:focus-visible {
   outline: 2px solid var(--accent-blue);
   outline-offset: -2px;
-  border-radius: 8px;
+  border-radius: var(--radius-control);
 }
 
 /* The mark is sized here rather than with a utility on the component, so the
@@ -119,7 +119,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
+  border-radius: var(--radius-control);
   color: #fff;
   background: var(--accent-blue);
   /* The ring in the page's own colour cuts the knob out of the sidebar's
@@ -260,7 +260,7 @@
      out and a fade back in. */
   transition: top var(--duration-quick) var(--ease-smooth-out);
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-panel);
   background: var(--tt-bg);
   color: var(--tt-fg);
   font-size: 0.8125rem;
@@ -284,7 +284,7 @@
   min-width: 18px;
   padding: 1px 5px;
   border: 1px solid color-mix(in srgb, var(--tt-fg) 25%, transparent);
-  border-radius: 5px;
+  border-radius: var(--radius-chip);
   background: color-mix(in srgb, var(--tt-fg) 10%, transparent);
   font-family: var(--font-body);
   font-size: 0.6875rem;
@@ -315,7 +315,7 @@
   left: -200vw;
   z-index: 100;
   padding: 10px 16px;
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   background: var(--accent-blue);
   color: #fff;
   font-family: var(--font-body);
@@ -370,7 +370,7 @@
   flex-shrink: 0;
   padding: 2px 6px;
   border: 1px solid var(--dash-border);
-  border-radius: 6px;
+  border-radius: var(--radius-chip);
   background: var(--ink-04);
   font-family: var(--font-body);
   font-size: 0.6875rem;
@@ -413,7 +413,7 @@
   max-height: 100%;
   overflow: hidden;
   border: 1px solid var(--dash-border);
-  border-radius: 16px;
+  border-radius: var(--radius-panel);
   background: var(--dash-panel-solid);
   box-shadow: 0 24px 64px var(--dash-shadow);
 }
@@ -458,7 +458,7 @@
 
 .dash-jump-row {
   padding: 2px;
-  border-radius: 10px;
+  border-radius: max(2px, calc(var(--radius-panel) - 8px));
   cursor: pointer;
 }
 
@@ -480,7 +480,7 @@
   gap: 12px;
   min-height: 42px;
   padding: 0 10px;
-  border-radius: 10px;
+  border-radius: max(2px, calc(var(--radius-panel) - 8px));
   color: var(--text-secondary);
   font-size: 0.9375rem;
   font-weight: 500;
@@ -548,7 +548,7 @@
   margin-right: 4px;
   padding: 1px 5px;
   border: 1px solid var(--dash-border);
-  border-radius: 5px;
+  border-radius: var(--radius-chip);
   background: var(--ink-04);
   font-family: var(--font-body);
   font-size: 0.6875rem;
@@ -759,7 +759,7 @@
 .dash-crumb-link {
   padding: 12px 0;
   margin: -12px 0;
-  border-radius: 4px;
+  border-radius: var(--radius-chip);
   color: var(--text-secondary);
   transition: color var(--duration-quick) ease;
 }
@@ -798,7 +798,7 @@
   min-width: 0;
   background: var(--dash-surface);
   border: 1px solid var(--dash-hairline);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-panel);
   padding: var(--space-lg);
   display: flex;
   flex-direction: column;
@@ -821,7 +821,7 @@
   color: var(--accent-blue);
   background: rgba(43, 192, 255, 0.1);
   padding: 8px;
-  border-radius: 8px;
+  border-radius: var(--radius-control);
 }
 
 .metric-value {
@@ -869,7 +869,7 @@
   min-height: 56px;
   padding: 0 var(--space-lg);
   border: 1px solid var(--dash-hairline);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-panel);
   background: var(--dash-surface);
   color: var(--text-secondary);
   font-size: 0.9375rem;
@@ -888,7 +888,7 @@
   height: 22px;
   margin-left: 8px;
   padding: 0 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-chip);
   background: color-mix(in srgb, var(--status-warning) 16%, transparent);
   color: var(--status-warning);
   font-size: 0.8125rem;
@@ -987,7 +987,7 @@
 .overview-row-sublink:focus-visible {
   outline: 2px solid var(--accent-blue);
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: var(--radius-chip);
 }
 
 .overview-row-main {
@@ -1086,7 +1086,7 @@
 .admin-panel {
   background: var(--dash-surface);
   border: 1px solid var(--dash-hairline);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-panel);
   overflow: hidden;
 }
 
@@ -1153,7 +1153,7 @@
   display: inline-flex;
   align-items: center;
   padding: 4px 12px;
-  border-radius: 100px;
+  border-radius: var(--radius-chip);
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -1243,7 +1243,7 @@
   gap: 6px;
   min-height: 32px;
   padding: 2px 10px;
-  border-radius: 100px;
+  border-radius: var(--radius-chip);
   border: 1px solid var(--dash-border);
   background: var(--ink-04);
   color: var(--text-primary);
@@ -1286,7 +1286,7 @@ a.reg-count-trigger {
   display: grid;
   gap: 4px;
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-panel);
   background: var(--tt-bg);
   color: var(--tt-fg);
   font-size: 0.8125rem;
@@ -1411,7 +1411,7 @@ a.reg-count-trigger {
   padding: var(--space-md);
   background: var(--dash-surface);
   border: 1px solid var(--dash-hairline);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-panel);
   transition:
     border-color var(--duration-quick) ease,
     background-color var(--duration-quick) ease;
@@ -1772,7 +1772,7 @@ a.reg-count-trigger {
   padding: 12px;
   background: var(--dash-panel);
   border: 1px solid var(--dash-border);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-panel);
   box-shadow: 0 16px 40px var(--dash-shadow);
 }
 
@@ -1874,7 +1874,7 @@ a.reg-count-trigger {
   align-items: center;
   gap: 3px;
   padding: 3px;
-  border-radius: 48px;
+  border-radius: var(--radius-panel);
   background: var(--tabs-bar-bg);
 }
 .t-tab {
@@ -1886,7 +1886,7 @@ a.reg-count-trigger {
   padding: 4px 12px;
   color: var(--tabs-text-muted);
   cursor: pointer;
-  border-radius: 48px;
+  border-radius: calc(var(--radius-panel) - 3px);
   z-index: 1;
   transition: color var(--tabs-dur) var(--tabs-ease);
 }
@@ -1902,7 +1902,7 @@ a.reg-count-trigger {
   height: 30px;
   width: 0;
   background: var(--tabs-pill-bg);
-  border-radius: 48px;
+  border-radius: calc(var(--radius-panel) - 3px);
   transform: translateX(0);
   transition:
     transform var(--tabs-dur) var(--tabs-ease),
@@ -1926,14 +1926,14 @@ a.reg-count-trigger {
   gap: 4px;
   padding: 4px;
   border: 1px solid var(--ink-08);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-panel);
 }
 
 .role-tabs .t-tab {
   height: auto;
   min-height: 44px;
   padding: 8px 10px;
-  border-radius: calc(var(--radius-lg) - 4px);
+  border-radius: calc(var(--radius-panel) - 4px);
   font-family: var(--font-body);
   font-size: 0.875rem;
   font-weight: 500;
@@ -1948,7 +1948,7 @@ a.reg-count-trigger {
 .role-tabs .t-tabs-pill {
   top: 0;
   height: 0;
-  border-radius: calc(var(--radius-lg) - 4px);
+  border-radius: calc(var(--radius-panel) - 4px);
   box-shadow: inset 0 0 0 1px var(--ink-12);
   transition:
     transform var(--tabs-dur) var(--tabs-ease),
@@ -2020,7 +2020,7 @@ a.reg-count-trigger {
   padding: var(--space-md);
   background: var(--dash-field);
   border: 1px solid var(--dash-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-control);
   color: var(--text-primary);
   font-family: var(--font-body);
   font-size: 1rem;
@@ -2089,7 +2089,7 @@ textarea.form-input {
 
 .inclusion-chip {
   padding: 0.25rem 0.625rem;
-  border-radius: 999px;
+  border-radius: var(--radius-chip);
   background: rgba(0, 122, 255, 0.12);
   border: 1px solid rgba(0, 122, 255, 0.3);
   color: var(--ink-85);
@@ -2123,7 +2123,7 @@ textarea.form-input {
   justify-content: center;
   background: transparent;
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-chip);
   color: var(--text-secondary);
   cursor: pointer;
   transition: color 0.2s ease, background 0.2s ease;
@@ -2270,7 +2270,7 @@ textarea.form-input {
   gap: 6px;
   padding: var(--space-md);
   border: 1px solid var(--ink-06);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-panel);
 }
 
 .settings-event-head {
@@ -2290,7 +2290,7 @@ textarea.form-input {
 .settings-role-pill {
   flex-shrink: 0;
   padding: 2px 10px;
-  border-radius: 999px;
+  border-radius: var(--radius-chip);
   font-size: 0.75rem;
   font-weight: 600;
   background: color-mix(in srgb, var(--accent-orange) 14%, transparent);
@@ -2362,7 +2362,7 @@ textarea.form-input {
   width: 176px;
   flex-shrink: 0;
   padding: 8px;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-panel);
   background: #fff;
 }
 
@@ -2400,7 +2400,7 @@ textarea.form-input {
   margin: var(--space-md) 0 0;
   padding: var(--space-md);
   border: 1px solid var(--dash-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-panel);
   list-style: none;
   font-size: 1rem;
   user-select: all;
@@ -2433,7 +2433,7 @@ textarea.form-input {
 .two-step-warning {
   margin: var(--space-md) 0 0;
   padding: 10px 12px;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-panel);
   background: color-mix(in srgb, var(--status-warning) 10%, transparent);
   color: var(--status-warning);
   font-size: 0.875rem;
@@ -2522,7 +2522,7 @@ textarea.form-input {
   padding: 0.625rem;
   background: color-mix(in srgb, var(--status-danger) 10%, transparent);
   color: var(--status-danger);
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   transition: background 0.2s;
   border: none;
   cursor: pointer;
@@ -2545,7 +2545,7 @@ textarea.form-input {
 
 .btn-cancel {
   padding: 0.75rem 1.5rem;
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   color: var(--text-secondary);
   font-weight: 500;
   text-decoration: none;
@@ -2648,7 +2648,7 @@ textarea.form-input {
   width: 100%;
   background: var(--dash-field);
   border: 1px solid var(--dash-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-control);
   height: 40px;
   padding: 0 16px 0 36px;
   color: var(--text-primary);
@@ -2707,7 +2707,7 @@ textarea.form-input {
   padding: 0 16px;
   height: 40px;
   border: 1px solid var(--dash-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-control);
   background: transparent;
   color: var(--text-secondary);
   font-size: 0.875rem;
@@ -2744,7 +2744,7 @@ textarea.form-input {
      so a .btn-light and a .btn-filter set to the same height measure the
      same in the row they share. */
   border: 1px solid transparent;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-control);
   /* The inverse of the ground it sits on: zinc-950 on zinc-200 in the dark
      theme, zinc-50 on zinc-900 in the light one, so the page's primary action
      is the highest-contrast thing on either. The icons are lucide, drawn in
@@ -3334,7 +3334,7 @@ textarea.form-input {
   position: relative;
   width: 100%;
   border: 2px dashed var(--ink-15);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-panel);
   padding: 2rem;
   display: flex;
   flex-direction: column;
@@ -3378,7 +3378,7 @@ textarea.form-input {
   height: 64px;
   color: var(--accent-blue);
   background: rgba(43, 192, 255, 0.1);
-  border-radius: 50%;
+  border-radius: var(--radius-panel);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3406,7 +3406,7 @@ textarea.form-input {
 .file-preview {
   position: relative;
   width: 100%;
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-panel);
   overflow: hidden;
   border: 1px solid var(--dash-border);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
@@ -3455,7 +3455,7 @@ textarea.form-input {
   gap: 0.75rem;
   padding: 0.625rem;
   border: 1px solid var(--dash-border);
-  border-radius: var(--radius-lg, 12px);
+  border-radius: var(--radius-panel);
   background: var(--dash-sunken);
 }
 
@@ -3463,7 +3463,7 @@ textarea.form-input {
   flex-shrink: 0;
   width: 64px;
   height: 80px;
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   overflow: hidden;
   border: 1px solid var(--dash-border);
   background: #000;
@@ -3500,7 +3500,7 @@ textarea.form-input {
   color: var(--text-secondary);
   background: transparent;
   border: 1px solid var(--dash-border);
-  border-radius: 6px;
+  border-radius: var(--radius-control);
   cursor: pointer;
   transition: color 0.2s, border-color 0.2s, background 0.2s;
 }
@@ -3582,7 +3582,7 @@ textarea.form-input {
   top: 50%;
   width: 84px;
   height: 84px;
-  border-radius: 20px;
+  border-radius: var(--radius-panel);
   overflow: hidden;
   border: 3px solid #0b0b0d;
   background: #0b0b0d;
@@ -3613,7 +3613,7 @@ textarea.form-input {
   right: 4px;
   bottom: 0;
   padding: 0.2rem 0.55rem;
-  border-radius: 999px;
+  border-radius: var(--radius-chip);
   font-size: 0.75rem;
   font-weight: 700;
   color: #fff;
@@ -3629,7 +3629,7 @@ textarea.form-input {
   background: color-mix(in srgb, var(--status-danger) 90%, transparent);
   color: white;
   border: none;
-  border-radius: 50px;
+  border-radius: var(--radius-control);
   padding: 8px 24px;
   font-weight: 600;
   font-size: 0.875rem;
@@ -3698,7 +3698,7 @@ textarea.form-input {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-control);
   color: var(--text-secondary);
   transition: all 0.2s ease;
   outline: none;
@@ -3750,7 +3750,7 @@ textarea.form-input {
 .modal-container {
   background: var(--dash-panel);
   border: 1px solid var(--dash-border);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-panel);
   box-shadow: 0 24px 48px var(--dash-shadow);
   width: 100%;
   max-width: 600px;
@@ -3783,7 +3783,7 @@ textarea.form-input {
   color: var(--text-secondary);
   cursor: pointer;
   padding: 0.5rem;
-  border-radius: 50%;
+  border-radius: var(--radius-control);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3811,7 +3811,7 @@ textarea.form-input {
 
 .modal-body::-webkit-scrollbar-thumb {
   background: var(--ink-10);
-  border-radius: 10px;
+  border-radius: var(--radius-chip);
 }
 
 .modal-section {
@@ -3855,7 +3855,7 @@ textarea.form-input {
 .modal-proof-box {
   background: var(--dash-sunken);
   border: 1px dashed var(--ink-10);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-panel);
   height: 120px;
   display: flex;
   flex-direction: column;
@@ -3878,7 +3878,7 @@ textarea.form-input {
   background: var(--ink-10);
   border: 1px solid var(--dash-hairline);
   color: var(--text-primary);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-control);
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
@@ -3930,7 +3930,7 @@ textarea.form-input {
   border: none;
   color: var(--text-secondary);
   padding: 0.25rem;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-control);
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
@@ -3950,7 +3950,7 @@ textarea.form-input {
   margin-top: 0.25rem;
   background: var(--dash-panel);
   border: 1px solid var(--dash-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-panel);
   box-shadow: 0 8px 24px var(--dash-shadow);
   /* Sized to the longest label the admin's menus carry — "Manage Results" —
      with room for the icon, the padding and the pending mark that rides on the
@@ -4101,7 +4101,7 @@ textarea.form-input {
   justify-content: center;
   width: 40px;
   height: 40px;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-control);
   background: color-mix(in srgb, var(--accent-blue) 12%, transparent);
   color: var(--accent-blue-text);
 }
@@ -4142,7 +4142,7 @@ textarea.form-input {
   min-width: 24px;
   height: 22px;
   padding: 0 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-chip);
   background: var(--ink-06);
   font-size: 0.75rem;
   font-weight: 600;
@@ -4157,7 +4157,7 @@ textarea.form-input {
   margin: 0;
   padding: 0 var(--space-lg);
   border: 1px solid var(--dash-hairline);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-control);
   background: var(--dash-surface);
   cursor: pointer;
   list-style: none;
@@ -4197,7 +4197,7 @@ textarea.form-input {
   margin: 24px auto 0;
   padding: 0 20px;
   border: 1px solid var(--dash-hairline);
-  border-radius: 999px;
+  border-radius: var(--radius-control);
   background: var(--dash-surface);
   font-size: 0.875rem;
   font-weight: 600;
@@ -4262,7 +4262,7 @@ details[open] > summary .viewer-fold-chevron {
   height: 100%;
   background: var(--dash-surface);
   border: 1px solid var(--dash-hairline);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-panel);
   overflow: hidden;
   transition:
     border-color 200ms var(--ease-out),
@@ -4348,7 +4348,7 @@ details[open] > summary .viewer-fold-chevron {
   justify-content: center;
   width: 32px;
   height: 32px;
-  border-radius: 999px;
+  border-radius: var(--radius-control);
   background: color-mix(in srgb, var(--accent-blue) 14%, transparent);
   transition:
     transform 200ms var(--ease-smooth-out),
@@ -4442,7 +4442,7 @@ details[open] > summary .viewer-fold-chevron {
 .viewer-split-bar {
   display: flex;
   height: 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-chip);
   overflow: hidden;
   background: var(--ink-06);
 }
@@ -4540,13 +4540,13 @@ details[open] > summary .viewer-fold-chevron {
 .viewer-categories-toggle:focus-visible {
   outline: 2px solid var(--accent-blue);
   outline-offset: 2px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-chip);
 }
 
 .viewer-categories-count {
   margin-left: 6px;
   padding: 1px 7px;
-  border-radius: 999px;
+  border-radius: var(--radius-chip);
   background: var(--ink-06);
   letter-spacing: 0;
   font-variant-numeric: tabular-nums;
@@ -4715,7 +4715,7 @@ details[open] > summary .viewer-fold-chevron {
   height: 44px;
   padding: 4px 10px 4px 4px;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-control);
   background: transparent;
   color: var(--text-secondary);
   text-align: left;
@@ -4947,7 +4947,7 @@ details[open] > summary .viewer-fold-chevron {
   overflow: clip;
   background: var(--dash-panel-solid);
   border: 1px solid var(--dash-border);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-panel);
   box-shadow: 0 24px 60px var(--dash-shadow);
   transform-origin: top right;
   outline: none;
@@ -4968,7 +4968,7 @@ details[open] > summary .viewer-fold-chevron {
   flex-shrink: 0;
   display: grid;
   place-items: center;
-  border-radius: 12px;
+  border-radius: var(--radius-control);
   color: var(--text-secondary);
   transition: color var(--duration-quick) ease, background-color var(--duration-quick) ease;
 }
@@ -5060,7 +5060,7 @@ details[open] > summary .viewer-fold-chevron {
   flex-shrink: 0;
   display: grid;
   place-items: center;
-  border-radius: 12px;
+  border-radius: var(--radius-control);
   border-width: 1px;
   border-style: solid;
 }
@@ -5085,7 +5085,7 @@ details[open] > summary .viewer-fold-chevron {
 
 .notif-action-chip {
   padding: 1px 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-chip);
   font-size: 0.6875rem;
   font-weight: 600;
   color: var(--status-warning);
@@ -5142,7 +5142,7 @@ details[open] > summary .viewer-fold-chevron {
   margin-bottom: 4px;
   display: grid;
   place-items: center;
-  border-radius: 999px;
+  border-radius: var(--radius-panel);
   color: var(--text-secondary);
   background: var(--ink-05);
 }
@@ -5171,7 +5171,7 @@ details[open] > summary .viewer-fold-chevron {
   .notif-panel {
     width: 100%;
     max-height: 85dvh;
-    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    border-radius: var(--radius-panel) var(--radius-panel) 0 0;
     border-bottom-width: 0;
     transform-origin: bottom center;
   }
@@ -5223,7 +5223,7 @@ details[open] > summary .viewer-fold-chevron {
   min-height: 44px;
   padding: 12px 16px;
   border: 1px solid var(--dash-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-panel);
   background: transparent;
   color: var(--text-primary);
   font-family: var(--font-body);
@@ -5355,7 +5355,7 @@ details[open] > summary .viewer-fold-chevron {
   height: 32px;
   margin: -6px;
   border: none;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-control);
   background: transparent;
   color: var(--text-secondary);
   cursor: pointer;
@@ -5402,7 +5402,7 @@ details[open] > summary .viewer-fold-chevron {
 .rich-editor {
   background: var(--dash-field);
   border: 1px solid var(--dash-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-control);
   overflow: hidden;
   transition: all 0.3s ease;
 }
@@ -5435,7 +5435,7 @@ details[open] > summary .viewer-fold-chevron {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-chip);
   color: var(--ink-60);
   transition: background-color 0.15s ease, color 0.15s ease;
 }

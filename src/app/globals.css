@@ -23,6 +23,24 @@
   --color-site-accent: var(--site-accent-text);
 }
 
+/* The corner scale — three steps, one source for the whole app (public Paper
+   pages and the admin). `static` so the variables always reach :root, where
+   the plain CSS files read them as var(--radius-*), and Tailwind turns each
+   into a utility: rounded-chip, rounded-control, rounded-panel.
+   - chip (4px): chips, badges, counts, tags, status labels
+   - control (6px): buttons, fields, selects, dropdown triggers, pager and
+     icon buttons
+   - panel (8px): cards, tables, menus, popovers, modals, sheets, choice cards
+   A menu item inside a padded menu takes the panel corner less the padding
+   (floor 2px) so the two stay concentric. Only what is drawn as a circle
+   stays one (999px / rounded-full): medals, status dots, avatars, radio
+   inputs, a toggle switch, spinners and the blurred glow blobs. */
+@theme static {
+  --radius-chip: 4px;
+  --radius-control: 6px;
+  --radius-panel: 8px;
+}
+
 /* Base Reset */
 
 button, 
@@ -256,12 +274,16 @@ input[type="checkbox"],
   --space-2xl: 3rem;    /* 48px */
   --space-3xl: 4rem;    /* 64px */
 
-  /* Global Border Radius System */
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
-  --radius-2xl: 24px;
+  /* Legacy radius names, folded onto the corner scale (--radius-chip /
+     -control / -panel, the @theme block at the top) so no old rounded-md /
+     -lg / -xl utility or var(--radius-lg) brings a soft corner back. New
+     code uses the three semantic names. */
+  --radius-sm: var(--radius-chip);
+  --radius-md: var(--radius-control);
+  --radius-lg: var(--radius-panel);
+  --radius-xl: var(--radius-panel);
+  --radius-2xl: var(--radius-panel);
+  --radius-3xl: var(--radius-panel);
 /* Transitions.dev Texts Reveal */
   --stagger-dur: 500ms;
   --stagger-distance: 12px;
@@ -391,7 +413,7 @@ input[type="datetime-local"]:focus::-webkit-calendar-picker-indicator {
   background: var(--gradient-primary);
   color: #fff;
   border: none;
-  border-radius: 1rem; /* 16px */
+  border-radius: var(--radius-control); /* 16px */
   padding: 1rem 1.25rem; /* 16px 20px */
   min-height: 48px;
   font-weight: 700;
@@ -453,7 +475,7 @@ input[type="datetime-local"]:focus::-webkit-calendar-picker-indicator {
   background: var(--ink-04);
   color: var(--text-primary);
   border: 1px solid var(--glass-border);
-  border-radius: 1rem; /* 16px — matches .btn-gradient */
+  border-radius: var(--radius-control); /* 16px — matches .btn-gradient */
   padding: 1rem 1.25rem; /* 16px 20px */
   min-height: 48px;
   font-size: 1rem;
@@ -549,7 +571,7 @@ input[type="datetime-local"]:focus::-webkit-calendar-picker-indicator {
   min-width: 0;
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   padding: 12px 16px; /* 8dp rhythm */
   color: var(--text-primary);
   font-family: var(--font-body);
@@ -678,7 +700,7 @@ input[type="datetime-local"]:focus::-webkit-calendar-picker-indicator {
 .t-tilt { touch-action: none; }
 .t-tilt-card {
   position: relative;
-  border-radius: 12px;
+  border-radius: var(--radius-panel);
   overflow: hidden;
   transform:
     perspective(var(--tilt-perspective))
@@ -904,7 +926,7 @@ input[type="datetime-local"]:focus::-webkit-calendar-picker-indicator {
 
 .t-skel-bar {
   background: rgba(255, 255, 255, 0.06);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-chip);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1261,7 +1283,7 @@ input[type="datetime-local"]:focus::-webkit-calendar-picker-indicator {
   max-width: 24rem;
   padding: 2rem 1.75rem;
   text-align: center;
-  border-radius: 24px;
+  border-radius: var(--radius-panel);
   background: #0d0d0f;
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
@@ -1578,7 +1600,7 @@ html, body { overflow-x: clip; }
   bottom: 0.25rem;
   left: 0;
   width: 0;
-  border-radius: 9999px;
+  border-radius: var(--radius-chip);
   background: var(--tabs-pill-bg);
   box-shadow: var(--tabs-pill-shadow);
   transform: translateX(0);

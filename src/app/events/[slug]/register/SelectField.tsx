@@ -200,7 +200,7 @@ export default function SelectField({
           }
           onClick={() => (isOpen ? close() : open(0))}
           onKeyDown={handleKeyDown}
-          className="control-shell w-full flex items-center gap-2 rounded-[8px] border border-white/10 bg-black/30 px-4 min-h-[48px] text-left transition-all focus:outline-none focus:border-accent-blue focus:bg-black/40 focus:shadow-[0_0_0_3px_rgba(43,192,255,0.2)]"
+          className="control-shell w-full flex items-center gap-2 rounded-control border border-white/10 bg-black/30 px-4 min-h-[48px] text-left transition-all focus:outline-none focus:border-accent-blue focus:bg-black/40 focus:shadow-[0_0_0_3px_rgba(43,192,255,0.2)]"
         >
           <span
             className={`flex-1 min-w-0 truncate ${
@@ -224,7 +224,7 @@ export default function SelectField({
             id={listboxId}
             role="listbox"
             aria-label={listboxLabel}
-            className="absolute z-30 left-0 right-0 mt-2 max-h-64 overflow-y-auto rounded-[12px] border border-white/15 bg-[#0d0d0f] shadow-[0_16px_40px_rgba(0,0,0,0.6)] py-1"
+            className="absolute z-30 left-0 right-0 mt-2 max-h-64 overflow-y-auto rounded-panel border border-white/15 bg-[#0d0d0f] shadow-[0_16px_40px_rgba(0,0,0,0.6)] py-1"
           >
             {options.map((option, index) => {
               const isSelected = index === selectedIndex;

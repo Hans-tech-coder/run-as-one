@@ -156,7 +156,7 @@ export default function LoginClient({
                 />
                 <span
                   aria-hidden="true"
-                  className={`shrink-0 w-5 h-5 rounded-[6px] border-2 flex items-center justify-center transition-all peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--site-focus)] peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-site-card ${
+                  className={`shrink-0 w-5 h-5 rounded-control border-2 flex items-center justify-center transition-all peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--site-focus)] peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-site-card ${
                     keep
                       ? 'border-site-action bg-site-action'
                       : 'border-[var(--site-field-line)] bg-site-card group-hover:border-site-ink'

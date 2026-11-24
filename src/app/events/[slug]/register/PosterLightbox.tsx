@@ -116,7 +116,7 @@ export default function PosterLightbox({
             type="button"
             onClick={onClose}
             aria-label="Close poster"
-            className="shrink-0 w-11 h-11 flex items-center justify-center rounded-lg text-secondary hover:text-white hover:bg-white/10 transition-colors"
+            className="shrink-0 w-11 h-11 flex items-center justify-center rounded-control text-secondary hover:text-white hover:bg-white/10 transition-colors"
           >
             <X size={22} />
           </button>
@@ -159,7 +159,7 @@ export default function PosterLightbox({
               onSelect();
               onClose();
             }}
-            className={`w-full min-h-11 rounded-xl font-bold uppercase tracking-wide transition-colors ${
+            className={`w-full min-h-11 rounded-control font-bold uppercase tracking-wide transition-colors ${
               isFull
                 ? 'bg-white/5 text-white/50 border border-white/10 cursor-not-allowed'
                 : isSelected

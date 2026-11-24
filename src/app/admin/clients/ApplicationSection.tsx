@@ -12,7 +12,7 @@ export function Section({
   list?: boolean;
   children: React.ReactNode;
 }) {
-  const frame = 'm-0 grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 rounded-[12px] border border-[var(--dash-border)] bg-[var(--dash-surface)] p-4';
+  const frame = 'm-0 grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 rounded-panel border border-[var(--dash-border)] bg-[var(--dash-surface)] p-4';
   return (
     <section className="min-w-0">
       <h4 className="m-0 mb-3 text-xs font-bold uppercase tracking-wider text-secondary">

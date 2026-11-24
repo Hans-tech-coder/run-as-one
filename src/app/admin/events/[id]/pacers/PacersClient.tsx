@@ -275,12 +275,12 @@ export default function PacersClient({
       </div>
 
       {categories.length === 0 ? (
-        <div className="border border-[var(--dash-border)] rounded-lg py-16 px-4 text-center text-[var(--text-muted)]">
+        <div className="border border-[var(--dash-border)] rounded-panel py-16 px-4 text-center text-[var(--text-muted)]">
           This race has no categories yet, so there is nothing for a pacer to run. Add a distance
           category to the event first.
         </div>
       ) : groups.length === 0 ? (
-        <div className="border border-[var(--dash-border)] rounded-lg py-16 px-4 text-center text-[var(--text-muted)]">
+        <div className="border border-[var(--dash-border)] rounded-panel py-16 px-4 text-center text-[var(--text-muted)]">
           No pacers yet. Add one and this race gets a code you can send them; they register with it
           themselves and pay nothing for their entry.
         </div>
@@ -296,7 +296,7 @@ export default function PacersClient({
             </div>
 
             {/* From `lg` up; the cards below take its place under it. */}
-            <div className="dash-desktop-only border border-[var(--dash-border)] rounded-lg overflow-hidden bg-transparent">
+            <div className="dash-desktop-only border border-[var(--dash-border)] rounded-panel overflow-hidden bg-transparent">
               <Table>
                 <TableHeader className="bg-transparent">
                   <TableRow className="border-b border-[var(--dash-border)] hover:bg-transparent">

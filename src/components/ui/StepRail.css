@@ -43,7 +43,7 @@
   z-index: 1;
   width: 1.875rem; /* 30px */
   height: 1.875rem;
-  border-radius: 50%;
+  border-radius: var(--radius-control);
   display: flex;
   align-items: center;
   justify-content: center;

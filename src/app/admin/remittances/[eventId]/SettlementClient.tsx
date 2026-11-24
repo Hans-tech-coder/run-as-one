@@ -266,7 +266,7 @@ export default function SettlementClient({
               ) : null
             }
             empty={
-              <div className="border border-[var(--dash-border)] rounded-lg py-16 px-4 text-center text-[var(--text-muted)]">{EMPTY_MESSAGE}</div>
+              <div className="border border-[var(--dash-border)] rounded-panel py-16 px-4 text-center text-[var(--text-muted)]">{EMPTY_MESSAGE}</div>
             }
           />
         </div>

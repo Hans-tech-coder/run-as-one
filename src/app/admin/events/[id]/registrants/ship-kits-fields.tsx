@@ -50,7 +50,7 @@ function Tile({
 }) {
   return (
     <label
-      className={`flex min-h-11 items-start gap-3 rounded-lg border px-3 py-2.5 cursor-pointer transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-[var(--ink-30)] ${
+      className={`flex min-h-11 items-start gap-3 rounded-control border px-3 py-2.5 cursor-pointer transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-[var(--ink-30)] ${
         checked ? 'border-accent-blue bg-accent-blue/10' : 'border-[var(--dash-border)] bg-[var(--ink-02)] hover:border-[var(--ink-20)]'
       }`}
     >
@@ -74,7 +74,7 @@ function Tile({
 
 export function Warning({ children }: { children: React.ReactNode }) {
   return (
-    <div role="alert" className="flex gap-3 rounded-lg border border-orange-500/30 bg-orange-500/10 p-3 text-primary">
+    <div role="alert" className="flex gap-3 rounded-panel border border-orange-500/30 bg-orange-500/10 p-3 text-primary">
       <TriangleAlert size={18} className="shrink-0 text-[var(--status-warning)]" aria-hidden="true" />
       <p className="m-0">{children}</p>
     </div>
@@ -89,7 +89,7 @@ export function SwitchQuote({ quote, onlineFee, needsPayment, paymentChoice }: {
   paymentChoice: Props['paymentChoice'];
 }) {
   return (
-    <div className="rounded-lg border border-[var(--dash-border)] p-3 space-y-2" aria-live="polite">
+    <div className="rounded-panel border border-[var(--dash-border)] p-3 space-y-2" aria-live="polite">
       <ol className="m-0 p-0 list-none space-y-1.5">
         {quote.parcels.map((parcel, i) => (
           <li key={i} className="flex items-start justify-between gap-3">
@@ -132,7 +132,7 @@ export function SendSummary({ receipt, event, hasHome, homeText, askRunner }: Pr
     .map(tier => `${peso(tier.fee)} ${deliveryZoneLabelFor(event, tier.zone).toLowerCase() || tier.label.toLowerCase()}`)
     .join(' · ');
   return (
-    <div className="flex gap-3 rounded-lg border border-[var(--dash-border)] bg-[var(--ink-02)] p-3">
+    <div className="flex gap-3 rounded-panel border border-[var(--dash-border)] bg-[var(--ink-02)] p-3">
       <Home size={16} className="mt-0.5 shrink-0 text-[var(--accent-blue-text)]" aria-hidden="true" />
       <div className="min-w-0 space-y-1">
         {askRunner ? (
@@ -262,7 +262,7 @@ function AlreadyPaidFields({
   paidErrors,
 }: Props) {
   return (
-    <div className="mt-3 space-y-3 rounded-lg border border-[var(--dash-border)] p-3">
+    <div className="mt-3 space-y-3 rounded-panel border border-[var(--dash-border)] p-3">
       <div className="space-y-1.5">
         <label htmlFor="ship-kits-transaction" className="block text-secondary">
           GCash or Bank Reference Number

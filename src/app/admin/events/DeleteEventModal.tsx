@@ -41,11 +41,11 @@ export default function DeleteEventModal({
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="delete-event-title"
-        className={`t-modal admin-modal-panel w-full max-w-md bg-[var(--dash-panel-solid)] border border-red-500/20 rounded-2xl shadow-2xl p-6 flex flex-col gap-6 ${isOpen ? 'is-open' : ''} ${isClosing ? 'is-closing' : ''}`}
+        className={`t-modal admin-modal-panel w-full max-w-md bg-[var(--dash-panel-solid)] border border-red-500/20 rounded-panel shadow-2xl p-6 flex flex-col gap-6 ${isOpen ? 'is-open' : ''} ${isClosing ? 'is-closing' : ''}`}
       >
         <div className="admin-modal-body flex flex-col gap-6">
           <div className="flex items-start gap-4">
-            <div className="p-3 bg-red-500/10 rounded-full text-[var(--status-danger)] shrink-0 mt-1">
+            <div className="p-3 bg-red-500/10 rounded-control text-[var(--status-danger)] shrink-0 mt-1">
               <AlertCircle size={24} strokeWidth={2} />
             </div>
             <div className="flex flex-col gap-2 min-w-0">
@@ -57,7 +57,7 @@ export default function DeleteEventModal({
           </div>
 
           {registrations > 0 && (
-            <div className="bg-red-500/10 border border-red-500/50 p-4 rounded-lg flex items-center gap-3 text-[var(--status-danger)]">
+            <div className="bg-red-500/10 border border-red-500/50 p-4 rounded-panel flex items-center gap-3 text-[var(--status-danger)]">
               <AlertCircle size={20} className="shrink-0" />
               <p className="text-sm">
                 This event has {registrations} registration{registrations === 1 ? '' : 's'}. Deleting it also erases those registrations, their runners, and any uploaded race results.
@@ -65,7 +65,7 @@ export default function DeleteEventModal({
             </div>
           )}
           {registrations === 0 && results > 0 && (
-            <div className="bg-red-500/10 border border-red-500/50 p-4 rounded-lg flex items-center gap-3 text-[var(--status-danger)]">
+            <div className="bg-red-500/10 border border-red-500/50 p-4 rounded-panel flex items-center gap-3 text-[var(--status-danger)]">
               <AlertCircle size={20} className="shrink-0" />
               <p className="text-sm">
                 This event has {results} uploaded result{results === 1 ? '' : 's'}. Deleting it also erases them, and its public results page goes with it.
@@ -86,7 +86,7 @@ export default function DeleteEventModal({
             type="button"
             onClick={onConfirm}
             disabled={isDeleting}
-            className="px-5 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
+            className="px-5 py-2 bg-red-500 hover:bg-red-600 text-white rounded-control text-sm font-medium transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
           >
             {isDeleting ? <BusyLabel>Deleting</BusyLabel> : 'Delete Event'}
           </button>

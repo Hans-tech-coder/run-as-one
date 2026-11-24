@@ -120,7 +120,7 @@ function RecordRefund({
           type="button"
           onClick={save}
           disabled={saving}
-          className="px-4 min-h-11 bg-[var(--dash-inverse-bg)] text-[var(--dash-inverse-fg)] rounded-lg text-sm font-medium hover:bg-[var(--dash-inverse-hover)] disabled:opacity-50 inline-flex items-center justify-center"
+          className="px-4 min-h-11 bg-[var(--dash-inverse-bg)] text-[var(--dash-inverse-fg)] rounded-control text-sm font-medium hover:bg-[var(--dash-inverse-hover)] disabled:opacity-50 inline-flex items-center justify-center"
         >
           {saving ? <BusyLabel>Saving</BusyLabel> : 'Save Refund'}
         </button>
@@ -183,7 +183,7 @@ export default function CategoryChangeHistory({
               : paymentMethodLabel(change.paymentMethod)
             : null;
           return (
-            <li key={change.id} className="rounded-lg border border-[var(--dash-border)] p-3 text-sm space-y-1.5">
+            <li key={change.id} className="rounded-panel border border-[var(--dash-border)] p-3 text-sm space-y-1.5">
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <span className="flex items-center gap-1.5 font-medium text-primary">
                   {change.fromCategory} <ArrowRight size={14} aria-label="to" /> {change.toCategory}

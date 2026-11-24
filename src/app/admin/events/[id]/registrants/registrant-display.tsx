@@ -239,7 +239,7 @@ export function DeliveryParcels({
           return (
             <li
               key={i}
-              className={`rounded-lg border border-[var(--dash-border)] px-3 py-2 ${mine ? 'bg-[var(--ink-05)]' : ''}`}
+              className={`rounded-panel border border-[var(--dash-border)] px-3 py-2 ${mine ? 'bg-[var(--ink-05)]' : ''}`}
             >
               <span className="block text-xs text-[var(--text-muted)]">
                 Parcel {i + 1} of {parcels.length}{mine ? ' · this runner' : ''}

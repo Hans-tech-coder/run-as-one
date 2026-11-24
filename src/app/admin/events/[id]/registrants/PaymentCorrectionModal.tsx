@@ -66,7 +66,7 @@ function correctedWords(fields: string[]): string {
 
 /** Both proof tiles share one size, so the before and after line up. */
 const PROOF_TILE_SIZE = 'h-36 max-sm:h-44';
-const PROOF_TILE = `${PROOF_TILE_SIZE} w-full overflow-hidden rounded-lg border border-[var(--dash-border)] bg-[var(--dash-sunken)] flex items-center justify-center`;
+const PROOF_TILE = `${PROOF_TILE_SIZE} w-full overflow-hidden rounded-panel border border-[var(--dash-border)] bg-[var(--dash-sunken)] flex items-center justify-center`;
 
 /** One correctable field: what is on file beside what replaces it. */
 function CorrectionRow({ title, children }: { title: string; children: React.ReactNode }) {
@@ -316,14 +316,14 @@ export default function PaymentCorrectionModal({
           role="dialog"
           aria-modal="true"
           aria-labelledby={ids.title}
-          className={`t-modal admin-modal-panel w-full max-w-2xl bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-2xl max-sm:rounded-none shadow-2xl flex flex-col max-h-[calc(100dvh-2rem)] max-sm:max-h-[100dvh] max-sm:h-[100dvh] ${visible ? 'is-open' : 'is-closing'}`}
+          className={`t-modal admin-modal-panel w-full max-w-2xl bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-panel max-sm:rounded-none shadow-2xl flex flex-col max-h-[calc(100dvh-2rem)] max-sm:max-h-[100dvh] max-sm:h-[100dvh] ${visible ? 'is-open' : 'is-closing'}`}
         >
           <div className="px-6 py-4 max-sm:px-4 max-sm:py-3 border-b border-[var(--dash-border)] flex justify-between items-start gap-4 shrink-0">
             <div className="min-w-0">
               <h3 id={ids.title} className="text-lg font-semibold text-primary m-0">Correct Payment</h3>
               <p className="text-sm text-secondary mt-1 m-0 flex flex-wrap items-center gap-x-2 gap-y-1 [overflow-wrap:anywhere]">
                 <span>{runner.orderRef} &middot; {runner.name} &middot; Bank transfer</span>
-                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusPillClass(runner.status)}`}>
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-chip text-xs font-medium ${statusPillClass(runner.status)}`}>
                   {runner.status}
                 </span>
               </p>
@@ -332,7 +332,7 @@ export default function PaymentCorrectionModal({
               type="button"
               onClick={close}
               aria-label="Close"
-              className="w-11 h-11 -m-2 shrink-0 flex items-center justify-center rounded-full text-secondary hover:text-primary transition-colors bg-transparent border-none cursor-pointer p-0"
+              className="w-11 h-11 -m-2 shrink-0 flex items-center justify-center rounded-control text-secondary hover:text-primary transition-colors bg-transparent border-none cursor-pointer p-0"
             >
               <X size={20} />
             </button>
@@ -492,7 +492,7 @@ export default function PaymentCorrectionModal({
             {needsStepUp && (
               <label
                 htmlFor={ids.resend}
-                className="flex items-start gap-3 rounded-lg border border-[var(--dash-border)] bg-[var(--ink-02)] px-4 py-3 cursor-pointer min-h-11"
+                className="flex items-start gap-3 rounded-control border border-[var(--dash-border)] bg-[var(--ink-02)] px-4 py-3 cursor-pointer min-h-11"
               >
                 <input
                   id={ids.resend}

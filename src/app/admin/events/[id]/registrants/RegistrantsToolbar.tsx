@@ -309,7 +309,7 @@ export default function RegistrantsToolbar({
             : 'Show only the bank transfers and delivery fee proofs waiting to be checked'}
         >
           <Hourglass size={16} /> Needs Validation
-          {needsValidationCount > 0 && <span className="ml-1 px-1 bg-[var(--ink-10)] rounded">{needsValidationCount}</span>}
+          {needsValidationCount > 0 && <span className="ml-1 px-1 bg-[var(--ink-10)] rounded-chip">{needsValidationCount}</span>}
         </button>
 
         {/*
@@ -330,7 +330,7 @@ export default function RegistrantsToolbar({
             : 'Show only the registrants whose email never went out'}
         >
           <MailWarning size={16} /> Unsent Email
-          {unsentEmailCount > 0 && <span className="ml-1 px-1 bg-[var(--ink-10)] rounded">{unsentEmailCount}</span>}
+          {unsentEmailCount > 0 && <span className="ml-1 px-1 bg-[var(--ink-10)] rounded-chip">{unsentEmailCount}</span>}
         </button>
 
         {/* Which columns the table shows. Cards have no columns to hide, so

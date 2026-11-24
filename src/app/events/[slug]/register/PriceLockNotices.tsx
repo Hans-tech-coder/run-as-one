@@ -42,7 +42,7 @@ export function PriceCountdownLine({
       {countdown && (
         <div
           aria-hidden="true"
-          className={`mt-3 flex items-center gap-2 rounded-[12px] border px-3 py-2 text-xs transition-colors ${
+          className={`mt-3 flex items-center gap-2 rounded-panel border px-3 py-2 text-xs transition-colors ${
             countdown.urgent
               ? "border-amber-400/40 bg-amber-400/10 text-amber-300"
               : "border-white/10 bg-white/[0.03] text-secondary"
@@ -95,7 +95,7 @@ export function RenewedPriceNotice({
   return (
     <div
       role="status"
-      className="mt-4 flex items-start gap-3 rounded-[16px] border border-amber-400/30 bg-amber-400/[0.07] p-4"
+      className="mt-4 flex items-start gap-3 rounded-panel border border-amber-400/30 bg-amber-400/[0.07] p-4"
     >
       <RefreshCw size={18} aria-hidden="true" className="mt-0.5 shrink-0 text-amber-300" />
       <div className="min-w-0 flex-1">
@@ -111,7 +111,7 @@ export function RenewedPriceNotice({
         type="button"
         onClick={onDismiss}
         aria-label="Dismiss price update"
-        className="-mr-2 -mt-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-secondary transition-colors hover:bg-white/5 hover:text-white"
+        className="-mr-2 -mt-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-control text-secondary transition-colors hover:bg-white/5 hover:text-white"
       >
         <X size={16} aria-hidden="true" />
       </button>
@@ -147,7 +147,7 @@ export function PriceChangedNotice({
       ref={ref}
       role="alert"
       tabIndex={-1}
-      className="mt-8 flex items-start gap-3 rounded-[16px] border border-amber-400/30 bg-amber-400/[0.07] p-5 focus:outline-none"
+      className="mt-8 flex items-start gap-3 rounded-panel border border-amber-400/30 bg-amber-400/[0.07] p-5 focus:outline-none"
     >
       <AlertTriangle size={22} aria-hidden="true" className="mt-0.5 shrink-0 text-amber-300" />
       <div className="min-w-0">
@@ -177,7 +177,7 @@ export function PriceChangedNotice({
         <button
           type="button"
           onClick={() => window.location.reload()}
-          className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-full border border-white/15 px-4 text-sm font-semibold text-white transition-colors hover:bg-white/5"
+          className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-control border border-white/15 px-4 text-sm font-semibold text-white transition-colors hover:bg-white/5"
         >
           <RefreshCw size={16} aria-hidden="true" />
           Reload Page
@@ -195,7 +195,7 @@ export function WaitForFreshPrice() {
   return (
     <div
       role="status"
-      className="mb-8 flex items-start gap-3 rounded-[16px] border border-amber-400/30 bg-amber-400/[0.07] p-5"
+      className="mb-8 flex items-start gap-3 rounded-panel border border-amber-400/30 bg-amber-400/[0.07] p-5"
     >
       <Clock size={22} aria-hidden="true" className="mt-0.5 shrink-0 text-amber-300" />
       <div>

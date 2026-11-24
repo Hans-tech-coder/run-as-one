@@ -118,9 +118,9 @@ function NoResultsYet({ hasPastEvents }: { hasPastEvents: boolean }) {
   ];
 
   return (
-    <div className="w-full rounded-[14px] border border-site-line bg-site-card px-6 py-10 sm:px-10">
+    <div className="w-full rounded-panel border border-site-line bg-site-card px-6 py-10 sm:px-10">
       <div className="flex flex-col items-center text-center">
-        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-site-surface text-site-ink" aria-hidden="true">
+        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-control bg-site-surface text-site-ink" aria-hidden="true">
           <Trophy size={22} />
         </div>
         <h2 className="site-h3 mb-2">No Results Published Yet</h2>

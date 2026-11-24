@@ -212,7 +212,7 @@ export default function RunnerList({
       </div>
 
       {/* The table, from `lg` up. */}
-      <div className="dash-desktop-only border border-[var(--dash-border)] rounded-lg overflow-hidden bg-transparent">
+      <div className="dash-desktop-only border border-[var(--dash-border)] rounded-panel overflow-hidden bg-transparent">
         <Table>
           <TableHeader className="bg-transparent">
             <TableRow className="border-b border-[var(--dash-border)] hover:bg-transparent">
@@ -306,7 +306,7 @@ export default function RunnerList({
             { label: 'Contact', value: <ContactLines runner={runner} />, full: true },
             { label: runner.kit === 'Delivery' ? 'Ship To' : 'Home Address', value: <AddressLine runner={runner} labelled />, full: true },
           ]}
-          empty={<div className="border border-[var(--dash-border)] rounded-lg py-10 px-4 text-center text-[var(--text-muted)]">{empty}</div>}
+          empty={<div className="border border-[var(--dash-border)] rounded-panel py-10 px-4 text-center text-[var(--text-muted)]">{empty}</div>}
         />
       </div>
 

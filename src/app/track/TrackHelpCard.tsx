@@ -67,7 +67,7 @@ export default function TrackHelpCard({ view, help }: { view: TrackView; help: T
   };
 
   return (
-    <section aria-labelledby="track-help-title" className="rounded-[14px] border border-site-line bg-site-surface p-5 sm:p-6">
+    <section aria-labelledby="track-help-title" className="rounded-panel border border-site-line bg-site-surface p-5 sm:p-6">
       <h2 id="track-help-title" className="m-0 text-lg font-semibold tracking-wide text-site-ink">
         Problem with Your Registration?
       </h2>

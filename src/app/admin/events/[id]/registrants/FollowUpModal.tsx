@@ -137,7 +137,7 @@ export default function FollowUpModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="follow-up-modal-title"
-        className={`t-modal admin-modal-panel w-full max-w-lg bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-2xl shadow-2xl flex flex-col ${visible ? 'is-open' : 'is-closing'}`}
+        className={`t-modal admin-modal-panel w-full max-w-lg bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-panel shadow-2xl flex flex-col ${visible ? 'is-open' : 'is-closing'}`}
       >
         <div className="p-6 max-sm:px-4 max-sm:py-3 border-b border-[var(--dash-border)] flex justify-between items-start gap-4 shrink-0">
           <div className="min-w-0">
@@ -150,7 +150,7 @@ export default function FollowUpModal({
             type="button"
             onClick={close}
             aria-label="Close"
-            className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-full text-secondary hover:text-primary transition-colors bg-transparent border-none cursor-pointer p-0"
+            className="w-11 h-11 -m-3 shrink-0 flex items-center justify-center rounded-control text-secondary hover:text-primary transition-colors bg-transparent border-none cursor-pointer p-0"
           >
             <X size={20} />
           </button>
@@ -165,7 +165,7 @@ export default function FollowUpModal({
                 return (
                   <label
                     key={value}
-                    className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-[var(--ink-30)] ${
+                    className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-control border px-3 py-2 text-sm transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-[var(--ink-30)] ${
                       selected
                         ? 'border-accent-blue bg-accent-blue/10 text-primary font-medium'
                         : 'border-[var(--dash-border)] bg-[var(--ink-02)] text-[var(--ink-85)] hover:border-[var(--ink-20)]'
@@ -203,7 +203,7 @@ export default function FollowUpModal({
               maxLength={FOLLOW_UP_NOTE_MAX}
               rows={3}
               placeholder="e.g. Will pay tonight after work. Asked for the link again."
-              className="w-full bg-[var(--dash-surface)] border border-[var(--dash-border)] rounded-lg px-4 py-3 text-base text-primary placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--ink-30)] resize-y"
+              className="w-full bg-[var(--dash-surface)] border border-[var(--dash-border)] rounded-control px-4 py-3 text-base text-primary placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--ink-30)] resize-y"
             />
             <p className="text-xs text-[var(--text-muted)] m-0 flex justify-between gap-3">
               <span>Internal only. Nothing is sent to the runner.</span>
@@ -231,7 +231,7 @@ export default function FollowUpModal({
             onClick={save}
             disabled={saving || !outcome}
             title={outcome ? undefined : 'Choose how it went first'}
-            className="px-6 py-2 bg-[var(--dash-inverse-bg)] text-[var(--dash-inverse-fg)] rounded-lg text-sm font-medium hover:bg-[var(--dash-inverse-hover)] transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
+            className="px-6 py-2 bg-[var(--dash-inverse-bg)] text-[var(--dash-inverse-fg)] rounded-control text-sm font-medium hover:bg-[var(--dash-inverse-hover)] transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
           >
             {saving ? <BusyLabel>Saving</BusyLabel> : 'Save Follow-Up'}
           </button>

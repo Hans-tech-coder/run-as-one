@@ -67,7 +67,7 @@ export default function PaidToPicker({
             <label
               key={account.id}
               htmlFor={`${id}-${index}`}
-              className={`flex min-h-[44px] cursor-pointer items-center gap-3 rounded-xl border p-4 transition-colors ${
+              className={`flex min-h-[44px] cursor-pointer items-center gap-3 rounded-panel border p-4 transition-colors ${
                 checked
                   ? "border-accent-blue bg-accent-blue/10"
                   : error

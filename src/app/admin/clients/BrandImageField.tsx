@@ -86,7 +86,7 @@ export default function BrandImageField({
       </label>
       {value ? (
         <div className="flex flex-col gap-2">
-          <div className="rounded-[12px] border border-[var(--dash-border)] bg-[var(--dash-sunken)] p-3 flex items-center justify-center">
+          <div className="rounded-panel border border-[var(--dash-border)] bg-[var(--dash-sunken)] p-3 flex items-center justify-center">
             <img src={value} alt={alt} className="max-h-32 max-w-full object-contain" />
           </div>
           <button

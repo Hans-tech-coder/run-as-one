@@ -53,7 +53,7 @@ export default function BankDetailsModal({
             <img
               src={bank.qrImageUrl}
               alt={`${bank.bankName} QR code`}
-              className="qr-image mx-auto rounded-lg"
+              className="qr-image mx-auto rounded-panel"
             />
           </div>
         )}

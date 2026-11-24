@@ -115,14 +115,14 @@ export default function ManageSignUpsModal({
       }`}
     >
       <div
-        className={`t-modal admin-modal-panel w-full max-w-2xl bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-2xl shadow-2xl flex flex-col max-h-[90vh] ${isOpen ? 'is-open' : ''} ${isClosing ? 'is-closing' : ''}`}
+        className={`t-modal admin-modal-panel w-full max-w-2xl bg-[var(--dash-panel-solid)] border border-[var(--dash-border)] rounded-panel shadow-2xl flex flex-col max-h-[90vh] ${isOpen ? 'is-open' : ''} ${isClosing ? 'is-closing' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="manage-sign-ups-title"
       >
         <div className="p-6 border-b border-[var(--dash-border)] flex justify-between items-start gap-4 shrink-0">
           <div className="flex items-start gap-3 min-w-0">
-            <span className="p-2 rounded-lg bg-accent-blue/10 text-accent-blue-ink shrink-0">
+            <span className="p-2 rounded-panel bg-accent-blue/10 text-accent-blue-ink shrink-0">
               <SlidersHorizontal size={20} />
             </span>
             <div className="min-w-0">
@@ -146,7 +146,7 @@ export default function ManageSignUpsModal({
         <div className="admin-modal-body p-6 overflow-y-auto flex flex-col gap-6">
           {/* What is true right now, before anything is changed — the same
               badge and date line the table row shows. */}
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-[var(--dash-border)] bg-[var(--ink-02)] px-4 py-3">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-panel border border-[var(--dash-border)] bg-[var(--ink-02)] px-4 py-3">
             <span className={`status-badge ${badge.tone} whitespace-nowrap`}>{badge.label}</span>
             <span className="text-sm text-secondary">{statusLine(event)}</span>
           </div>
@@ -212,7 +212,7 @@ export default function ManageSignUpsModal({
           {/* Apart from the settings above, and red: a closure is said now,
               not saved, and it tells runners the race is not coming back. */}
           <section
-            className="flex flex-col gap-3 rounded-xl border border-red-500/30 bg-red-500/5 p-4"
+            className="flex flex-col gap-3 rounded-panel border border-red-500/30 bg-red-500/5 p-4"
             aria-labelledby="manage-sign-ups-final"
           >
             <h4 id="manage-sign-ups-final" className="flex items-center gap-2 text-base font-semibold text-primary m-0">
@@ -236,7 +236,7 @@ export default function ManageSignUpsModal({
                 className={
                   closed
                     ? 'btn-light'
-                    : 'min-h-11 px-5 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2'
+                    : 'min-h-11 px-5 py-2 bg-red-500 hover:bg-red-600 text-white rounded-control text-sm font-medium transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2'
                 }
               >
                 {closed ? 'Reopen Sign-Ups' : 'Close Sign-Ups'}
