@@ -25,8 +25,8 @@ import { useContactEmail, useSocialLinks } from './SiteContactProvider';
  * (ClientSiteFooter.tsx, CLIENT_SUBDOMAIN_PLAN.md D9).
  */
 
-/** Built per render: Contact us follows the saved contact address. */
-const columns = (contactEmail: string): FooterColumn[] => [
+/** Contact Us is the form at /contact; the address itself is the chip above. */
+const columns: FooterColumn[] = [
   {
     heading: 'Explore',
     links: [
@@ -52,7 +52,7 @@ const columns = (contactEmail: string): FooterColumn[] => [
       { label: 'Send Feedback', href: '/feedback' },
       { label: 'Terms of Service', href: '/terms' },
       { label: 'Privacy Policy', href: '/privacy' },
-      { label: 'Contact Us', href: supportMailto(contactEmail), external: true },
+      { label: 'Contact Us', href: '/contact' },
     ],
   },
 ];
@@ -86,7 +86,7 @@ export default function Footer({ site }: { site: SiteClient | null }) {
           <FooterSocials links={socialLinks} owner={SITE_NAME} heading="Follow the Community" />
         </>
       }
-      nav={<FooterNav columns={columns(contactEmail)} />}
+      nav={<FooterNav columns={columns} />}
       bottomLeft={<>&copy; {year} {SITE_NAME}. All rights reserved.</>}
       bottomRight="Built for runners, organizers, and the communities behind them."
     />

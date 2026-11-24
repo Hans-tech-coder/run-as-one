@@ -52,6 +52,17 @@ export const PROMO_LOOKUP_RULE: RateLimitRule = { limit: 20, windowMs: 60_000 };
 export const FEEDBACK_RULE: RateLimitRule = { limit: 5, windowMs: 10 * 60_000 };
 
 /**
+ * The Contact Us form (`/api/contact`): 5 messages every 10 minutes from one
+ * address, counted before the body is read — a honeypot catch counts too.
+ *
+ * Each accepted message is one Resend send to the contact inbox, out of the
+ * free tier's 100 recipients a day that runner receipts share, so this is what
+ * stops a script spending the day's receipts on junk. A person writes once,
+ * maybe twice; five is room for a household on one address.
+ */
+export const CONTACT_RULE: RateLimitRule = { limit: 5, windowMs: 10 * 60_000 };
+
+/**
  * The service inquiry (`/api/auth/register`): 5 every 10 minutes from one
  * address.
  *

@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-50 pages · 100 API routes · 172 modules in `src/lib` · 723 files · 125,624 lines
+51 pages · 101 API routes · 175 modules in `src/lib` · 733 files · 126,588 lines
 
 ---
 
@@ -55,6 +55,7 @@ The route, the server component behind it, and the client components beside it.
 | `/admin/two-factor` | [`/admin/two-factor/page.tsx`](../src/app/admin/two-factor/page.tsx) | `TwoFactorClient.tsx` |
 | `/admin/your-events/[id]` | [`/admin/your-events/[id]/page.tsx`](../src/app/admin/your-events/[id]/page.tsx) | `PayoutSummary.tsx` `RaceReport.tsx` `RegistrationTrend.tsx` `runner-csv.ts` `RunnerCells.tsx` `RunnerList.tsx` |
 | `/coming-soon` | [`/coming-soon/page.tsx`](../src/app/coming-soon/page.tsx) | — |
+| `/contact` | [`/contact/page.tsx`](../src/app/contact/page.tsx) | `ContactForm.tsx` `ContactSent.tsx` `useContactForm.ts` |
 | `/events/[slug]/register` | [`/events/[slug]/register/page.tsx`](../src/app/events/[slug]/register/page.tsx) | `AddressPlaceFields.tsx` `BankDetailsModal.tsx` `BankTransferWizardClient.tsx` `BirthdatePicker.tsx` `CategoryPicker.tsx` `Combobox.tsx` `CommunityPicker.tsx` `ConsentWaiver.tsx` `delivery-address.ts` `delivery-split.ts` `delivery.ts` `DeliveryAddressFields.tsx` `DeliveryAreaPanel.tsx` `DeliveryStep.tsx` `FreeSlotOffer.tsx` `GenderField.tsx` `GroupLimitNotice.tsx` `GuardianConsent.tsx` `OrderSummary.tsx` `PaidToPicker.tsx` `PhoneField.tsx` `PosterLightbox.tsx` `PriceLockNotices.tsx` `PromoCodeField.tsx` `RegistrationWizardClient.tsx` `RunnerAddOns.tsx` `RunnerAddressFields.tsx` `RunnerCard.tsx` `SelectField.tsx` `ShirtSizeField.tsx` `SizeGuideModal.tsx` `useAddOnTotals.ts` `useDeliveryPlan.ts` `usePriceLock.ts` `usePromoPricing.ts` `useStepReveal.ts` `validation.ts` `WizardEventHeader.tsx` |
 | `/feedback` | [`/feedback/page.tsx`](../src/app/feedback/page.tsx) | `FeedbackForm.tsx` `FeedbackSent.tsx` `KindPicker.tsx` `ScreenshotField.tsx` `useFeedbackForm.ts` |
 | `/pay/[token]` | [`/pay/[token]/page.tsx`](../src/app/pay/[token]/page.tsx) | `PayNowButton.tsx` |
@@ -168,6 +169,7 @@ The route, the server component behind it, and the client components beside it.
 | `/api/category-change/proof` | POST | [`/category-change/proof/route.ts`](../src/app/api/category-change/proof/route.ts) |
 | `/api/checkout` | POST | [`/checkout/route.ts`](../src/app/api/checkout/route.ts) |
 | `/api/checkout/manual` | POST | [`/checkout/manual/route.ts`](../src/app/api/checkout/manual/route.ts) |
+| `/api/contact` | POST | [`/contact/route.ts`](../src/app/api/contact/route.ts) |
 | `/api/cron/expire-pending` | — | [`/cron/expire-pending/route.ts`](../src/app/api/cron/expire-pending/route.ts) |
 | `/api/feedback` | POST | [`/feedback/route.ts`](../src/app/api/feedback/route.ts) |
 | `/api/logistics-change/checkout` | POST | [`/logistics-change/checkout/route.ts`](../src/app/api/logistics-change/checkout/route.ts) |
@@ -228,6 +230,8 @@ the file itself.
 | [`client.ts`](../src/lib/client.ts) | Where a client stands, and which moves between standings are allowed. |
 | [`consent-signature.ts`](../src/lib/consent-signature.ts) | The typed signature under the consent waiver, and what counts as one. |
 | [`consent-waiver.ts`](../src/lib/consent-waiver.ts) | The liability, media, and data-privacy waiver every runner agrees to. |
+| [`contact-inquiry.ts`](../src/lib/contact-inquiry.ts) | **What the Contact Us form (`/contact`) accepts**, read the same way by the form and by `/api/contact`, so a message the form lets through is never… |
+| [`contact-races.ts`](../src/lib/contact-races.ts) | Which races the Contact Us form offers: the asking site's published races (a client's own on its subdomain, all on the main site) from the last six… |
 | [`css-duration.ts`](../src/lib/css-duration.ts) | A motion token's length in milliseconds, read from `:root` — client only. |
 | [`db.ts`](../src/lib/db.ts) | — |
 | [`discount.ts`](../src/lib/discount.ts) | What a promo code is worth, and why it cannot be used. |
@@ -237,6 +241,7 @@ the file itself.
 | [`e-certificate.ts`](../src/lib/e-certificate.ts) | A runner's e-certificate as a PDF: the organizer's template when there is one — in the designed layout or the legacy three lines, per `certificate-… |
 | [`email-address.ts`](../src/lib/email-address.ts) | What counts as an email address, in one place. |
 | [`email-category-change.ts`](../src/lib/email-category-change.ts) | The emails about a category change. |
+| [`email-contact.ts`](../src/lib/email-contact.ts) | The email a Contact Us inquiry becomes: `contactInquiryEmail` builds it on the shared document (*New Inquiry* pill, a *From* card of name, email, p… |
 | [`email-delivery.ts`](../src/lib/email-delivery.ts) | Whether the runner actually got their email, and what happens when they did not. |
 | [`email-document.ts`](../src/lib/email-document.ts) | How every email is built and sent, split out of `email.ts` (`UNPAID_FOLLOWUP_PLAN.md` Batch 4): the block document model (paragraph, heading, card,… |
 | [`email-invitations.ts`](../src/lib/email-invitations.ts) | The emails that invite somebody to sign in rather than tell a runner about an order: `staffInvitationEmail` (team) and `clientInvitationEmail` (a c… |
@@ -382,9 +387,9 @@ when a task touches one, split it before editing rather than after.
 | 1017 | [`src/app/admin/team/TeamClient.tsx`](../src/app/admin/team/TeamClient.tsx) |
 | 736 | [`src/lib/pending-expiry.ts`](../src/lib/pending-expiry.ts) |
 | 693 | [`src/app/admin/AdminDatePicker.tsx`](../src/app/admin/AdminDatePicker.tsx) |
+| 620 | [`src/lib/email-document.ts`](../src/lib/email-document.ts) |
 | 616 | [`src/app/api/checkout/route.ts`](../src/app/api/checkout/route.ts) |
 | 614 | [`src/app/admin/feedback/FeedbackClient.tsx`](../src/app/admin/feedback/FeedbackClient.tsx) |
-| 614 | [`src/lib/email-document.ts`](../src/lib/email-document.ts) |
 | 591 | [`src/lib/registration-gate.ts`](../src/lib/registration-gate.ts) |
 | 571 | [`src/lib/add-ons.ts`](../src/lib/add-ons.ts) |
 | 570 | [`src/app/admin/events/[id]/registrants/PaymentCorrectionModal.tsx`](../src/app/admin/events/[id]/registrants/PaymentCorrectionModal.tsx) |

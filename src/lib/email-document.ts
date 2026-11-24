@@ -99,6 +99,12 @@ export interface EmailMessage {
   subject: string;
   html: string;
   text: string;
+  /**
+   * Where Reply goes, when it is not the site's contact address. Only the
+   * Contact Us inquiry sets it (email-contact.ts): that email goes *to* staff,
+   * and Reply must reach the person who wrote in.
+   */
+  replyTo?: string;
 }
 
 /**
@@ -131,7 +137,7 @@ export async function sendEmail(message: EmailMessage): Promise<EmailOutcome> {
       // a hundred a day. Resend's own dashboard already keeps a log of
       // everything sent, which is what the archive mailbox was for.
       to: message.to,
-      replyTo: contactEmail,
+      replyTo: message.replyTo ?? contactEmail,
       subject: message.subject,
       html: message.html,
       // The text alternative exists anyway now that the template renders one,

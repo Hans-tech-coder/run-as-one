@@ -76,7 +76,7 @@ async function guardAdmin(request: NextRequest, forward: Headers) {
  * be added here**, or it is rewritten into the tree and 404s.
  */
 const REQUEST_SITE_PAGE =
-  /^\/(?:(?:pay|track|feedback|privacy|terms|coming-soon)(?:\/|$)|events\/[^/]+\/register(?:\/|$))/;
+  /^\/(?:(?:pay|track|feedback|contact|privacy|terms|coming-soon)(?:\/|$)|events\/[^/]+\/register(?:\/|$))/;
 
 /**
  * The event page, which the team may open before it is published

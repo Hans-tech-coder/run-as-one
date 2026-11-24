@@ -2,8 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { ArrowRight } from 'lucide-react';
-import { SITE_NAME, supportMailto } from '@/lib/site-contact';
-import { getContactEmail } from '@/lib/site-settings';
+import { SITE_NAME } from '@/lib/site-contact';
 
 export const NOT_FOUND_METADATA: Metadata = {
   title: `Page Not Found | ${SITE_NAME}`,
@@ -27,8 +26,6 @@ export const NOT_FOUND_METADATA: Metadata = {
  * which almost every miss reaches), the register wizard's, and the root one.
  */
 export default async function NotFoundContent() {
-  const contactEmail = await getContactEmail();
-
   return (
     <section className="site-section site-wrap">
       <div className="site-notice" data-enter>
@@ -52,7 +49,7 @@ export default async function NotFoundContent() {
 
       <h2 className="sr-only">Or Pick Up from Here</h2>
       <ul className="site-notice__more">
-        {destinations(contactEmail).map(destination => (
+        {destinations.map(destination => (
           <li key={destination.label}>
             <DestinationLink {...destination} />
           </li>
@@ -62,8 +59,8 @@ export default async function NotFoundContent() {
   );
 }
 
-/** Built per request: the contact address is a platform setting. */
-const destinations = (contactEmail: string) => [
+/** Contact Us is the form at /contact, which also shows the address. */
+const destinations = [
   {
     label: 'Upcoming Races',
     body: 'Every race and fun run open for registration.',
@@ -77,8 +74,7 @@ const destinations = (contactEmail: string) => [
   {
     label: 'Contact Us',
     body: 'Tell us which link sent you here.',
-    href: supportMailto(contactEmail),
-    external: true,
+    href: '/contact',
   },
 ] as const;
 

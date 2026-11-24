@@ -34,7 +34,7 @@ import { EVENT_SITE_CLIENT, findSiteClient, siteOrigin } from '@/lib/site-client
  *   sitemap of thousands of names is not something the runners asked for.
  * - Drafts and scheduled events never (`publishedEvents`).
  * - The site's own pages: on the main site `/`, `/events`, `/results`,
- *   `/track`, `/privacy` and `/terms`; on a client's site `/events`,
+ *   `/track`, `/contact`, `/privacy` and `/terms`; on a client's site `/events`,
  *   `/results` and `/track` (its `/` is a redirect to `/events`, and the
  *   policies are Run As One's, served the same on every host, so they belong
  *   to the main site's list alone).
@@ -45,7 +45,7 @@ import { EVENT_SITE_CLIENT, findSiteClient, siteOrigin } from '@/lib/site-client
 /** Six hours: a new race reaching Google a few hours late costs nothing. */
 const SITEMAP_SECONDS = 6 * 60 * 60;
 
-const MAIN_PAGES = ['/', '/events', '/results', '/track', '/privacy', '/terms'];
+const MAIN_PAGES = ['/', '/events', '/results', '/track', '/contact', '/privacy', '/terms'];
 const CLIENT_PAGES = ['/events', '/results', '/track'];
 
 const siteEntries = unstable_cache(

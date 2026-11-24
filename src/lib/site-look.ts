@@ -57,7 +57,16 @@ export function isCheckoutPath(pathname: string | null | undefined): boolean {
   return false;
 }
 
-/** The pages whose frame carries `.site-checkout`, checkout-paper.css's scope. */
+/**
+ * The pages whose frame carries `.site-checkout`, checkout-paper.css's scope.
+ * Contact Us (`/contact`) wears it too: it reuses the wizard's `PhoneField`
+ * and `SelectField`, which are dark-era controls.
+ */
 export function wearsPaletteBridge(pathname: string | null | undefined): boolean {
-  return isCheckoutPath(pathname) || isInquiryPath(pathname);
+  return isCheckoutPath(pathname) || isInquiryPath(pathname) || isContactPath(pathname);
+}
+
+/** Contact Us, `/contact`. */
+export function isContactPath(pathname: string | null | undefined): boolean {
+  return pathname === '/contact' || pathname === '/contact/';
 }
