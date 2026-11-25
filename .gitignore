@@ -73,3 +73,6 @@ __pycache__/
 
 # Official brand kit & high-res logo files (local checkout only)
 /brand/
+
+# Promo video scenes (local checkout only)
+/rao_video/

@@ -73,7 +73,7 @@ export default async function TrackLinkPage({ params }: { params: Promise<{ toke
 function Notice({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) {
   return (
     <div className="site-wrap">
-    <div className="mx-auto flex w-full max-w-2xl flex-col items-center">
+    <div className="mx-auto flex w-full max-w-2xl flex-col items-center py-10 sm:py-16">
       <StatusPanel>
         <div className="flex flex-col items-center text-center">
           <IconBadge>{icon}</IconBadge>
