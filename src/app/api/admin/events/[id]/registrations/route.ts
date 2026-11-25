@@ -9,7 +9,13 @@
  * "Prices have changed" refusal, and the write by `placeOrder` — so the
  * promos, add-ons, slot caps, pause, close and duplicate-runner guard are
  * exactly the website's, and staff can override none of them. The order lands
- * PENDING · BANK_TRANSFER and goes through validation like any other.
+ * PENDING · BANK_TRANSFER and goes through validation like any other —
+ * unless the staff member ticks that they **checked the money landed** in the
+ * account (`paymentChecked`, the owner, 2026-11-25). That is validating as it
+ * is entered, so it asks `registration:validate`, writes PAID with the same
+ * `registration.status.changed` trail line the status route writes, and sends
+ * the receipt instead of the "received" mail. A screenshot alone is not a
+ * check of the account, so the tick is off by default.
  *
  * What differs, and why:
  * - **Auth**, `registration:create` on the race (the validate holders): a
@@ -35,7 +41,7 @@ import { recordWriteInCommunities } from '@/lib/running-community-store';
 import { discardUnclaimedProof, uploadPrivateProof, UploadError } from '@/lib/blob';
 import { asLogisticsMethod, PAYMENT_METHODS } from '@/lib/registration-codes';
 import { SlotsUnavailableError } from '@/lib/registration-gate';
-import { deliverReceivedEmail } from '@/lib/email-delivery';
+import { deliverConfirmationEmail, deliverReceivedEmail } from '@/lib/email-delivery';
 import { optionalUpperCaseForStorage, upperCaseForStorage } from '@/lib/text-case';
 import { PromoUnavailableError } from '@/lib/discount';
 import { priceCheckout } from '@/lib/checkout-pricing';
@@ -88,6 +94,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       return NextResponse.json(
         { error: 'Send the order as a form with the payment proof attached.' },
         { status: 400 },
+      );
+    }
+
+    // "I checked the money landed": the order is validated as it is entered,
+    // so it asks what validating asks. Refused before the upload.
+    const paidOnEntry = formData.get('paymentChecked') === 'true';
+    if (paidOnEntry && !can(actor, 'registration:validate', { organizerId: reach.organizerId, eventId: reach.id })) {
+      return NextResponse.json(
+        { error: 'Only staff who validate payments can mark an order paid as it is entered.', field: 'paymentChecked' },
+        { status: 403 },
       );
     }
 
@@ -210,6 +226,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
           paidTo: account.value,
         },
         encodedBy: { id: actor.id, name: staffName },
+        paidOnEntry,
       });
       // In the same transaction, so an order never exists without the record
       // of who encoded it and who vouched for the runner's consent.
@@ -227,6 +244,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
           totalAmount,
         },
       });
+      // Validated as it was entered: the same trail line the status route
+      // writes, so the order reads "Validated by …" like any other and the
+      // trail says the money was checked, not only that it was claimed.
+      if (paidOnEntry) {
+        await recordAudit(tx, actor, {
+          action: 'registration.status.changed',
+          entityType: 'Registration',
+          entityId: placed.id,
+          eventId: event.id,
+          summary: `Marked ${placed.orderRef} as PAID on entry: ${staffName} checked the money landed${
+            account.value ? ` in ${account.value}` : ''
+          }.`,
+          changes: { status: ['PENDING', 'PAID'], ...(account.value ? { paidTo: account.value } : {}) },
+        });
+      }
       return placed;
     });
     unclaimedProof = null;
@@ -241,14 +273,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       });
     }
     await recordWriteInCommunities(participants);
-    // The same "we received your registration" mail the website sends; the
+    // Validated already: the receipt, as validating sends it. Otherwise the
+    // same "we received your registration" mail the website sends, and the
     // receipt waits for validation, as it does for every bank transfer.
-    const email = await deliverReceivedEmail(registration);
+    const email = await (paidOnEntry ? deliverConfirmationEmail : deliverReceivedEmail)(registration);
 
     return NextResponse.json({
       success: true,
       id: registration.id,
       orderRef: registration.orderRef,
+      status: registration.status,
       emailSent: email.sent,
     });
   } catch (error: unknown) {

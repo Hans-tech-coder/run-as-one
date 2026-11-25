@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { asRunnerCommunity } from '@/lib/running-community';
+import { recordWriteInCommunities } from '@/lib/running-community-store';
 import { emailAddressError, normalizeEmailAddress } from '@/lib/email-address';
 import {
   optionalUpperCaseForStorage,
@@ -266,6 +267,13 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
       return updated;
     });
+
+    // A club staff typed that is not on the list goes to the Communities
+    // review queue, as a runner's write-in does at checkout. Only when the
+    // club changed; never throws (running-community-store.ts).
+    if (updatedRunner.runningCommunity !== runner.runningCommunity) {
+      await recordWriteInCommunities([updatedRunner]);
+    }
 
     return NextResponse.json(updatedRunner);
   } catch (error: any) {

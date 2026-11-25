@@ -176,13 +176,14 @@ async function teamNotifications(actor: Actor, now: Date): Promise<AppNotificati
         event: reachableEvents(actor, 'registration:email'),
         deletedAt: null,
         createdAt: { gte: since },
-        // outstandingEmail's rule, as a where: the received email never
-        // went out, or the order is paid and its receipt never did. A
+        // outstandingEmail's rule, as a where: neither email went out (the
+        // receipt supersedes "received"), or the order is paid and its
+        // receipt never did. A
         // deliberate superset — a complimentary order is owed no received
         // email at all and matches the first arm anyway — which is why
         // `outstandingEmail` still has the last word on each row below.
         OR: [
-          { receivedEmailSentAt: null },
+          { receivedEmailSentAt: null, confirmationEmailSentAt: null },
           { status: 'PAID', confirmationEmailSentAt: null },
         ],
       },

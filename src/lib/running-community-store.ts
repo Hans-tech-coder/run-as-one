@@ -29,8 +29,10 @@ export async function approvedCommunityNames(): Promise<string[]> {
  * File the clubs a batch of runners wrote in, for Run As One's staff to review.
  *
  * Called from checkout rather than from a public endpoint of its own. A club
- * only enters the queue when someone actually registers with it, which keeps
- * the list from being writable by anyone who can reach the site.
+ * only enters the queue when someone actually registers with it — or when
+ * signed-in staff enter or edit a runner with it (the staff registration form,
+ * Edit Runner) — which keeps the list from being writable by anyone who can
+ * reach the site.
  *
  * Never throws into the caller: a registration that has already been paid for
  * must not fail because a suggestion could not be filed.

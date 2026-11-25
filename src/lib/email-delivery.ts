@@ -92,7 +92,10 @@ export function outstandingEmail(registration: EmailDeliveryRecord): EmailKind |
       ? EMAIL_KINDS.CONFIRMATION
       : null;
   }
-  if (!registration.receivedEmailSentAt) return EMAIL_KINDS.RECEIVED;
+  // The receipt supersedes "received": once it went out there is no point
+  // telling the runner the order arrived. A staff order validated as it was
+  // entered (STAFF_REGISTRATION_PLAN.md) is sent only the receipt.
+  if (!registration.receivedEmailSentAt && !registration.confirmationEmailSentAt) return EMAIL_KINDS.RECEIVED;
   if (registration.status === 'PAID' && !registration.confirmationEmailSentAt) {
     return EMAIL_KINDS.CONFIRMATION;
   }

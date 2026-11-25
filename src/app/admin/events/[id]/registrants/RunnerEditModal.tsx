@@ -27,6 +27,20 @@ import {
   type RunnerAddressField,
 } from '@/lib/runner-address';
 import RunnerAddressEditor from './RunnerAddressEditor';
+import AdminCommunityField from '../../../AdminCommunityField';
+import PhoneField from '@/app/events/[slug]/register/PhoneField';
+import FieldError from '@/components/ui/FieldError';
+import { DEFAULT_COUNTRY, phoneNumberError } from '@/lib/phone';
+import { emailAddressError } from '@/lib/email-address';
+
+type CheckedField = 'email' | 'phone' | 'emergencyContactPhone';
+
+/** The website's rule for each checked field; blank is the browser's `required`. */
+function fieldError(field: CheckedField, value: string): string | undefined {
+  if (!value.trim()) return undefined;
+  if (field === 'email') return emailAddressError(value);
+  return phoneNumberError(value)?.replace('your mobile number', 'the mobile number') ?? undefined;
+}
 
 /**
  * Editing one runner, split out of `RegistrantsTable.tsx` when the home
@@ -132,6 +146,7 @@ export default function RunnerEditModal({
   isOpen,
   isClosing,
   raceDay,
+  communities,
   onClose,
   onSaved,
 }: {
@@ -141,6 +156,8 @@ export default function RunnerEditModal({
   isOpen: boolean;
   isClosing: boolean;
   raceDay: string;
+  /** Approved running clubs, sorted: the community field's suggestions. */
+  communities: readonly string[];
   onClose: () => void;
   /** The runner as the route saved it, for the table to fold into the row. */
   onSaved: (saved: any) => void;
@@ -149,6 +166,12 @@ export default function RunnerEditModal({
   const { alert } = useAlert();
   const [isSaving, setIsSaving] = useState(false);
   const [addressErrors, setAddressErrors] = useState<Partial<Record<RunnerAddressField, string>>>({});
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<CheckedField, string>>>({});
+
+  const checkField = (field: CheckedField, value: unknown) => {
+    const message = fieldError(field, typeof value === 'string' ? value : '');
+    setFieldErrors(current => ({ ...current, [field]: message }));
+  };
 
   const address: RunnerAddress = {
     addressProvince: runner?.addressProvince ?? '',
@@ -170,12 +193,30 @@ export default function RunnerEditModal({
 
   const close = () => {
     setAddressErrors({});
+    setFieldErrors({});
     onClose();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!runner) return;
+
+    // Email and both phones, by the website's rules; a blank phone is
+    // refused too (the phone fields have no `required` of their own).
+    const checked: Partial<Record<CheckedField, string>> = {};
+    for (const field of ['email', 'phone', 'emergencyContactPhone'] as const) {
+      const value = typeof runner[field] === 'string' ? runner[field] : '';
+      const message = value.trim()
+        ? fieldError(field, value)
+        : field === 'email' ? undefined : 'Enter the mobile number in digits, like 9171234567.';
+      if (message) checked[field] = message;
+    }
+    if (Object.keys(checked).length > 0) {
+      setFieldErrors(checked);
+      const first = (['email', 'phone', 'emergencyContactPhone'] as const).find(f => checked[f]);
+      document.getElementById(first === 'email' ? 'edit-runner-email' : first === 'phone' ? 'edit-runner-phone' : 'edit-runner-emergency-phone')?.focus();
+      return;
+    }
 
     // Checked here so the missing part is marked where it sits; the route
     // checks again and names it in its refusal for any other client.
@@ -286,20 +327,33 @@ export default function RunnerEditModal({
                     type="email"
                     required
                     value={runner.email || ''}
-                    onChange={e => setRunner({...runner, email: e.target.value})}
+                    onChange={e => {
+                      setRunner({...runner, email: e.target.value});
+                      setFieldErrors(current => ({ ...current, email: undefined }));
+                    }}
+                    // The website's rule, said as staff leave the field
+                    // rather than only after Save (lib/email-address.ts).
+                    onBlur={() => checkField('email', runner.email)}
                     className="form-input"
+                    aria-invalid={fieldErrors.email ? true : undefined}
+                    aria-describedby={fieldErrors.email ? 'edit-runner-email-error' : undefined}
                   />
+                  <FieldError id="edit-runner-email-error" message={fieldErrors.email} />
                 </div>
-                <div className="form-group">
-                  <label className="form-label" htmlFor="edit-runner-phone">Phone</label>
-                  <input
+                {/* The website's phone field: country code picked, digits
+                    only, capped at that country's length, stored as E.164.
+                    An older local number (09…) opens read as Philippine. */}
+                <div className="min-w-0" onBlur={() => checkField('phone', runner.phone)}>
+                  <PhoneField
                     id="edit-runner-phone"
-                    type="text"
-                    inputMode="tel"
-                    required
+                    label="Phone"
                     value={runner.phone || ''}
-                    onChange={e => setRunner({...runner, phone: e.target.value})}
-                    className="form-input"
+                    defaultCountry={DEFAULT_COUNTRY}
+                    error={fieldErrors.phone}
+                    onChange={phone => {
+                      setRunner({...runner, phone});
+                      setFieldErrors(current => ({ ...current, phone: undefined }));
+                    }}
                   />
                 </div>
               </div>
@@ -338,15 +392,15 @@ export default function RunnerEditModal({
                   placeholder="Select a size"
                   onChange={singletSize => setRunner({...runner, singletSize})}
                 />
-                <div className="form-group col-span-full">
-                  <label className="form-label" htmlFor="edit-runner-community">Running Community</label>
-                  <input
+                {/* The approved clubs suggested, a write-in still allowed
+                    (AdminCommunityField, the website picker's rules). The
+                    route files a write-in for review. */}
+                <div className="col-span-full">
+                  <AdminCommunityField
                     id="edit-runner-community"
-                    type="text"
                     value={runner.runningCommunity || ''}
-                    onChange={e => setRunner({...runner, runningCommunity: upperCaseAsTyped(e.target.value)})}
-                    placeholder="INDEPENDENT RUNNER"
-                    className="form-input"
+                    options={communities}
+                    onChange={runningCommunity => setRunner({ ...runner, runningCommunity })}
                   />
                 </div>
               </div>
@@ -377,16 +431,17 @@ export default function RunnerEditModal({
                       className="form-input"
                     />
                   </div>
-                  <div className="form-group">
-                    <label className="form-label" htmlFor="edit-runner-emergency-phone">Contact Phone</label>
-                    <input
+                  <div className="min-w-0" onBlur={() => checkField('emergencyContactPhone', runner.emergencyContactPhone)}>
+                    <PhoneField
                       id="edit-runner-emergency-phone"
-                      type="text"
-                      inputMode="tel"
-                      required
+                      label="Contact Phone"
                       value={runner.emergencyContactPhone || ''}
-                      onChange={e => setRunner({...runner, emergencyContactPhone: e.target.value})}
-                      className="form-input"
+                      defaultCountry={DEFAULT_COUNTRY}
+                      error={fieldErrors.emergencyContactPhone}
+                      onChange={emergencyContactPhone => {
+                        setRunner({...runner, emergencyContactPhone});
+                        setFieldErrors(current => ({ ...current, emergencyContactPhone: undefined }));
+                      }}
                     />
                   </div>
                 </div>

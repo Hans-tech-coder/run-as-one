@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-52 pages · 103 API routes · 179 modules in `src/lib` · 750 files · 129,452 lines
+52 pages · 103 API routes · 179 modules in `src/lib` · 752 files · 129,915 lines
 
 ---
 
@@ -23,7 +23,7 @@ The route, the server component behind it, and the client components beside it.
 
 | Route | Page | Beside it |
 | --- | --- | --- |
-| `/admin` | [`/admin/page.tsx`](../src/app/admin/page.tsx) | `AccountMenu.tsx` `AdminCardEdit.tsx` `AdminCardList.tsx` `AdminDataTable.tsx` `AdminDatePicker.tsx` `AdminNotFound.tsx` `AdminRouteLoading.tsx` `AdminSelect.tsx` `AdminShell.tsx` `AdminSwitch.tsx` `AdminTablePager.tsx` `AuthHomeLink.tsx` `AuthPaperFrame.tsx` `AuthRouteLoading.tsx` `bare-paths.ts` `dashboard-nav.tsx` `dashboard-sidebar.ts` `DashboardHeader.tsx` `DashboardQuickJump.tsx` `DashboardShell.tsx` `FilterOptions.tsx` `FiltersMenu.tsx` `forbidden.tsx` `MobileSortMenu.tsx` `NotificationsCenter.tsx` `overview-data.ts` `OverviewPanels.tsx` `PasswordField.tsx` `PastEventsGrid.tsx` `PrintableCopy.tsx` `route-loading-shape.ts` `row-menu-position.ts` `RowActionsMenu.tsx` `SmoothModalBody.tsx` `StepUpDialog.tsx` `TwoStepChip.tsx` `useDashboardTheme.ts` `ViewerDashboard.tsx` |
+| `/admin` | [`/admin/page.tsx`](../src/app/admin/page.tsx) | `AccountMenu.tsx` `AdminCardEdit.tsx` `AdminCardList.tsx` `AdminCommunityField.tsx` `AdminDataTable.tsx` `AdminDatePicker.tsx` `AdminNotFound.tsx` `AdminRouteLoading.tsx` `AdminSelect.tsx` `AdminShell.tsx` `AdminSwitch.tsx` `AdminTablePager.tsx` `AuthHomeLink.tsx` `AuthPaperFrame.tsx` `AuthRouteLoading.tsx` `bare-paths.ts` `dashboard-nav.tsx` `dashboard-sidebar.ts` `DashboardHeader.tsx` `DashboardQuickJump.tsx` `DashboardShell.tsx` `FilterOptions.tsx` `FiltersMenu.tsx` `forbidden.tsx` `MobileSortMenu.tsx` `NotificationsCenter.tsx` `overview-data.ts` `OverviewPanels.tsx` `PasswordField.tsx` `PastEventsGrid.tsx` `PrintableCopy.tsx` `route-loading-shape.ts` `row-menu-position.ts` `RowActionsMenu.tsx` `SmoothModalBody.tsx` `StepUpDialog.tsx` `TwoStepChip.tsx` `useDashboardTheme.ts` `ViewerDashboard.tsx` |
 | `/admin/[...missing]` | [`/admin/[...missing]/page.tsx`](../src/app/admin/[...missing]/page.tsx) | — |
 | `/admin/activity` | [`/admin/activity/page.tsx`](../src/app/admin/activity/page.tsx) | `activity-row-parts.tsx` `ActivityCards.tsx` `ActivityClient.tsx` `ActivityTable.tsx` |
 | `/admin/certificate-guide` | [`/admin/certificate-guide/page.tsx`](../src/app/admin/certificate-guide/page.tsx) | `GuideChecklist.tsx` `GuideDiagram.tsx` `GuideDocument.tsx` `GuideToc.tsx` |
@@ -34,7 +34,7 @@ The route, the server component behind it, and the client components beside it.
 | `/admin/events/[id]/pacers` | [`/admin/events/[id]/pacers/page.tsx`](../src/app/admin/events/[id]/pacers/page.tsx) | `AddPacerModal.tsx` `EditPacerModal.tsx` `pacer-row.ts` `PacerActionsMenu.tsx` `PacersClient.tsx` `use-pacer-actions.tsx` |
 | `/admin/events/[id]/registrants` | [`/admin/events/[id]/registrants/page.tsx`](../src/app/admin/events/[id]/registrants/page.tsx) | `AwaitingChangeActions.tsx` `CancelOrderModal.tsx` `category-change-display.tsx` `CategoryChangeEmailModal.tsx` `CategoryChangeHistory.tsx` `CategoryChangeModal.tsx` `CategoryChangePaymentChoice.tsx` `CategoryChangeQuote.tsx` `CategoryChangesModal.tsx` `ColumnsViewMenu.tsx` `DeleteRegistrantModals.tsx` `email-handoff.ts` `FollowUpModal.tsx` `logistics-change-display.tsx` `ManualEmailModal.tsx` `NeedsAttentionMenu.tsx` `OrderSwitchModal.tsx` `paid-to.tsx` `PaymentCorrectionModal.tsx` `PaymentLinkEmailModal.tsx` `ProofLightbox.tsx` `ProofPreview.tsx` `reference-held.tsx` `RefundsList.tsx` `registrant-columns.tsx` `registrant-csv.ts` `registrant-display.tsx` `registrant-row-patches.ts` `registrant-rows.ts` `RegistrantActionsMenu.tsx` `RegistrantCards.tsx` `RegistrantDetailModal.tsx` `RegistrantGuardianConsent.tsx` `RegistrantHistoryModal.tsx` `RegistrantRowActions.tsx` `RegistrantsBulkBar.tsx` `RegistrantsDataTable.tsx` `RegistrantsTable.tsx` `RegistrantsTabs.tsx` `RegistrantsToolbar.tsx` `RegistrantTransactionFields.tsx` `RemarksModal.tsx` `RunnerAddressEditor.tsx` `RunnerEditModal.tsx` `RunnerRefundModal.tsx` `SendLinksButton.tsx` `ship-kits-address.tsx` `ship-kits-fields.tsx` `ShipKitsPanel.tsx` `SwitchEmailModal.tsx` `SwitchHistory.tsx` `ToolbarMoreMenu.tsx` `unpaid-columns.tsx` `UnpaidCheckoutActions.tsx` `UnpaidCheckoutCards.tsx` `UnpaidCheckoutsList.tsx` `useCategoryChangeModal.ts` `useCategoryChanges.tsx` `useOrderSwitch.tsx` `usePaymentCorrection.tsx` `usePaymentStatus.ts` `useRegistrantHistory.tsx` `useRunnerEdit.tsx` `useShipKits.ts` `WaitingSwitchActions.tsx` |
 | `/admin/events/[id]/registrants/[runnerId]/consent` | [`/admin/events/[id]/registrants/[runnerId]/consent/page.tsx`](../src/app/admin/events/[id]/registrants/[runnerId]/consent/page.tsx) | `PrintableSheet.tsx` |
-| `/admin/events/[id]/registrants/new` | [`/admin/events/[id]/registrants/new/page.tsx`](../src/app/admin/events/[id]/registrants/new/page.tsx) | `staff-registration.ts` `StaffOrderPanel.tsx` `StaffRegistrationForm.tsx` `StaffRunnerFields.tsx` `StaffTotalPanel.tsx` |
+| `/admin/events/[id]/registrants/new` | [`/admin/events/[id]/registrants/new/page.tsx`](../src/app/admin/events/[id]/registrants/new/page.tsx) | `staff-registration.ts` `staff-runner-parts.tsx` `StaffOrderPanel.tsx` `StaffRegistrationForm.tsx` `StaffRunnerFields.tsx` `StaffTotalPanel.tsx` |
 | `/admin/events/new` | [`/admin/events/new/page.tsx`](../src/app/admin/events/new/page.tsx) | `NewEventForm.tsx` |
 | `/admin/feedback` | [`/admin/feedback/page.tsx`](../src/app/admin/feedback/page.tsx) | `FeedbackClient.tsx` `MessageDetail.tsx` |
 | `/admin/forgot-password` | [`/admin/forgot-password/page.tsx`](../src/app/admin/forgot-password/page.tsx) | `ForgotPasswordClient.tsx` |
@@ -410,15 +410,15 @@ when a task touches one, split it before editing rather than after.
 | 499 | [`src/app/admin/AdminRouteLoading.tsx`](../src/app/admin/AdminRouteLoading.tsx) |
 | 478 | [`src/lib/settlement.ts`](../src/lib/settlement.ts) |
 | 477 | [`src/app/admin/events/AddOnFormModal.tsx`](../src/app/admin/events/AddOnFormModal.tsx) |
+| 474 | [`src/app/admin/events/[id]/registrants/RunnerEditModal.tsx`](../src/app/admin/events/[id]/registrants/RunnerEditModal.tsx) |
 | 472 | [`src/app/admin/settings/TwoFactorPanel.tsx`](../src/app/admin/settings/TwoFactorPanel.tsx) |
 | 472 | [`src/app/events/[slug]/register/BirthdatePicker.tsx`](../src/app/events/[slug]/register/BirthdatePicker.tsx) |
-| 470 | [`src/app/admin/events/[id]/registrants/RunnerEditModal.tsx`](../src/app/admin/events/[id]/registrants/RunnerEditModal.tsx) |
 | 452 | [`src/app/s/[site]/results/[slug]/full/FullResultsClient.tsx`](../src/app/s/[site]/results/[slug]/full/FullResultsClient.tsx) |
 | 445 | [`src/app/admin/events/[id]/registrants/RegistrantActionsMenu.tsx`](../src/app/admin/events/[id]/registrants/RegistrantActionsMenu.tsx) |
 | 441 | [`src/lib/actor.ts`](../src/lib/actor.ts) |
+| 439 | [`src/app/admin/events/[id]/registrants/RegistrantsTable.tsx`](../src/app/admin/events/[id]/registrants/RegistrantsTable.tsx) |
 | 439 | [`src/app/admin/events/[id]/registrants/UnpaidCheckoutsList.tsx`](../src/app/admin/events/[id]/registrants/UnpaidCheckoutsList.tsx) |
 | 436 | [`src/app/admin/events/[id]/edit/page.tsx`](../src/app/admin/events/[id]/edit/page.tsx) |
-| 436 | [`src/app/admin/events/[id]/registrants/RegistrantsTable.tsx`](../src/app/admin/events/[id]/registrants/RegistrantsTable.tsx) |
 | 434 | [`src/lib/activity.ts`](../src/lib/activity.ts) |
 | 426 | [`src/app/admin/your-events/[id]/RaceReport.tsx`](../src/app/admin/your-events/[id]/RaceReport.tsx) |
 | 425 | [`src/app/admin/events/[id]/registrants/useCategoryChangeModal.ts`](../src/app/admin/events/[id]/registrants/useCategoryChangeModal.ts) |
@@ -428,7 +428,7 @@ when a task touches one, split it before editing rather than after.
 | 420 | [`src/app/api/checkout/route.ts`](../src/app/api/checkout/route.ts) |
 | 418 | [`src/app/admin/events/[id]/registrants/RegistrantDetailModal.tsx`](../src/app/admin/events/[id]/registrants/RegistrantDetailModal.tsx) |
 | 417 | [`src/lib/logistics-change-payment.ts`](../src/lib/logistics-change-payment.ts) |
-| 416 | [`src/lib/notification-store.ts`](../src/lib/notification-store.ts) |
+| 417 | [`src/lib/notification-store.ts`](../src/lib/notification-store.ts) |
 | 413 | [`src/lib/category-change.ts`](../src/lib/category-change.ts) |
 | 408 | [`src/lib/audit.ts`](../src/lib/audit.ts) |
 | 407 | [`src/app/events/[slug]/register/RunnerCard.tsx`](../src/app/events/[slug]/register/RunnerCard.tsx) |

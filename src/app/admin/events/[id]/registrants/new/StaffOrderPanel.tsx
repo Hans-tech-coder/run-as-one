@@ -47,6 +47,7 @@ export default function StaffOrderPanel({
   clearError,
   setProofError,
   disabled,
+  canValidate,
 }: {
   event: StaffEvent;
   kit: Kit;
@@ -57,6 +58,8 @@ export default function StaffOrderPanel({
   clearError: (field: keyof OrderErrors) => void;
   setProofError: (message: string) => void;
   disabled: boolean;
+  /** Offers "I checked the money landed" (PAID on entry) to validators only. */
+  canValidate: boolean;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const { optimizing, compress } = useImageCompression('proof');
@@ -242,6 +245,38 @@ export default function StaffOrderPanel({
               error={typeof errors.paidTo === 'string' ? errors.paidTo : undefined}
             />
           </div>
+
+          {/* Validating as it is entered (the owner, 2026-11-25). Off by
+              default: a screenshot alone is not a check of the account. */}
+          {canValidate && (
+            <label
+              htmlFor="staff-order-payment-checked"
+              className={`flex items-start gap-3 rounded-control border px-4 py-3 cursor-pointer min-h-11 ${
+                order.paymentChecked
+                  ? 'border-[color-mix(in_srgb,var(--status-success)_45%,transparent)] bg-[color-mix(in_srgb,var(--status-success)_8%,transparent)]'
+                  : 'border-[var(--dash-border)] bg-[var(--ink-02)]'
+              }`}
+            >
+              <input
+                id="staff-order-payment-checked"
+                type="checkbox"
+                checked={order.paymentChecked}
+                onChange={e => setOrder({ paymentChecked: e.target.checked })}
+                disabled={disabled}
+                className="mt-0.5 h-4 w-4 shrink-0"
+                aria-describedby="staff-order-payment-checked-hint"
+              />
+              <span className="text-sm">
+                <span className="block text-primary font-medium">
+                  I checked the money landed in {order.paidTo || 'the account'}
+                </span>
+                <span id="staff-order-payment-checked-hint" className="block text-xs text-[var(--text-muted)] mt-0.5">
+                  The order is saved as Paid, with you as the validator, and the runner gets the receipt. Leave it
+                  off if you only saw the screenshot; it then waits in Needs Validation.
+                </span>
+              </span>
+            </label>
+          )}
 
           <div>
             <label

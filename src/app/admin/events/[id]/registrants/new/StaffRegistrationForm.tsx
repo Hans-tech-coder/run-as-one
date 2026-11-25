@@ -7,7 +7,7 @@ import { Plus } from 'lucide-react';
 import BusyLabel from '@/components/ui/BusyLabel';
 import { MAX_RUNNERS_PER_ORDER } from '@/lib/order-size';
 import { defaultDeliveryZone, deliveryProvinceOf, needsDeliveryZoneChoice } from '@/app/events/[slug]/register/delivery';
-import { hasErrors, validateRunners, type RunnerErrors, type RunnerField } from '@/app/events/[slug]/register/validation';
+import { hasErrors, validateRunner, validateRunners, type RunnerErrors, type RunnerField } from '@/app/events/[slug]/register/validation';
 import { staffError } from '../reference-held';
 import StaffRunnerFields, { staffFieldId } from './StaffRunnerFields';
 import StaffOrderPanel, { ORDER_FIELD_IDS, type OrderErrors } from './StaffOrderPanel';
@@ -15,6 +15,7 @@ import StaffTotalPanel from './StaffTotalPanel';
 import {
   deliveryAddressFor,
   emptyRunner,
+  resolvedRunners,
   orderFormData,
   toParticipants,
   withoutRunner,
@@ -62,7 +63,14 @@ function withOrderLinks(message: string, refs: string[], eventId: string): React
   );
 }
 
-export default function StaffRegistrationForm({ event }: { event: StaffEvent }) {
+export default function StaffRegistrationForm({
+  event,
+  canValidate,
+}: {
+  event: StaffEvent;
+  /** Whether this staff member may validate, and so tick "I checked the money landed". */
+  canValidate: boolean;
+}) {
   const router = useRouter();
   const soleCategory = event.categories.length === 1 ? event.categories[0].id : '';
   const [runners, setRunners] = useState<StaffRunner[]>(() => [emptyRunner(0, soleCategory)]);
@@ -79,8 +87,11 @@ export default function StaffRegistrationForm({ event }: { event: StaffEvent }) 
     paidTo: event.bankAccounts.length === 1 ? event.bankAccounts[0] : '',
     proofFile: null,
     consent: false,
+    paymentChecked: false,
   }));
   const [promoInput, setPromoInput] = useState('');
+  // Clubs written in on this form, shared across its runners.
+  const [addedCommunities, setAddedCommunities] = useState<string[]>([]);
   const [runnerErrors, setRunnerErrors] = useState<RunnerErrors[]>([]);
   const [orderErrors, setOrderErrors] = useState<OrderErrors>({});
   const [summary, setSummary] = useState<SummaryItem[]>([]);
@@ -171,6 +182,20 @@ export default function StaffRegistrationForm({ event }: { event: StaffEvent }) 
     });
   };
 
+  // One field, checked as staff leave it, with the save's own rule — only a
+  // filled one, so tabbing through an empty form does not paint it red.
+  const checkField = (index: number, field: RunnerField) => {
+    const runner = resolvedRunners(runners)[index];
+    const value = runner?.[field as keyof StaffRunner];
+    if (typeof value !== 'string' || value.trim() === '') return;
+    const message = validateRunner(runner, validatedEvent)[field];
+    setRunnerErrors(current => {
+      const next = [...current];
+      next[index] = { ...next[index], [field]: message };
+      return next;
+    });
+  };
+
   const showSummary = (items: SummaryItem[]) => {
     setSummary(items);
     requestAnimationFrame(() => summaryRef.current?.focus());
@@ -180,7 +205,19 @@ export default function StaffRegistrationForm({ event }: { event: StaffEvent }) 
     e.preventDefault();
     if (saving) return;
 
-    const perRunner = validateRunners(runners, validatedEvent);
+    // Checked as the order will carry them, Runner 1's email and emergency
+    // contact copied in. A copied field's error is Runner 1's to fix, so it
+    // is reported there only, never on a field the runner below cannot see.
+    const perRunner = validateRunners(resolvedRunners(runners), validatedEvent).map((errors, index) => {
+      if (index === 0) return errors;
+      const own = { ...errors };
+      if (runners[index].emailSameAsFirst) delete own.email;
+      if (runners[index].emergencySameAsFirst) {
+        delete own.emergencyContactName;
+        delete own.emergencyContactPhone;
+      }
+      return own;
+    });
     const orderProblems: OrderErrors = {};
     if (kit.method === 'DELIVERY' && !deliveryProvinceOf(event) && needsDeliveryZoneChoice(event) && !kit.zone) {
       orderProblems.zone = 'Choose the delivery area';
@@ -292,7 +329,11 @@ export default function StaffRegistrationForm({ event }: { event: StaffEvent }) 
             index={index}
             count={runners.length}
             runner={runner}
+            first={runners[0]}
             event={event}
+            addedCommunities={addedCommunities}
+            onAddCommunity={name => setAddedCommunities(current => (current.includes(name) ? current : [...current, name]))}
+            onCheck={field => checkField(index, field)}
             errors={runnerErrors[index] ?? {}}
             onChange={patch => changeRunner(index, patch)}
             onRemove={() => {
@@ -325,6 +366,7 @@ export default function StaffRegistrationForm({ event }: { event: StaffEvent }) 
         clearError={field => setOrderErrors(current => ({ ...current, [field]: undefined }))}
         setProofError={message => setOrderErrors(current => ({ ...current, proofFile: message }))}
         disabled={saving}
+        canValidate={canValidate}
       />
 
       <StaffTotalPanel
@@ -345,7 +387,11 @@ export default function StaffRegistrationForm({ event }: { event: StaffEvent }) 
           Cancel
         </Link>
         <button type="submit" disabled={saving || quoting} className="btn-light">
-          {saving ? <BusyLabel>Saving</BusyLabel> : runners.length > 1 ? `Save ${runners.length} Runners` : 'Save Registration'}
+          {saving ? (
+            <BusyLabel>Saving</BusyLabel>
+          ) : (
+            `${order.paymentChecked ? 'Save as Paid' : runners.length > 1 ? `Save ${runners.length} Runners` : 'Save Registration'}`
+          )}
         </button>
       </div>
     </form>

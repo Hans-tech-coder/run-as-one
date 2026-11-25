@@ -21,6 +21,7 @@ import { FIRST_MOVE } from '@/lib/paid-runners';
 import { refundsForEvent } from '@/lib/refund-store';
 import RefundsList from './RefundsList';
 import { PaidToAccountsProvider } from './paid-to';
+import { approvedCommunityNames } from '@/lib/running-community-store';
 import DashboardHeader from '@/app/admin/DashboardHeader';
 
 export default async function RegistrantsPage({
@@ -311,6 +312,7 @@ export default async function RegistrantsPage({
               permissions={permissions}
               switching={switching}
               addRegistrationHref={canCreate ? `/admin/events/${id}/registrants/new` : undefined}
+              communities={permissions.edit ? await approvedCommunityNames() : []}
             />
             </PaidToAccountsProvider>
           }

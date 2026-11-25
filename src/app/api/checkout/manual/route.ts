@@ -250,9 +250,9 @@ export async function POST(request: Request) {
       });
     }
 
-    // Clubs nobody has approved yet go to the Communities review queue. This is
-    // the only way a row enters that queue, so the list cannot be written to
-    // by anyone who has not actually registered.
+    // Clubs nobody has approved yet go to the Communities review queue. Only
+    // a registration (or signed-in staff) puts a row there, so the list cannot
+    // be written to by anyone who has not actually registered.
     await recordWriteInCommunities(participants);
 
     // Sent now, not the receipt: a bank transfer is unverified money until an

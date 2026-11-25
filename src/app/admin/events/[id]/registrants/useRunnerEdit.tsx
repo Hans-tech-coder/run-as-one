@@ -19,10 +19,12 @@ const CLOSE_MS = 150;
 export function useRunnerEdit({
   runners,
   raceDay,
+  communities,
   setRunners,
 }: {
   runners: RegistrantRow[];
   raceDay: string;
+  communities: readonly string[];
   setRunners: React.Dispatch<React.SetStateAction<RegistrantRow[]>>;
 }) {
   const [editingRunner, setEditingRunner] = useState<RegistrantRow | null>(null);
@@ -55,6 +57,7 @@ export function useRunnerEdit({
       isOpen={isOpen}
       isClosing={isClosing}
       raceDay={raceDay}
+      communities={communities}
       onClose={close}
       onSaved={saved =>
         setRunners(current =>

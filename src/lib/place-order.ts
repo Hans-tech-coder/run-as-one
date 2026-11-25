@@ -94,10 +94,16 @@ export type PlaceOrderInput = {
    * Absent on the runner's own checkout, which the column defaults to WEB.
    */
   encodedBy?: { id: string; name: string };
+  /**
+   * PAID on entry: a staff member who holds `registration:validate` saw the
+   * money land in the account (the staff door only). Every other order starts
+   * PENDING; a free one is written PAID by FREE_ORDER_COLUMNS either way.
+   */
+  paidOnEntry?: boolean;
 };
 
 export async function placeOrder(tx: Prisma.TransactionClient, input: PlaceOrderInput) {
-  const { event, orderRef, participants, pricing, order, payment, encodedBy } = input;
+  const { event, orderRef, participants, pricing, order, payment, encodedBy, paidOnEntry } = input;
   const { zone, promoOrder, lockedAt, discount, discountAmount, free, addOnLines } = pricing;
 
   // 1. One reference, one payment. null claims nothing and touches nothing.
@@ -174,8 +180,9 @@ export async function placeOrder(tx: Prisma.TransactionClient, input: PlaceOrder
             paidTo: payment.paidTo,
           }
         : {}),
-      // Waiting for the webhook or an admin to verify the payment.
-      status: 'PENDING',
+      // Waiting for the webhook or an admin to verify the payment, unless a
+      // validator encoding it already checked the money landed.
+      status: paidOnEntry ? 'PAID' : 'PENDING',
       // Nothing to collect, so nothing to wait for. Spread *after* the lines
       // above so it has the last word: a free order is written PAID and
       // COMPLIMENTARY with its chargeable amounts forced to zero, which also

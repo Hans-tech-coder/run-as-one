@@ -7,7 +7,9 @@ import AdminDatePicker from '../../../../AdminDatePicker';
 import AdminSwitch from '../../../../AdminSwitch';
 import FieldError from '@/components/ui/FieldError';
 import RunnerAddressEditor from '../RunnerAddressEditor';
-import { upperCaseAsTyped } from '@/lib/text-case';
+import AdminCommunityField from '../../../../AdminCommunityField';
+import PhoneField from '@/app/events/[slug]/register/PhoneField';
+import { DEFAULT_COUNTRY } from '@/lib/phone';
 import { today } from '@/lib/event-schedule';
 import { formatPesos } from '@/lib/money';
 import { SHIRT_SIZE_CHART, shouldAskShirtSize } from '@/lib/shirt-size';
@@ -24,6 +26,9 @@ import {
 import type { RunnerAddress, RunnerAddressField } from '@/lib/runner-address';
 import { runnerFieldId, type RunnerErrors, type RunnerField } from '@/app/events/[slug]/register/validation';
 import type { StaffEvent, StaffRunner } from './staff-registration';
+import { CopiedField, SameAsFirst, TextField } from './staff-runner-parts';
+
+export { addressFieldId, staffFieldId } from './staff-runner-parts';
 
 /**
  * One runner on the staff registration form (STAFF_REGISTRATION_PLAN.md step
@@ -49,70 +54,15 @@ const RELATIONSHIP_OPTIONS = GUARDIAN_RELATIONSHIPS.map(value => ({
   label: GUARDIAN_RELATIONSHIP_LABELS[value],
 }));
 
-/** The id RunnerAddressEditor gives an address field, for focusing it. */
-export function addressFieldId(index: number, field: RunnerAddressField): string {
-  return `runner-${index}-address-${field.replace('address', '').toLowerCase()}`;
-}
-
-/** Where the caret goes for a field's error. */
-export function staffFieldId(index: number, field: RunnerField): string {
-  return field.startsWith('address') ? addressFieldId(index, field as RunnerAddressField) : runnerFieldId(index, field);
-}
-
-function TextField({
-  index,
-  field,
-  label,
-  value,
-  error,
-  onChange,
-  type = 'text',
-  inputMode,
-  placeholder,
-  upper = false,
-  optional = false,
-}: {
-  index: number;
-  field: RunnerField | 'medicalConditions' | 'runningCommunity';
-  label: string;
-  value: string;
-  error?: string;
-  onChange: (next: string) => void;
-  type?: string;
-  inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode'];
-  placeholder?: string;
-  upper?: boolean;
-  optional?: boolean;
-}) {
-  const id = runnerFieldId(index, field as RunnerField);
-  const errorId = `${id}-error`;
-  return (
-    <div className="form-group">
-      <label className="form-label" htmlFor={id}>
-        {label}
-        {optional && <span className="text-xs opacity-70"> - optional</span>}
-      </label>
-      <input
-        id={id}
-        type={type}
-        inputMode={inputMode}
-        value={value}
-        placeholder={placeholder}
-        onChange={e => onChange(upper ? upperCaseAsTyped(e.target.value) : e.target.value)}
-        className="form-input"
-        aria-invalid={error ? true : undefined}
-        aria-describedby={error ? errorId : undefined}
-      />
-      <FieldError id={errorId} message={error} />
-    </div>
-  );
-}
-
 export default function StaffRunnerFields({
   index,
   count,
   runner,
+  first,
   event,
+  addedCommunities,
+  onAddCommunity,
+  onCheck,
   errors,
   onChange,
   onRemove,
@@ -120,7 +70,14 @@ export default function StaffRunnerFields({
   index: number;
   count: number;
   runner: StaffRunner;
+  /** Runner 1, whose email and emergency contact the others may share. */
+  first: StaffRunner;
   event: StaffEvent;
+  /** Clubs written in on this form, so a team-mate can pick one just added. */
+  addedCommunities: string[];
+  onAddCommunity: (name: string) => void;
+  /** Check one field as staff leave it (the email, the two phones). */
+  onCheck: (field: RunnerField) => void;
   errors: RunnerErrors;
   onChange: (patch: Partial<StaffRunner>) => void;
   onRemove: () => void;
@@ -199,8 +156,33 @@ export default function StaffRunnerFields({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <TextField index={index} field="firstName" label="First Name" value={runner.firstName} error={errors.firstName} upper onChange={firstName => onChange({ firstName })} />
           <TextField index={index} field="lastName" label="Last Name" value={runner.lastName} error={errors.lastName} upper onChange={lastName => onChange({ lastName })} />
-          <TextField index={index} field="email" label="Email" type="email" value={runner.email} error={errors.email} onChange={email => onChange({ email })} />
-          <TextField index={index} field="phone" label="Phone" inputMode="tel" placeholder="+639171234567" value={runner.phone} error={errors.phone} onChange={phone => onChange({ phone })} />
+          <div className="flex flex-col">
+            {index > 0 && runner.emailSameAsFirst ? (
+              <CopiedField label="Email" value={first.email} />
+            ) : (
+              <TextField index={index} field="email" label="Email" type="email" value={runner.email} error={errors.email} onChange={email => onChange({ email })} onBlur={() => onCheck('email')} />
+            )}
+            {index > 0 && (
+              <SameAsFirst
+                id={`runner-${index}-email-same`}
+                label="Same email as Runner 1"
+                checked={runner.emailSameAsFirst}
+                onChange={emailSameAsFirst => onChange({ emailSameAsFirst })}
+              />
+            )}
+          </div>
+          {/* The website's own phone field: country code picked, digits
+              only, capped at that country's length, stored as E.164. */}
+          <div className="min-w-0" onBlur={() => onCheck('phone')}>
+            <PhoneField
+              id={runnerFieldId(index, 'phone')}
+              label="Phone"
+              value={runner.phone}
+              defaultCountry={DEFAULT_COUNTRY}
+              error={errors.phone}
+              onChange={phone => onChange({ phone })}
+            />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -240,7 +222,14 @@ export default function StaffRunnerFields({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <TextField index={index} field="runningCommunity" label="Running Community" optional upper placeholder="INDEPENDENT RUNNER" value={runner.runningCommunity} onChange={runningCommunity => onChange({ runningCommunity })} />
+          <AdminCommunityField
+            id={runnerFieldId(index, 'runningCommunity' as RunnerField)}
+            value={runner.runningCommunity}
+            options={event.communities}
+            added={addedCommunities}
+            onChange={runningCommunity => onChange({ runningCommunity })}
+            onAdd={onAddCommunity}
+          />
           <TextField index={index} field="medicalConditions" label="Medical Conditions" optional upper value={runner.medicalConditions} onChange={medicalConditions => onChange({ medicalConditions })} />
         </div>
 
@@ -270,9 +259,37 @@ export default function StaffRunnerFields({
 
         <div className="pt-4 border-t border-[var(--dash-border)]">
           <h3 className="text-primary font-medium mt-0 mb-4 text-base">Emergency Contact</h3>
+          {index > 0 && (
+            <div className="-mt-2 mb-2">
+              <SameAsFirst
+                id={`runner-${index}-emergency-same`}
+                label="Same emergency contact as Runner 1"
+                checked={runner.emergencySameAsFirst}
+                onChange={emergencySameAsFirst => onChange({ emergencySameAsFirst })}
+              />
+            </div>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <TextField index={index} field="emergencyContactName" label="Contact Name" upper value={runner.emergencyContactName} error={errors.emergencyContactName} onChange={emergencyContactName => onChange({ emergencyContactName })} />
-            <TextField index={index} field="emergencyContactPhone" label="Contact Phone" inputMode="tel" value={runner.emergencyContactPhone} error={errors.emergencyContactPhone} onChange={emergencyContactPhone => onChange({ emergencyContactPhone })} />
+            {index > 0 && runner.emergencySameAsFirst ? (
+              <>
+                <CopiedField label="Contact Name" value={first.emergencyContactName} />
+                <CopiedField label="Contact Phone" value={first.emergencyContactPhone} />
+              </>
+            ) : (
+              <>
+                <TextField index={index} field="emergencyContactName" label="Contact Name" upper value={runner.emergencyContactName} error={errors.emergencyContactName} onChange={emergencyContactName => onChange({ emergencyContactName })} />
+                <div className="min-w-0" onBlur={() => onCheck('emergencyContactPhone')}>
+                  <PhoneField
+                    id={runnerFieldId(index, 'emergencyContactPhone')}
+                    label="Contact Phone"
+                    value={runner.emergencyContactPhone}
+                    defaultCountry={DEFAULT_COUNTRY}
+                    error={errors.emergencyContactPhone}
+                    onChange={emergencyContactPhone => onChange({ emergencyContactPhone })}
+                  />
+                </div>
+              </>
+            )}
           </div>
         </div>
 

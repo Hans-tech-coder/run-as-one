@@ -3,6 +3,7 @@ import { can, requireTeamActor } from '@/lib/actor';
 import { CATEGORY_ORDER } from '@/lib/category-order';
 import { ADD_ON_ORDER } from '@/lib/add-on-stock';
 import { addOnSalesClosed } from '@/lib/add-ons';
+import { approvedCommunityNames } from '@/lib/running-community-store';
 import AdminNotFound from '../../../../AdminNotFound';
 import { EVENT_NOT_FOUND } from '../../../event-not-found';
 import DashboardHeader from '@/app/admin/DashboardHeader';
@@ -62,6 +63,7 @@ export default async function NewRegistrationPage({ params }: { params: Promise<
         categoryIds: item.categoryIds,
       })),
     bankAccounts: found.bankAccounts.map(account => account.bankName),
+    communities: await approvedCommunityNames(),
     pickup: found.logisticsPickup,
     logisticsDeliveryFeeInside: found.logisticsDeliveryFeeInside,
     logisticsDeliveryFeeOutside: found.logisticsDeliveryFeeOutside,
@@ -86,7 +88,10 @@ export default async function NewRegistrationPage({ params }: { params: Promise<
           website’s.
         </p>
         <PaidToAccountsProvider accounts={event.bankAccounts}>
-          <StaffRegistrationForm event={event} />
+          <StaffRegistrationForm
+            event={event}
+            canValidate={can(actor, 'registration:validate', { organizerId: actor.orgId, eventId: id })}
+          />
         </PaidToAccountsProvider>
       </div>
     </>

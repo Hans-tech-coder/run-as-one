@@ -37,6 +37,8 @@ export type StaffEvent = {
   categories: StaffCategory[];
   addOns: StaffAddOn[];
   bankAccounts: string[];
+  /** Approved running clubs, sorted: the community field's suggestions. */
+  communities: string[];
   pickup: boolean;
   /** Centavos; 0 means that zone is not delivered to. */
   logisticsDeliveryFeeInside: number;
@@ -65,6 +67,14 @@ export type StaffRunner = RunnerAddress & {
   guardianConsent: boolean;
   /** The earlier runner (0-based) whose home address this one shares; null = typed its own. */
   addressSameAs: number | null;
+  /**
+   * Runner 2 onwards: use Runner 1's email, or emergency contact, instead of
+   * typing one. A group sent over Messenger usually has one inbox and one
+   * person to call; on by default, and the copy is made when the order is
+   * checked and sent (`resolvedRunners`), so it follows Runner 1's edits.
+   */
+  emailSameAsFirst: boolean;
+  emergencySameAsFirst: boolean;
   addOns: AddOnPick[];
 };
 
@@ -91,8 +101,22 @@ export function emptyRunner(index: number, categoryId = ''): StaffRunner {
     guardianRelationship: '',
     guardianConsent: false,
     addressSameAs: index === 0 ? null : 0,
+    emailSameAsFirst: index > 0,
+    emergencySameAsFirst: index > 0,
     addOns: [],
   };
+}
+
+/** Each runner as the order will carry it: Runner 1's email and emergency contact copied where asked. */
+export function resolvedRunners(runners: StaffRunner[]): StaffRunner[] {
+  const [first] = runners;
+  return runners.map((runner, index) => ({
+    ...runner,
+    ...(index > 0 && runner.emailSameAsFirst ? { email: first.email } : {}),
+    ...(index > 0 && runner.emergencySameAsFirst
+      ? { emergencyContactName: first.emergencyContactName, emergencyContactPhone: first.emergencyContactPhone }
+      : {}),
+  }));
 }
 
 /** Runner `removed` leaves: later runners sharing it, or past it, re-point. */
@@ -109,10 +133,14 @@ export function withoutRunner(runners: StaffRunner[], removed: number): StaffRun
 
 /** The runners as the routes read `participants`: each with its resolved home address. */
 export function toParticipants(runners: StaffRunner[]) {
-  return withResolvedAddresses(runners).map(({ key: _key, ...runner }) => {
-    void _key;
-    return { ...runner, addOns: runner.addOns };
-  });
+  return withResolvedAddresses(resolvedRunners(runners)).map(
+    ({ key: _key, emailSameAsFirst: _email, emergencySameAsFirst: _emergency, ...runner }) => {
+      void _key;
+      void _email;
+      void _emergency;
+      return runner;
+    },
+  );
 }
 
 export type Kit = { method: 'PICKUP' | 'DELIVERY'; zone: string; zip: string; landmark: string };
@@ -154,6 +182,8 @@ export type OrderDraft = {
   paidTo: string;
   proofFile: File | null;
   consent: boolean;
+  /** "I checked the money landed": PAID on entry (`registration:validate` only). */
+  paymentChecked: boolean;
 };
 
 /** The multipart body, field for field as the bank-transfer wizard posts it. */
@@ -182,6 +212,7 @@ export function orderFormData(
   form.append('transactionNumber', order.transactionNumber);
   form.append('paidTo', order.paidTo);
   form.append('consentGiven', String(order.consent));
+  form.append('paymentChecked', String(order.paymentChecked));
   // The runner's name as staff typed it: the waiver's signature, which the
   // staff member's tick vouches for.
   form.append('consentSignature', `${first.firstName} ${first.lastName}`.trim());

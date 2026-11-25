@@ -2042,6 +2042,105 @@ a.reg-count-trigger {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--status-danger) 22%, transparent);
 }
 
+/* ── The phone box in the dashboard ─────────────────────────────────────
+   The dashboard has no phone control of its own: it renders the runner
+   wizard's `PhoneField` (country picker, digits only, capped per country),
+   so there is one way to type a number on this site. That component draws
+   the public wizard's field — a black/30 box, a white/10 line, a blue focus
+   ring, white text and a near-black country list — which read as a stranger
+   beside `.form-label` / `.form-input` and turned unreadable in the light
+   theme. These rules dress it as a `.form-input` in either theme, inside
+   `.admin-layout` only; the sign-in pages (Auth.css) and the inquiry
+   (inquiry-paper.css) render outside it and keep their own reconciliation.
+   The input's size is an inline style in PhoneField, hence `!important`. */
+.admin-layout .input-group > label {
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.admin-layout .input-group .control-shell {
+  background: var(--dash-field);
+  border: 1px solid var(--paper-field-line);
+  border-radius: var(--radius-control);
+  box-shadow: none;
+  transition: all 0.3s ease;
+}
+
+.admin-layout .input-group .control-shell:focus-within {
+  background: var(--dash-field-focus);
+  border-color: var(--paper-focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--paper-focus) 22%, transparent);
+}
+
+.admin-layout .input-group .control-shell[aria-invalid="true"] {
+  border-color: var(--status-danger);
+  background: color-mix(in srgb, var(--status-danger) 5%, var(--dash-field));
+}
+
+.admin-layout .input-group .control-shell[aria-invalid="true"]:focus-within {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--status-danger) 22%, transparent);
+}
+
+/* The same height and inset as a `.form-input` beside it. */
+.admin-layout .input-group .control-shell > input {
+  min-height: 56px !important;
+  padding: var(--space-md) !important;
+  color: var(--text-primary);
+}
+
+.admin-layout .input-group .control-shell > input::placeholder {
+  color: var(--ink-30);
+}
+
+.admin-layout .input-group .control-shell > button:first-child {
+  color: var(--text-primary);
+  border-radius: var(--radius-control) 0 0 var(--radius-control);
+  border-right: 1px solid var(--dash-hairline);
+}
+
+.admin-layout .input-group .control-shell > button:first-child:hover {
+  background: var(--ink-05);
+}
+
+/* The country list: AdminSelect's panel, rows and highlight. */
+.admin-layout .input-group .control-shell + div {
+  background: var(--dash-panel-solid);
+  border-color: var(--ink-15);
+  box-shadow: 0 16px 40px var(--dash-shadow);
+  z-index: 50;
+}
+
+.admin-layout .input-group .control-shell + div > div:first-child {
+  border-color: var(--dash-hairline);
+}
+
+/* The search row: a bare line under its icon, not a field inside the panel
+   (globals.css `.input-group input` would otherwise box it). */
+.admin-layout .input-group .control-shell + div input {
+  color: var(--text-primary);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0.25rem 0;
+  min-height: 0;
+  font-size: 1rem;
+}
+
+.admin-layout .input-group .control-shell + div input::placeholder {
+  color: var(--ink-30);
+}
+
+.admin-layout .input-group .control-shell + div li span.text-white {
+  color: var(--text-primary);
+}
+
+.admin-layout .input-group .control-shell + div li.bg-white\/10 {
+  background: var(--ink-10);
+}
+
 select.form-input {
   padding-right: 2.5rem;
   appearance: none;

@@ -120,6 +120,8 @@ interface RegistrantsTableProps {
   initialPaidTo?: string;
   /** *Add Registration*'s page, for `registration:create` holders only. */
   addRegistrationHref?: string;
+  /** Approved running clubs, for Edit Runner's community field. */
+  communities: readonly string[];
 }
 
 /** One row as page.tsx builds it; named so the files split from this one can say so. */
@@ -135,6 +137,7 @@ export default function RegistrantsTable({
   permissions,
   switching,
   addRegistrationHref,
+  communities,
 }: RegistrantsTableProps) {
   const [runners, setRunners] = useState(initialRunners);
   // A delivery switch re-reads the page (router.refresh), and the rows it
@@ -162,7 +165,7 @@ export default function RegistrantsTable({
   });
 
   // Edit Registrant, its state and modal (useRunnerEdit).
-  const runnerEdit = useRunnerEdit({ runners, raceDay, setRunners });
+  const runnerEdit = useRunnerEdit({ runners, raceDay, communities, setRunners });
 
   const deleteModal = useDeleteRegistrantModal({
     runners,
