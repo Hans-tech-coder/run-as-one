@@ -72,7 +72,7 @@ export default function StaffRegistrationForm({
   canValidate: boolean;
 }) {
   const router = useRouter();
-  const soleCategory = event.categories.length === 1 ? event.categories[0].id : '';
+  const soleCategory = event.soleCategoryId;
   const [runners, setRunners] = useState<StaffRunner[]>(() => [emptyRunner(0, soleCategory)]);
   const [kit, setKitState] = useState<Kit>(() => ({
     method: event.pickup ? 'PICKUP' : 'DELIVERY',
@@ -98,6 +98,10 @@ export default function StaffRegistrationForm({
   const [quote, setQuote] = useState<Quote | null>(null);
   const [quoteError, setQuoteError] = useState<string>('');
   const [quoting, setQuoting] = useState(false);
+  // Which inputs `quote` was drawn for, and a nudge to ask again when the
+  // server says a figure moved while the inputs did not.
+  const [quotedKey, setQuotedKey] = useState('');
+  const [requote, setRequote] = useState(0);
   const [saving, setSaving] = useState(false);
   const summaryRef = useRef<HTMLDivElement>(null);
 
@@ -135,6 +139,9 @@ export default function StaffRegistrationForm({
   }, [runners, kit, order.promoCode]);
   const pricedKey = JSON.stringify(priced);
   const allCategorized = priced.participants.every(p => p.categoryId);
+  // Also true in the debounce before a request goes out, so Save never sends
+  // a total drawn for inputs that have since changed.
+  const isQuoting = quoting || (allCategorized && quotedKey !== pricedKey);
 
   useEffect(() => {
     // Nothing to price until every runner has a category; the panel says so
@@ -158,8 +165,13 @@ export default function StaffRegistrationForm({
           setQuote(null);
           setQuoteError(typeof data.error === 'string' ? data.error : 'The total could not be worked out.');
         }
+        setQuotedKey(pricedKey);
       } catch (err) {
-        if ((err as Error).name !== 'AbortError') setQuoteError('The total could not be worked out. Check the connection.');
+        if ((err as Error).name !== 'AbortError') {
+          setQuote(null);
+          setQuoteError('The total could not be worked out. Check the connection.');
+          setQuotedKey(pricedKey);
+        }
       } finally {
         if (!controller.signal.aborted) setQuoting(false);
       }
@@ -167,8 +179,11 @@ export default function StaffRegistrationForm({
     return () => {
       clearTimeout(timer);
       controller.abort();
+      // An aborted request never reaches its own reset; the next run, if any,
+      // sets it again when it sends.
+      setQuoting(false);
     };
-  }, [pricedKey, allCategorized, event.id]);
+  }, [pricedKey, allCategorized, event.id, requote]);
 
   const changeRunner = (index: number, patch: Partial<StaffRunner>) => {
     setRunners(current => current.map((runner, i) => (i === index ? { ...runner, ...patch } : runner)));
@@ -243,7 +258,7 @@ export default function StaffRegistrationForm({
 
     setRunnerErrors(perRunner);
     setOrderErrors(orderProblems);
-    if (hasErrors(perRunner) || items.length > 0 || !quote) {
+    if (hasErrors(perRunner) || items.length > 0 || !quote || isQuoting) {
       showSummary(items.length > 0 ? items : [{ id: 'staff-total', message: 'Wait for the total to finish updating, then save.' }]);
       return;
     }
@@ -263,7 +278,11 @@ export default function StaffRegistrationForm({
       // A figure moved since the total was drawn: show the new one and ask
       // for a second look rather than saving a different amount.
       if (data.code === 'priceChanged') {
+        // Some refusals carry no total, so ask for a fresh quote either way;
+        // Save waits for it.
         setQuote(current => (current && typeof data.total === 'number' ? { ...current, ...data } : current));
+        setQuotedKey('');
+        setRequote(n => n + 1);
         showSummary([{ id: 'staff-total', message: 'The price changed while you were typing. Check the new total, then save again.' }]);
         return;
       }
@@ -378,7 +397,7 @@ export default function StaffRegistrationForm({
         allCategorized={allCategorized}
         quote={quote}
         quoteError={quoteError}
-        quoting={quoting}
+        quoting={isQuoting}
         disabled={saving}
       />
 
@@ -386,7 +405,7 @@ export default function StaffRegistrationForm({
         <Link href={`/admin/events/${event.id}/registrants`} className="btn-cancel">
           Cancel
         </Link>
-        <button type="submit" disabled={saving || quoting} className="btn-light">
+        <button type="submit" disabled={saving || isQuoting} className="btn-light">
           {saving ? (
             <BusyLabel>Saving</BusyLabel>
           ) : (

@@ -13,8 +13,8 @@ import type { AddOnPick } from '@/lib/add-ons';
 import { composeDeliveryAddress, EMPTY_DELIVERY_ADDRESS } from '@/app/events/[slug]/register/delivery-address';
 import { withResolvedAddresses } from '@/app/events/[slug]/register/RunnerAddressFields';
 
-/** A category as the form offers it. */
-export type StaffCategory = { id: string; name: string; price: number; inclusions: string[] };
+/** A category as the form offers it: open now, `slotsLeft` null when it has no cap. */
+export type StaffCategory = { id: string; name: string; price: number; inclusions: string[]; slotsLeft: number | null };
 
 /** An add-on as the form offers it: on sale now, open to `categoryIds` (empty = all). */
 export type StaffAddOn = {
@@ -34,7 +34,10 @@ export type StaffEvent = {
   /** Race day, YYYY-MM-DD. */
   date: string;
   eventType: string;
+  /** Only the options open now; sold-out ones are left out. */
   categories: StaffCategory[];
+  /** The one open option, preselected for every new runner; empty while two or more are open. */
+  soleCategoryId: string;
   addOns: StaffAddOn[];
   bankAccounts: string[];
   /** Approved running clubs, sorted: the community field's suggestions. */

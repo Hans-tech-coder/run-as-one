@@ -42,7 +42,7 @@ export type LiveMatch = {
 };
 
 function normName(value: string): string {
-  return value.trim().replace(/\s+/g, ' ').toLowerCase();
+  return String(value ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
 /** M1's key. Two runners with equal keys in one event are the same runner. */
@@ -170,7 +170,7 @@ export async function assertRunnersNotRegistered(
   runners: RunnerIdentity[],
 ): Promise<void> {
   const runnerName = (r: RunnerIdentity) =>
-    `${r.firstName.trim()} ${r.lastName.trim()}`.replace(/\s+/g, ' ').toUpperCase();
+    `${String(r.firstName ?? '').trim()} ${String(r.lastName ?? '').trim()}`.replace(/\s+/g, ' ').toUpperCase();
   // The same person twice in one group is the same double entry (M3).
   const seen = new Set<string>();
   for (const runner of runners) {

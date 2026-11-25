@@ -116,15 +116,22 @@ export async function registrationReceivedEmail(registration: RegistrationWithDe
 /**
  * Sent once a registration reaches PAID — online via the PayMongo webhook, or
  * manual once an admin confirms a bank transfer proof. This is the official
- * receipt. A bank transfer already had the received email above, so its
- * receipt is about the money and keeps the compact runner line. Every other
- * order (online, free) never got that email, so its receipt also carries the
- * contact, logistics and full per-runner details.
+ * receipt. A bank transfer that already had the received email above gets a
+ * receipt about the money with the compact runner line. Every other order —
+ * online, free, or a bank transfer staff marked paid as they entered it, so no
+ * received email went out — gets a receipt that also carries the contact,
+ * logistics and full per-runner details.
  */
 export async function registrationConfirmationEmail(registration: RegistrationWithDetails): Promise<EmailMessage> {
   const { event, runners } = registration;
   const trackUrl = await emailedTrackUrl(registration);
   const paidByBankTransfer = isBankTransfer(registration.paymentMethod);
+  // The received email already showed the contact, kit and runner details.
+  const detailsAlreadySent = paidByBankTransfer && Boolean(registration.receivedEmailSentAt);
+  const transactionRows =
+    paidByBankTransfer && registration.transactionNumber
+      ? [{ kind: 'info' as const, label: 'Transaction No.', value: registration.transactionNumber }]
+      : [];
   const firstName = registration.customerName.split(' ')[0] || registration.customerName;
 
   return renderMessage({
@@ -149,14 +156,13 @@ export async function registrationConfirmationEmail(registration: RegistrationWi
         kind: 'card',
         rows: orderRows(
           registration,
-          paidByBankTransfer
-            ? registration.transactionNumber
-              ? [{ kind: 'info', label: 'Transaction No.', value: registration.transactionNumber }]
-              : []
+          detailsAlreadySent
+            ? transactionRows
             : [
-                // Only a bank transfer gets the "received" email first; for
-                // every other order this receipt is the one email, so it
-                // carries what that one would have shown.
+                // Only a reviewed bank transfer gets the "received" email
+                // first; for every other order this receipt is the one email,
+                // so it carries what that one would have shown.
+                ...transactionRows,
                 { kind: 'info', label: 'Submitted By', value: registration.customerName },
                 { kind: 'info', label: 'Contact Email', value: registration.customerEmail },
                 ...(registration.customerPhone
@@ -167,7 +173,7 @@ export async function registrationConfirmationEmail(registration: RegistrationWi
         ),
       },
       { kind: 'heading', text: `Registered Runner${runners.length > 1 ? 's' : ''}` },
-      paidByBankTransfer
+      detailsAlreadySent
         ? { kind: 'rows', rows: runnerRows(registration) }
         : { kind: 'card', rows: runnerDetailRows(registration) },
       { kind: 'heading', text: 'Payment Summary' },

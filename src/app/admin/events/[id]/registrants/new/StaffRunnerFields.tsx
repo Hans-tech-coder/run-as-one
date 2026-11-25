@@ -138,7 +138,7 @@ export default function StaffRunnerFields({
           options={event.categories.map(category => ({
             value: category.id,
             label: category.name,
-            hint: formatPesos(category.price),
+            hint: category.slotsLeft === null ? formatPesos(category.price) : `${formatPesos(category.price)} · ${category.slotsLeft} ${category.slotsLeft === 1 ? 'slot' : 'slots'} left`,
           }))}
           error={errors.categoryId}
           // Add-ons not open to the new category go; the price follows.

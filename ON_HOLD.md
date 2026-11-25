@@ -544,3 +544,28 @@ If the owner wants them structured, the smallest change, in order of value:
 
 Together well under 1 MB of Neon storage; the cost is the admin form work
 (three fields, one repeater) and one reversible additive migration.
+
+## 20. Leftovers from the staff registration plan
+
+*Source: `docs/plans/STAFF_REGISTRATION_PLAN.md` (gitignored, written
+2026-11-24, deleted 2026-11-25; committed as `4b59dec` and `b140f0e`). What it
+built and its decisions are in `docs/current-state.md` under "Staff
+registration".*
+
+- **Release step: run the migration on production first.**
+  `20261124090000_registration_source` (`Registration.source` defaulting to
+  `WEB`, nullable `createdById` / `createdByName`; additive, applied to
+  `local-dev` only). Run `npx prisma migrate deploy` with `DIRECT_URL` on
+  the production endpoint **before** the code goes live: the new code writes
+  `source`, the old code ignores it.
+- **15+ dummy proof images** from testing are in the shared private proofs
+  store (1×1 or 240×120 "TEST PROOF" PNGs); their pathnames are listed in
+  `C:\Users\user\Web Projects\Claude Scratch\staff-reg-baseline\test-blobs.txt`.
+  Safe to delete; nothing live points at them (their orders are soft-deleted
+  on `local-dev`).
+- **Not exercised end to end:** a club written in through Edit Registrant
+  reaching the Communities review queue (the shared `recordWriteInCommunities`
+  is proven at checkout), and the dashboard's phone box in the **light** theme
+  (checked in dark; it uses the same theme tokens as `.form-input`). The
+  `paymentChecked` 403 cannot occur with today's roles (every
+  `registration:create` holder also validates), so it is untested.

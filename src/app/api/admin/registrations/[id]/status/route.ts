@@ -72,7 +72,7 @@ import {
   orderHoldsReference,
 } from '@/lib/payment-reference';
 import { findLiveMatches, type LiveMatch } from '@/lib/runner-match';
-import { lockEventForRegistration } from '@/lib/registration-gate';
+import { lockEventRow } from '@/lib/registration-gate';
 
 /**
  * The statuses an organizer may set from the admin. Guarded rather than
@@ -298,14 +298,15 @@ export async function PATCH(
       // whenever this move makes the order live (lib/runner-match.ts M2):
       // validating, or reopening a bank transfer as PENDING. Under the event
       // lock checkout takes, so a checkout and this validation for the same
-      // runner cannot both pass.
+      // runner cannot both pass. The row lock only, not the sign-up gate: a
+      // paused or closed race still takes the slips of orders already in it.
       let duplicateOf: LiveMatch[] = [];
       const from = lockedStatus ?? existing.status;
       const becomesLive =
         (status === 'PAID' && from !== 'PAID') ||
         (status === 'PENDING' && from !== 'PENDING' && isBankTransfer(existing.paymentMethod));
       if (wantsStatus && becomesLive) {
-        await lockEventForRegistration(tx, existing.eventId);
+        await lockEventRow(tx, existing.eventId);
         const runners = await tx.runner.findMany({
           where: { registrationId: id, deletedAt: null },
           select: { firstName: true, lastName: true, birthdate: true },

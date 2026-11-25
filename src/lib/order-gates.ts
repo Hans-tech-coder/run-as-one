@@ -11,7 +11,9 @@
  * 2. results-only → 400, refused before anything else about the order, since
  *    its client runs sign-ups elsewhere;
  * 3. every runner in one of this event's own options (an option from another
- *    event would be priced at ₱0 and skip the caps);
+ *    event would be priced at ₱0 and skip the caps); then every runner's
+ *    first and last name, as text with something in it (the forms require
+ *    both, a direct post does not have to);
  * 4. a guardian for every runner 12 or under on race day (lib/minor-consent.ts);
  * 5. every runner's home address (lib/runner-address.ts);
  * 6. the race already held → 409;
@@ -67,6 +69,9 @@ export function checkoutGateRefusal(
   const categoryProblem = participantCategoryError(participants, event.categories);
   if (categoryProblem) return { error: categoryProblem, status: 400 };
 
+  const nameProblem = participantNameError(participants);
+  if (nameProblem) return { error: nameProblem, status: 400 };
+
   // Only now, because the age is taken on this event's date.
   const guardianProblem = participantGuardianError(participants, event.date);
   if (guardianProblem) return { error: guardianProblem, status: 400 };
@@ -83,4 +88,23 @@ export function checkoutGateRefusal(
   if (event.registrationPaused) return { error: pauseNote(event), status: 409 };
   if (opensLater(event)) return { error: openingNote(event), status: 409 };
   return null;
+}
+
+/**
+ * The first runner missing a first or last name, or undefined. A name that is
+ * not a string, or only spaces, counts as missing: the duplicate check and the
+ * stored row both read it as text, and a blank one would save a nameless bib.
+ */
+export function participantNameError(participants: unknown): string | undefined {
+  if (!Array.isArray(participants)) return undefined;
+  const filled = (value: unknown) => typeof value === 'string' && value.trim() !== '';
+  for (const [index, participant] of participants.entries()) {
+    const p = (participant ?? {}) as { firstName?: unknown; lastName?: unknown };
+    const missing = !filled(p.firstName) ? 'first name' : !filled(p.lastName) ? 'last name' : null;
+    if (!missing) continue;
+    return participants.length === 1
+      ? `Enter the runner's ${missing}.`
+      : `Runner ${index + 1}: enter the ${missing}.`;
+  }
+  return undefined;
 }

@@ -430,7 +430,7 @@ These are the user's own standing preferences. Follow them without being asked.
 16. **Never let local or preview tests email a real registrant.** `local-dev`
     holds copies of real runners' emails and Resend is live locally with no
     test-recipient code guard (never add one to app code). Trigger email-sending
-    actions only on test orders addressed to the owner's own email.
+    actions only on test orders addressed to `runasoneph@gmail.com`.
 
 ---
 
