@@ -1922,8 +1922,8 @@ mapping is `AdminSelect`, `PromoActionsMenu` is on `placeRowMenu`, and the edit
 screen's Promotions panel stacks on a phone. **Batch 5 is in too.**
 `/superadmin/organizers`, `/communities` and `/feedback` are cards below `lg`.
 The club rename opens as a full-width `AdminCardEdit` block on
-the card (the admin fee's went with the fee editor), a feedback card opens its message through a "Read message" accordion
-(`.t-acc`), the dashboard's tile icons sit in their `.metric-icon` box, and
+the card (the admin fee's went with the fee editor), a feedback card opens its message in a modal from a "Read Message" button
+(the accordion is gone; the table row opens the same `MessageModal`), the dashboard's tile icons sit in their `.metric-icon` box, and
 Approve / Suspend / Remove wear the `.is-success` / `.is-danger` chip tones.
 **Batch 6 is in too.** The create and edit forms keep Save in a bar at the
 foot of a phone's screen and their dialogs wear `.admin-modal-panel`; uploads,

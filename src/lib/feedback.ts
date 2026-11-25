@@ -67,17 +67,38 @@ export function feedbackKindLabel(kind: string): string {
   return known ? FEEDBACK_KIND_COPY[known].label : kind;
 }
 
-/** Two states, which is a queue rather than a workflow — see the schema note. */
-export const FEEDBACK_STATUSES = ['NEW', 'REVIEWED'] as const;
+/**
+ * Where a message stands, in the order it moves: arrived, read, being worked
+ * on, done. Any state can be set from any other — a "resolved" bug that comes
+ * back is reopened, not re-sent. See the schema note.
+ */
+export const FEEDBACK_STATUSES = ['NEW', 'SEEN', 'IN_PROGRESS', 'RESOLVED'] as const;
 
 export type FeedbackStatus = (typeof FEEDBACK_STATUSES)[number];
 
+/** What the inbox calls each state, and the badge tone it wears. */
+export const FEEDBACK_STATUS_COPY: Record<FeedbackStatus, { label: string; tone: string }> = {
+  NEW: { label: 'New', tone: 'pending' },
+  SEEN: { label: 'Seen', tone: 'neutral' },
+  IN_PROGRESS: { label: 'In Progress', tone: 'info' },
+  RESOLVED: { label: 'Resolved', tone: 'success' },
+};
+
+/** A state the PATCH route will write, or null. Only the four current ones. */
 export function asFeedbackStatus(value: unknown): FeedbackStatus | null {
   if (typeof value !== 'string') return null;
   const upper = value.trim().toUpperCase();
   return (FEEDBACK_STATUSES as readonly string[]).includes(upper)
     ? (upper as FeedbackStatus)
     : null;
+}
+
+/** A stored state, read for the inbox. Rows written before the four states
+ *  existed say "REVIEWED", which meant "read" — so they read as SEEN, without
+ *  a data migration. Anything unrecognised reads as NEW, so it gets looked at. */
+export function feedbackStatusOf(stored: string): FeedbackStatus {
+  if (stored.trim().toUpperCase() === 'REVIEWED') return 'SEEN';
+  return asFeedbackStatus(stored) ?? 'NEW';
 }
 
 /**

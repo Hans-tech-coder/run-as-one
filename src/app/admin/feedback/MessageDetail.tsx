@@ -1,7 +1,8 @@
 "use client";
 
 import React from 'react';
-import { CheckCircle, Image as ImageIcon, Mail } from 'lucide-react';
+import { Image as ImageIcon } from 'lucide-react';
+import type { FeedbackStatus } from '@/lib/feedback';
 
 /** One message as the inbox holds it — the shape /api/admin/feedback returns. */
 export interface FeedbackRow {
@@ -15,29 +16,29 @@ export interface FeedbackRow {
   /** Whether a screenshot is attached; the picture itself opens through
    *  /api/admin/feedback/[id]/screenshot. */
   hasScreenshot: boolean;
-  status: string;
+  /** Already read through feedbackStatusOf, so a legacy "REVIEWED" is SEEN. */
+  status: FeedbackStatus;
   createdAt: string;
 }
 
+/** Manila, spelled out — the same zone every other date on this site is read
+ *  in, so a message that arrived at 11pm does not show up on the wrong day. */
+export function receivedOn(iso: string): string {
+  return new Date(iso).toLocaleString('en-PH', {
+    timeZone: 'Asia/Manila',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
 /**
- * The opened message: every word of it, where the sender was and on what, and
- * the two things worth doing next. One component for the table's second row
- * and the card's accordion, so what an open message shows cannot differ by
- * screen width.
+ * The opened message's body: every word of it, the screenshot, and where the
+ * sender was and on what. MessageModal frames it and carries the actions.
  */
-export default function MessageDetail({
-  row,
-  saving,
-  onReview,
-  showReview = true,
-}: {
-  row: FeedbackRow;
-  saving: boolean;
-  onReview: () => void;
-  /** The card already has Mark Reviewed in its footer, beside the actions
-   *  menu, so it opts out of a second one here. */
-  showReview?: boolean;
-}) {
+export default function MessageDetail({ row }: { row: FeedbackRow }) {
   return (
     <>
       <p className="m-0 whitespace-pre-wrap text-sm leading-relaxed text-primary [overflow-wrap:anywhere]">
@@ -71,53 +72,18 @@ export default function MessageDetail({
 
       <dl className="mt-4 grid grid-cols-1 gap-3 border-t border-[var(--dash-hairline)] pt-4 text-xs sm:grid-cols-2">
         <div className="min-w-0">
-          <dt className="mb-1 font-bold text-secondary">
-            Page They Were On
-          </dt>
+          <dt className="mb-1 font-bold text-secondary">Page They Were On</dt>
           <dd className="m-0 break-all font-mono text-[var(--ink-85)]">
             {row.pagePath || 'Not recorded'}
           </dd>
         </div>
         <div className="min-w-0">
-          <dt className="mb-1 font-bold text-secondary">
-            Browser
-          </dt>
+          <dt className="mb-1 font-bold text-secondary">Browser</dt>
           <dd className="m-0 break-all text-[var(--ink-85)]">
             {row.userAgent || 'Not recorded'}
           </dd>
         </div>
       </dl>
-
-      {/* The note (when there is no address) reads on the left; the actions sit
-          together on the right, vertically centred against it. */}
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-        {!row.email && (
-          <span className="text-xs text-secondary">
-            No address left, so there is nobody to reply to.
-          </span>
-        )}
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-          {row.email && (
-            <a
-              href={`mailto:${row.email}?subject=${encodeURIComponent(
-                'Re: your feedback on Run As One',
-              )}`}
-              className="btn-filter no-underline max-lg:min-h-11"
-            >
-              <Mail size={16} /> Reply by Email
-            </a>
-          )}
-          {showReview && row.status === 'NEW' && (
-            <button
-              onClick={onReview}
-              disabled={saving}
-              className="btn-filter max-lg:min-h-11"
-            >
-              <CheckCircle size={16} /> Mark Reviewed
-            </button>
-          )}
-        </div>
-      </div>
     </>
   );
 }

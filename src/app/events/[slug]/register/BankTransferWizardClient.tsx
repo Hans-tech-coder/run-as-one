@@ -1136,6 +1136,7 @@ export default function BankTransferWizardClient({
                         <input
                           {...fieldAria(idx, "firstName")}
                           type="text"
+                          autoComplete="given-name"
                           value={p.firstName}
                           onChange={(e) =>
                             handleParticipantChange(
@@ -1158,6 +1159,7 @@ export default function BankTransferWizardClient({
                         <input
                           {...fieldAria(idx, "lastName")}
                           type="text"
+                          autoComplete="family-name"
                           value={p.lastName}
                           onChange={(e) =>
                             handleParticipantChange(
@@ -1298,6 +1300,9 @@ export default function BankTransferWizardClient({
                         <input
                           {...fieldAria(idx, "emergencyContactName")}
                           type="text"
+                          // Its own autofill section, so a saved profile never pours the
+                          // contact's name into the runner's, or the runner's into this.
+                          autoComplete="section-emergency name"
                           value={p.emergencyContactName}
                           onChange={(e) =>
                             handleParticipantChange(
@@ -1315,6 +1320,7 @@ export default function BankTransferWizardClient({
                       </div>
                       <PhoneField
                         label="Emergency Contact No."
+                        autoComplete="section-emergency tel-national"
                         id={runnerFieldId(idx, "emergencyContactPhone")}
                         error={errorFor(idx, "emergencyContactPhone")}
                         value={p.emergencyContactPhone}

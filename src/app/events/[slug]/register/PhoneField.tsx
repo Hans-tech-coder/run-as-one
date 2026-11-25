@@ -71,6 +71,7 @@ export default function PhoneField({
   id,
   error,
   hint,
+  autoComplete = "tel-national",
 }: {
   label: string;
   /** E.164, or a legacy local number from before this field existed. */
@@ -91,6 +92,11 @@ export default function PhoneField({
    * application does, because there the number is a promise to ring somebody.
    */
   hint?: React.ReactNode;
+  /**
+   * The autofill token. A number that is not the runner's own (the emergency
+   * contact's) passes a "section-…" token so browsers keep the two apart.
+   */
+  autoComplete?: string;
 }) {
   const parsed = useMemo(() => parseE164(value), [value]);
   // The country is local: an empty number carries no country of its own, and
@@ -232,7 +238,7 @@ export default function PhoneField({
             id={inputId}
             type="tel"
             inputMode="numeric"
-            autoComplete="tel-national"
+            autoComplete={autoComplete}
             value={shown}
             onChange={e => handleNationalChange(e.target.value)}
             placeholder={placeholder}

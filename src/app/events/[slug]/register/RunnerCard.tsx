@@ -189,6 +189,7 @@ export default function RunnerCard({
           <input
             {...fieldAria(index, "firstName")}
             type="text"
+            autoComplete="given-name"
             value={runner.firstName}
             onChange={(e) =>
               onChange(
@@ -211,6 +212,7 @@ export default function RunnerCard({
           <input
             {...fieldAria(index, "lastName")}
             type="text"
+            autoComplete="family-name"
             value={runner.lastName}
             onChange={(e) =>
               onChange(
@@ -357,6 +359,9 @@ export default function RunnerCard({
           <input
             {...fieldAria(index, "emergencyContactName")}
             type="text"
+            // Its own autofill section, so a saved profile never pours the
+            // contact's name into the runner's, or the runner's into this.
+            autoComplete="section-emergency name"
             value={runner.emergencyContactName}
             onChange={(e) =>
               onChange(
@@ -374,6 +379,7 @@ export default function RunnerCard({
         </div>
         <PhoneField
           label="Emergency Contact No."
+          autoComplete="section-emergency tel-national"
           id={runnerFieldId(index, "emergencyContactPhone")}
           error={errorFor(index, "emergencyContactPhone")}
           value={runner.emergencyContactPhone}

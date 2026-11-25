@@ -1715,6 +1715,14 @@ a.reg-count-trigger {
   color: var(--accent-blue-text);
 }
 
+/* A chip in a pick-one row (the feedback modal's Status) that is the current
+   choice. Filled and in full ink, so the state reads without hunting. */
+.btn-filter[aria-pressed="true"] {
+  color: var(--text-primary);
+  background: var(--ink-10);
+  border-color: var(--ink-35);
+}
+
 /* Approve (the organizers and communities screens). Green only under the
    pointer, the badge's own var(--status-success): at rest an approve is a question, not a
    status, and it sits beside a red that already is one. This is the hover

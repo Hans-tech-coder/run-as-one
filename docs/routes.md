@@ -1306,18 +1306,29 @@ three metric cards over the messages, newest first. It is Run As
 One's screen and not a per-event one for the same reason the club list is: feedback is
 about the platform rather than about any one race, and it carries strangers'
 email addresses. A message is a paragraph rather than a field, so the table shows
-one line of it and **the row opens** into the whole thing — the second-`TableRow`
-pattern the marketing screen's voucher batches use — carrying the page and the
-browser it came from and a *Reply by email* that opens a `mailto:`. The Filters
-chip's Status (Unread with its count, Reviewed) and Kind groups filter; the order changes only when somebody clicks
+one line of it and **a click on the row opens it in a modal**
+(`feedback/MessageModal.tsx`) — the whole message, the screenshot, the page and
+browser it came from, a **Status** row of four chips (New · Seen · In Progress ·
+Resolved — the pressed one is where it stands, one press moves it), and a footer
+with Delete on the left and *Reply by Email* (a `mailto:`) and *Copy AI Prompt*
+on the right. **Opening a New message marks it Seen on its own**, quietly (no
+toast); the other moves are by hand. A status change shows in the open modal at
+once; a delete closes it. The metric cards are Unread, In Progress, Open
+Problems (issues not yet Resolved) and the total. The Filters chip's Status
+(the four states, each with its count) and Kind groups filter; the order changes only when somebody clicks
 a header, which is why the unread ones are **found** rather than sorted to the
 top). All three are TanStack tables on `AdminDataTable` (§9) — sortable
 headers, View, the pager and a Sort chip below `lg`; the club rename opens in
 the Club cell with Save / Cancel chips. A club's Approve / Rename / Remove from
-List and a message's Mark Reviewed (or Move to New) / Delete Message sit in the
-row's ⋮ menu (`RowActionsMenu`), the red item below its divider; a club card's
+List and a message's View Message / a move to each other state / Copy AI
+Prompt / Delete Message sit in the row's ⋮ menu (`RowActionsMenu`), the red item below its
+divider. **Copy AI Prompt** (`feedback/feedbackPrompt.ts`) copies the message as
+a prompt for a coding agent — kind, page, browser, the message fenced as
+untrusted text, and per-kind steps (an issue is checked and fixed if real; a
+suggestion or feature is weighed and proposed, not built) — and leaves the
+sender's name and email out on purpose; a club card's
 footer shortcut is Approve while it waits and Rename once approved, a feedback
-card's is its status move. **The platform trail is `/admin/activity`.** Organizer
+card's is *Read Message*, which opens the same modal. **The platform trail is `/admin/activity`.** Organizer
 decisions are made inside Run As One's tenant now, so they are rows of the one
 trail under an *Organizer decisions* shelf; the older decisions and sign-ins of
 the retired "System Owner" test account stay under that account's own `orgId`,
@@ -1325,7 +1336,7 @@ where no session reads them (the trail is append-only; the account row is gone).
 **Below `lg` the three lists
 are cards** (`AdminCardList`): the club rename becomes a
 full-width edit block on the card (`AdminCardEdit`, §9), and a feedback card
-opens its message from a *Read message* button rather than a tap anywhere.
+opens its message modal from a *Read Message* button rather than a tap anywhere.
 
 **`/admin/remittances`** (`remittance:manage`, `ADMIN_MERGE_PLAN.md` Batch 6 —
 *Remittances* in the sidebar, first among Run As One's own screens; anyone else

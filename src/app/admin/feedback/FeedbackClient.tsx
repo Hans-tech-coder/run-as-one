@@ -1,30 +1,27 @@
 "use client";
 
 import React, { useMemo, useState } from 'react';
-import {
-  AlertTriangle,
-  CheckCircle,
-  ChevronDown,
-  Inbox,
-  Lightbulb,
-  MessageSquare,
-  RotateCcw,
-  Search,
-  Sparkles,
-  Trash2,
-  X,
-} from 'lucide-react';
+import { Eye, Search, X } from 'lucide-react';
 import {
   getCoreRowModel,
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-  type ColumnDef,
   type SortingState,
   type VisibilityState,
 } from '@tanstack/react-table';
-import RowActionsMenu from '@/app/admin/RowActionsMenu';
-import MessageDetail, { type FeedbackRow } from './MessageDetail';
+import { type FeedbackRow, receivedOn } from './MessageDetail';
+import MessageModal from './MessageModal';
+import FeedbackMetrics from './FeedbackMetrics';
+import FeedbackMenu from './FeedbackMenu';
+import {
+  COLUMNS,
+  FeedbackKindLabel,
+  FeedbackSender,
+  FeedbackStatus as FeedbackStatusBadge,
+  STATUS_MOVES,
+  type FeedbackTableMeta,
+} from './feedbackColumns';
 import { useAlert } from '@/components/ui/AlertProvider';
 import AdminCardList, { AdminCardListSkeleton } from '@/app/admin/AdminCardList';
 import AdminDataTable, { AdminColumnsMenu } from '@/app/admin/AdminDataTable';
@@ -32,11 +29,13 @@ import AdminTablePager from '@/app/admin/AdminTablePager';
 import FiltersMenu from '@/app/admin/FiltersMenu';
 import MobileSortMenu from '@/app/admin/MobileSortMenu';
 import {
-  ANONYMOUS_SENDER,
   FEEDBACK_KINDS,
+  FEEDBACK_STATUSES,
+  FEEDBACK_STATUS_COPY,
   asFeedbackKind,
   feedbackKindLabel,
-  type FeedbackKind,
+  feedbackStatusOf,
+  type FeedbackStatus,
 } from '@/lib/feedback';
 import DashboardHeader from '@/app/admin/DashboardHeader';
 
@@ -54,40 +53,21 @@ import DashboardHeader from '@/app/admin/DashboardHeader';
  * the table's `meta`, so the column list is built once.
  *
  * Two things shape the layout. A message is a paragraph, not a field, so the
- * table shows one line of it and the row **opens** into the whole thing — the
- * second-TableRow pattern the marketing screen's voucher batches use, rather
- * than a column wide enough for prose that would squeeze every other column.
- * And the only state a message has is read or not read: the chips filter, the
- * order changes only when somebody clicks a header, and "Mark
- * Reviewed" is one press away in the row that is already open.
+ * table shows one line of it and a click on the row **opens it in a modal**
+ * (MessageModal) — the whole message, the screenshot, and every action on it
+ * (Reply, Copy AI Prompt, the status move, Delete) in its footer. And the only
+ * Filters chips choose which states and kinds show, and the order
+ * changes only when somebody clicks a header. A message moves through four
+ * states — New, Seen, In Progress, Resolved (lib/feedback.ts); opening a New
+ * one marks it Seen, and the rest are set by hand from the modal or the menu.
  *
  * Below `lg` the same filtered list is cards (AdminCardList). A card shows
- * three lines of the message and opens through its own "Read message" button
- * rather than on a tap anywhere, so its Mark Reviewed and Delete can never be
- * pressed by a thumb that meant to read. Open is `openId`, the one the table's
- * row reads, so a message stays open across a resize.
+ * three lines of the message and opens through its own "Read Message" button
+ * rather than on a tap anywhere. Open is `openId`, the one the table's row
+ * sets, and the open row is read back from the list by id, so a status change
+ * shows in the modal at once.
  */
 
-/** The icon and the tone each kind wears in the table. Lucide in currentColor,
- *  like every other icon in the dashboard. */
-const KIND_META: Record<FeedbackKind, { icon: React.ReactNode; tone: string }> = {
-  ISSUE: { icon: <AlertTriangle size={14} />, tone: 'text-[var(--status-danger)]' },
-  SUGGESTION: { icon: <Lightbulb size={14} />, tone: 'text-[var(--status-warning)]' },
-  FEATURE: { icon: <Sparkles size={14} />, tone: 'text-accent-blue-ink' },
-};
-
-/** Manila, spelled out — the same zone every other date on this site is read
- *  in, so a message that arrived at 11pm does not show up on the wrong day. */
-function receivedOn(iso: string): string {
-  return new Date(iso).toLocaleString('en-PH', {
-    timeZone: 'Asia/Manila',
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-}
 
 export default function FeedbackClient() {
   // Shadows window.alert / window.confirm on purpose — see AlertProvider.
@@ -109,7 +89,14 @@ export default function FeedbackClient() {
       const res = await fetch('/api/admin/feedback');
       if (res.ok) {
         const data = await res.json();
-        setRows(data.feedback);
+        // Read through feedbackStatusOf, so rows written as "REVIEWED"
+        // before the four states existed show as Seen.
+        setRows(
+          (data.feedback as (Omit<FeedbackRow, 'status'> & { status: string })[]).map(row => ({
+            ...row,
+            status: feedbackStatusOf(row.status),
+          })),
+        );
       }
     } catch (error) {
       console.error('Failed to fetch feedback:', error);
@@ -152,7 +139,7 @@ export default function FeedbackClient() {
     }
   };
 
-  const setStatus = async (row: FeedbackRow, status: 'NEW' | 'REVIEWED') => {
+  const setStatus = async (row: FeedbackRow, status: FeedbackStatus) => {
     // A success is announced, never made to be dismissed (§9).
     await send(
       `/api/admin/feedback/${row.id}`,
@@ -161,9 +148,24 @@ export default function FeedbackClient() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
       },
-      status === 'REVIEWED' ? 'Marking as reviewed' : 'Moving back to new',
-      status === 'REVIEWED' ? 'Marked as reviewed.' : 'Moved back to new.',
+      STATUS_MOVES[status].working,
+      STATUS_MOVES[status].done,
     );
+  };
+
+  /**
+   * Opening a NEW message is reading it, so it moves to Seen on its own —
+   * quietly: the row changes here at once and the PATCH runs behind it, with
+   * no toast for a move nobody pressed a button for. If the save fails, the
+   * next load shows it as New again, which is the truth.
+   */
+  const markSeen = (row: FeedbackRow) => {
+    setRows(prev => prev.map(r => (r.id === row.id ? { ...r, status: 'SEEN' } : r)));
+    fetch(`/api/admin/feedback/${row.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'SEEN' }),
+    }).catch(error => console.error('Failed to mark feedback seen:', error));
   };
 
   const remove = async (row: FeedbackRow) => {
@@ -183,12 +185,6 @@ export default function FeedbackClient() {
     );
     if (ok) setOpenId(current => (current === row.id ? null : current));
   };
-
-  const newCount = useMemo(() => rows.filter(r => r.status === 'NEW').length, [rows]);
-  const issueCount = useMemo(
-    () => rows.filter(r => asFeedbackKind(r.kind) === 'ISSUE').length,
-    [rows],
-  );
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -212,7 +208,13 @@ export default function FeedbackClient() {
       ? 'Nothing yet. The form at /feedback is live — this fills up on its own.'
       : 'No message matches those filters.';
 
-  const meta: FeedbackTableMeta = { openId, isSaving, setOpenId, setStatus, remove };
+  const openRow = openId ? rows.find(r => r.id === openId) ?? null : null;
+  const open = (row: FeedbackRow) => {
+    setOpenId(row.id);
+    if (row.status === 'NEW') markSeen(row);
+  };
+
+  const meta: FeedbackTableMeta = { isSaving, open, setStatus, remove };
 
   const table = useReactTable({
     data: filtered,
@@ -231,35 +233,7 @@ export default function FeedbackClient() {
       <DashboardHeader title="Feedback" />
 
       <div className="admin-content">
-        <div className="metrics-grid" style={{ marginBottom: '24px' }}>
-          <div className="metric-card">
-            <div className="metric-header">
-              <span className="metric-title">Unread</span>
-              <span className="metric-icon">
-                <Inbox size={18} />
-              </span>
-            </div>
-            <div className="metric-value">{newCount}</div>
-          </div>
-          <div className="metric-card">
-            <div className="metric-header">
-              <span className="metric-title">Reported Problems</span>
-              <span className="metric-icon">
-                <AlertTriangle size={18} />
-              </span>
-            </div>
-            <div className="metric-value">{issueCount}</div>
-          </div>
-          <div className="metric-card">
-            <div className="metric-header">
-              <span className="metric-title">Messages in Total</span>
-              <span className="metric-icon">
-                <MessageSquare size={18} />
-              </span>
-            </div>
-            <div className="metric-value">{rows.length}</div>
-          </div>
-        </div>
+        <FeedbackMetrics rows={rows} />
 
         <div className="flex flex-col gap-4 w-full text-primary">
           <div className="admin-toolbar" style={{ padding: '0 0 16px 0', borderBottom: 'none' }}>
@@ -290,10 +264,13 @@ export default function FeedbackClient() {
                 groups={[
                   {
                     label: 'Status',
-                    options: [
-                      { value: 'NEW', label: `Unread${newCount ? ` (${newCount})` : ''}` },
-                      { value: 'REVIEWED', label: 'Reviewed' },
-                    ],
+                    options: FEEDBACK_STATUSES.map(status => {
+                      const count = rows.filter(r => r.status === status).length;
+                      return {
+                        value: status,
+                        label: `${FEEDBACK_STATUS_COPY[status].label}${count ? ` (${count})` : ''}`,
+                      };
+                    }),
                     selected: selectedStatuses,
                     onToggle: toggleIn(setSelectedStatuses),
                   },
@@ -322,18 +299,9 @@ export default function FeedbackClient() {
             loading={isLoading}
             leadColumn="received"
             rowProps={row => ({
-              onClick: () => setOpenId(openId === row.original.id ? null : row.original.id),
+              onClick: () => open(row.original),
               className: 'cursor-pointer',
             })}
-            renderSubRow={row =>
-              openId === row.original.id && (
-                <MessageDetail
-                  row={row.original}
-                  saving={isSaving}
-                  onReview={() => setStatus(row.original, 'REVIEWED')}
-                />
-              )
-            }
           />
 
           <div className="dash-mobile-only">
@@ -359,86 +327,28 @@ export default function FeedbackClient() {
                 badges={row => (
                   <>
                     <FeedbackKindLabel kind={row.kind} />
-                    <FeedbackStatus isNew={row.status === 'NEW'} />
+                    <FeedbackStatusBadge status={row.status} />
                   </>
                 )}
                 fields={row => [
                   { label: 'Received', value: receivedOn(row.createdAt) },
                   { label: 'From', value: <FeedbackSender row={row} />, full: true },
                 ]}
-                expanded={row => {
-                  const isOpen = openId === row.id;
-                  return (
-                    // transitions.dev's accordion (21), as the marketing
-                    // card's voucher list. The message stays mounted so the
-                    // height can animate; `inert` keeps a closed one out of
-                    // the tab order. No `id` or aria-controls: the table
-                    // renders beside these cards.
-                    <div className="t-acc" data-open={isOpen ? 'true' : 'false'}>
-                      <button
-                        type="button"
-                        onClick={() => setOpenId(isOpen ? null : row.id)}
-                        aria-expanded={isOpen}
-                        className="t-acc-head btn-filter w-full justify-between min-h-11"
-                      >
-                        <span>{isOpen ? 'Hide Message' : 'Read Message'}</span>
-                        <span className="t-acc-chevron" aria-hidden="true">
-                          <svg
-                            viewBox="0 0 16 16"
-                            width="16"
-                            height="16"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <path d="M4 6.5L8 10.5L12 6.5" />
-                          </svg>
-                        </span>
-                      </button>
-                      <div className="t-acc-panel" inert={!isOpen}>
-                        <div className="t-acc-panel-inner">
-                          <div className="pt-3">
-                            <MessageDetail
-                              row={row}
-                              saving={isSaving}
-                              onReview={() => setStatus(row, 'REVIEWED')}
-                              showReview={false}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                }}
-                actions={row => {
-                  const isNew = row.status === 'NEW';
-                  return (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => setStatus(row, isNew ? 'REVIEWED' : 'NEW')}
-                        disabled={isSaving}
-                        className="btn-filter"
-                      >
-                        {isNew ? (
-                          <CheckCircle size={16} aria-hidden="true" />
-                        ) : (
-                          <RotateCcw size={16} aria-hidden="true" />
-                        )}
-                        {isNew ? 'Mark Reviewed' : 'Move to New'}
-                      </button>
-                      <FeedbackMenu
-                        row={row}
-                        saving={isSaving}
-                        onSetStatus={setStatus}
-                        onRemove={remove}
-                        className="ml-auto"
-                      />
-                    </>
-                  );
-                }}
+                actions={row => (
+                  <>
+                    <button type="button" onClick={() => open(row)} className="btn-filter">
+                      <Eye size={16} aria-hidden="true" /> Read Message
+                    </button>
+                    <FeedbackMenu
+                      row={row}
+                      saving={isSaving}
+                      onOpen={open}
+                      onSetStatus={setStatus}
+                      onRemove={remove}
+                      className="ml-auto"
+                    />
+                  </>
+                )}
                 empty={
                   <div className="border border-[var(--dash-border)] rounded-panel py-16 px-4 text-center text-[var(--text-muted)]">
                     {emptyMessage}
@@ -451,163 +361,17 @@ export default function FeedbackClient() {
           <AdminTablePager table={table} />
         </div>
       </div>
-    </>
-  );
-}
 
-/** What the cells read that changes while the inbox is open. */
-type FeedbackTableMeta = {
-  openId: string | null;
-  isSaving: boolean;
-  setOpenId: (id: string | null) => void;
-  setStatus: (row: FeedbackRow, status: 'NEW' | 'REVIEWED') => void;
-  remove: (row: FeedbackRow) => void;
-};
-
-const COLUMNS: ColumnDef<FeedbackRow>[] = [
-  {
-    id: 'received',
-    header: 'Received',
-    accessorFn: row => row.createdAt,
-    cell: ({ row }) => <span className="whitespace-nowrap text-secondary">{receivedOn(row.original.createdAt)}</span>,
-    enableHiding: false,
-  },
-  {
-    id: 'type',
-    header: 'Type',
-    accessorFn: row => feedbackKindLabel(row.kind),
-    cell: ({ row }) => (
-      <span className="whitespace-nowrap">
-        <FeedbackKindLabel kind={row.original.kind} />
-      </span>
-    ),
-  },
-  {
-    id: 'message',
-    header: 'Message',
-    accessorFn: row => row.message,
-    cell: ({ row, table }) => {
-      const { openId } = table.options.meta as FeedbackTableMeta;
-      const isOpen = openId === row.original.id;
-      const isNew = row.original.status === 'NEW';
-      return (
-        <div className="flex items-start gap-2 min-w-[260px] max-w-[420px]">
-          <ChevronDown
-            size={16}
-            aria-hidden="true"
-            className={`mt-0.5 shrink-0 text-secondary transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
-          />
-          <span className={`${isOpen ? '' : 'line-clamp-1'} ${isNew ? 'font-medium text-primary' : 'text-secondary'}`}>
-            {row.original.message}
-          </span>
-        </div>
-      );
-    },
-    enableSorting: false,
-    enableHiding: false,
-  },
-  {
-    id: 'from',
-    header: 'From',
-    accessorFn: row => row.name ?? '',
-    cell: ({ row }) => (
-      <div className="whitespace-nowrap">
-        <FeedbackSender row={row.original} />
-      </div>
-    ),
-  },
-  {
-    id: 'status',
-    header: 'Status',
-    accessorFn: row => row.status,
-    cell: ({ row }) => <FeedbackStatus isNew={row.original.status === 'NEW'} />,
-  },
-  {
-    // Left-aligned, under its own header label — never pushed to the row's
-    // right edge. RowActionsMenu swallows the click, so acting never opens the row.
-    id: 'actions',
-    header: 'Actions',
-    cell: ({ row, table }) => {
-      const { isSaving, setStatus, remove } = table.options.meta as FeedbackTableMeta;
-      return <FeedbackMenu row={row.original} saving={isSaving} onSetStatus={setStatus} onRemove={remove} />;
-    },
-    enableSorting: false,
-    enableHiding: false,
-  },
-];
-
-/** A message's ⋮ menu, for the table's Actions cell and the card's footer. */
-function FeedbackMenu({
-  row,
-  saving,
-  onSetStatus,
-  onRemove,
-  className,
-}: {
-  row: FeedbackRow;
-  saving: boolean;
-  onSetStatus: FeedbackTableMeta['setStatus'];
-  onRemove: FeedbackTableMeta['remove'];
-  className?: string;
-}) {
-  const isNew = row.status === 'NEW';
-  const sender = row.name ?? row.email ?? 'an anonymous sender';
-  return (
-    <RowActionsMenu
-      label={`feedback from ${sender}`}
-      className={className}
-      actions={[
-        {
-          key: 'status',
-          label: isNew ? 'Mark Reviewed' : 'Move to New',
-          icon: isNew ? <CheckCircle size={16} /> : <RotateCcw size={16} />,
-          onSelect: () => onSetStatus(row, isNew ? 'REVIEWED' : 'NEW'),
-          disabled: saving,
-        },
-        {
-          key: 'delete',
-          label: 'Delete Message',
-          icon: <Trash2 size={16} />,
-          onSelect: () => onRemove(row),
-          disabled: saving,
-          danger: true,
-        },
-      ]}
-    />
-  );
-}
-
-/** A kind, in its icon and tone. The table's Type cell and a card's badge. */
-function FeedbackKindLabel({ kind }: { kind: string }) {
-  const known = asFeedbackKind(kind);
-  const meta = known ? KIND_META[known] : null;
-  return (
-    <span
-      className={`inline-flex items-center gap-1.5 text-sm ${meta ? meta.tone : 'text-secondary'}`}
-    >
-      {meta?.icon}
-      {feedbackKindLabel(kind)}
-    </span>
-  );
-}
-
-function FeedbackStatus({ isNew }: { isNew: boolean }) {
-  return (
-    <span className={`status-badge ${isNew ? 'pending' : 'success'}`}>
-      {isNew ? 'New' : 'Reviewed'}
-    </span>
-  );
-}
-
-/** The name, or that there was none, and the address under it. A card lets the
- *  address wrap; the table's cell keeps it on one line. */
-function FeedbackSender({ row }: { row: FeedbackRow }) {
-  return (
-    <>
-      <span className={row.name ? 'text-primary' : 'text-secondary'}>
-        {row.name || ANONYMOUS_SENDER}
-      </span>
-      {row.email && <div className="status-note neutral">{row.email}</div>}
+      {openRow && (
+        <MessageModal
+          key={openRow.id}
+          row={openRow}
+          saving={isSaving}
+          onClose={() => setOpenId(null)}
+          onSetStatus={setStatus}
+          onRemove={remove}
+        />
+      )}
     </>
   );
 }

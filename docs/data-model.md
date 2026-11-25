@@ -248,7 +248,7 @@ shape:
   `userAgent`, an optional `screenshot` (a pathname in the **private** Blob
   store under `feedback/`, opened only through the signed-URL route
   `/api/admin/feedback/[id]/screenshot`; the inbox list returns just
-  `hasScreenshot`, and deleting the row deletes the file), plus `status` (`NEW` | `REVIEWED`) — the platform owner's own
+  `hasScreenshot`, and deleting the row deletes the file), plus `status` (`NEW` | `SEEN` | `IN_PROGRESS` | `RESOLVED`; older rows saying `REVIEWED` read as `SEEN` through `feedbackStatusOf`, no data migration) — the platform owner's own
   triage mark, which the sender never sees. **It deliberately has no relation to
   Organizer or Registration**: most feedback arrives from a signed-out runner, so
   a foreign key would be null on the majority of rows and would tempt a later

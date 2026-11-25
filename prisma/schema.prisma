@@ -1316,9 +1316,10 @@ model Feedback {
   /// short-lived signed link from /api/admin/feedback/[id]/screenshot, exactly
   /// like a deposit slip. Null when they did not attach one.
   screenshot String?
-  /// "NEW" | "REVIEWED" -- the platform owner's own triage mark, so the inbox
-  /// can show what has not been read yet. Nothing the sender ever sees, and
-  /// deliberately not a workflow: two states are enough to keep a queue.
+  /// "NEW" | "SEEN" | "IN_PROGRESS" | "RESOLVED" -- the platform owner's own
+  /// triage mark: arrived, read, being worked on, done. Nothing the sender ever
+  /// sees. Older rows may still say "REVIEWED", which feedbackStatusOf reads as
+  /// SEEN; a plain String, so the vocabulary lives in lib/feedback.ts.
   status     String   @default("NEW")
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
