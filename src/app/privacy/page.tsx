@@ -2,6 +2,8 @@ import React from 'react';
 import type { Metadata } from 'next';
 import { ShieldCheck } from 'lucide-react';
 import LegalPage, { type LegalSection } from '@/components/LegalPage';
+import { MAIN_SITE } from '@/lib/site-host';
+import { siteOrigin } from '@/lib/site-client';
 import { SITE_NAME } from '@/lib/site-contact';
 import { getContactEmail } from '@/lib/site-settings';
 import PageReveal from '@/components/PageReveal';
@@ -10,6 +12,8 @@ export const metadata: Metadata = {
   title: `Privacy Policy | ${SITE_NAME}`,
   description:
     `What personal data ${SITE_NAME} collects when you register for a running event, why we collect it, who sees it, and the rights you have over it under the Data Privacy Act of 2012.`,
+  // Served on every host, client subdomains too; the main site's copy is the one to index.
+  alternates: { canonical: `${siteOrigin(MAIN_SITE)}/privacy` },
 };
 
 /**

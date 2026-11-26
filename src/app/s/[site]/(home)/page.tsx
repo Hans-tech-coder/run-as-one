@@ -1,4 +1,5 @@
 import React from 'react';
+import type { Metadata, ResolvingMetadata } from 'next';
 import Link from 'next/link';
 import HeroSection from '@/components/HeroSection';
 import HomeEventBrowser from '@/components/HomeEventBrowser';
@@ -7,7 +8,12 @@ import { mostRecentFirst, soonestFirst, upcomingEvents } from '@/lib/event-sched
 import { publishedEvents } from '@/lib/event-visibility';
 import { PAST_CARD, pastEventsWhere, toPastCard } from '@/lib/past-events';
 import { forListing } from '@/lib/registration-gate';
-import { EVENT_SITE_CLIENT, eventLinkOrigin } from '@/lib/site-client';
+import { EVENT_SITE_CLIENT, eventLinkOrigin, findSiteClient, siteOrigin } from '@/lib/site-client';
+import { rootCard, sitePageMetadata } from '@/lib/site-metadata';
+import { MAIN_SITE } from '@/lib/site-host';
+import { getSiteSettings } from '@/lib/site-settings';
+import { siteJsonLd } from '@/lib/site-structured-data';
+import { jsonLdScript } from '@/lib/event-structured-data';
 import RecentlyHeld from './RecentlyHeld';
 import PageReveal from '@/components/PageReveal';
 import StatementHighlight from '@/components/StatementHighlight';
@@ -45,6 +51,15 @@ export function generateStaticParams() {
   return [];
 }
 
+/** Its own title, description and canonical URL (lib/site-metadata.ts). */
+export async function generateMetadata(
+  { params }: { params: Promise<{ site: string }> },
+  parent: ResolvingMetadata,
+): Promise<Metadata> {
+  const { site } = await params;
+  return sitePageMetadata(await findSiteClient(site), siteOrigin(site), 'home', await rootCard(parent));
+}
+
 export default async function Home({ params }: { params: Promise<{ site: string }> }) {
   const { site } = await params;
   // Two rows of cards on a desktop grid rather than one, so the section that
@@ -66,9 +81,10 @@ export default async function Home({ params }: { params: Promise<{ site: string 
   const published = publishedEvents(await publishCutoff());
   const upcoming = { ...upcomingEvents(), ...published, resultsOnly: false };
   // The provinces the upcoming races are in, most races first, are the hero's
-  // headline ("Road races in Tarlac and Pangasinan"), so it stays true as the
+  // headline ("Road Races and Fun Runs in Tarlac and Pangasinan"), so it stays true as the
   // calendar moves without anyone editing copy. Read in the same pass.
-  const [openForRegistration, totalEvents, recentlyHeld, byProvince] = await Promise.all([
+  // The platform settings are a cached read the root layout already made.
+  const [openForRegistration, totalEvents, recentlyHeld, byProvince, settings] = await Promise.all([
     db.event.findMany({
       where: upcoming,
       orderBy: soonestFirst,
@@ -98,6 +114,7 @@ export default async function Home({ params }: { params: Promise<{ site: string 
       where: { ...upcoming, format: 'ONSITE', province: { not: null } },
       _count: { _all: true },
     }),
+    getSiteSettings(),
   ]);
   const provinces = byProvince
     .filter((row): row is typeof row & { province: string } => Boolean(row.province?.trim()))
@@ -125,15 +142,27 @@ export default async function Home({ params }: { params: Promise<{ site: string 
   const pastCards = recentlyHeld.map((row) => toPastCard(row, linkOrigin));
 
   return (
-    <PageReveal>
-      <div className="w-full">
-        <HeroSection provinces={provinces} nextRace={events[0] ?? null} />
-        <HomeEventBrowser events={events} totalEvents={totalEvents} />
-        <RaceDayStatement />
-        {pastCards.length > 0 && <RecentlyHeld events={pastCards} />}
-        <OrganizerBand />
-      </div>
-    </PageReveal>
+    <>
+      {/* Who Run As One is, for Google's results (lib/site-structured-data.ts).
+          Main site only; a client's `/` never renders here. */}
+      {site === MAIN_SITE && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: jsonLdScript(siteJsonLd(siteOrigin(site), settings.socialLinks, settings.contactEmail)),
+          }}
+        />
+      )}
+      <PageReveal>
+        <div className="w-full">
+          <HeroSection provinces={provinces} nextRace={events[0] ?? null} />
+          <HomeEventBrowser events={events} totalEvents={totalEvents} />
+          <RaceDayStatement />
+          {pastCards.length > 0 && <RecentlyHeld events={pastCards} />}
+          <OrganizerBand />
+        </div>
+      </PageReveal>
+    </>
   );
 }
 

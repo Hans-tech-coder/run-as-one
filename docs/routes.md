@@ -29,8 +29,21 @@ judge the clock per request. The register wizard and `/pay/[token]` are the
 exceptions — they read live, being the start of an order. `/robots.txt`
 (`src/app/robots.ts`) keeps crawlers off `/admin`, `/api/`, `/pay/`, the
 register wizard and `/coming-soon`, since every page a crawler opens is a
-database read, and its `Sitemap:` line names **the sitemap of the host it is
+database read, **except `/admin/register`** (Our Services), allowed by name so
+organizers can find it (2026-11-26; the longest rule wins, and the page is a
+cached read). Its `Sitemap:` line names **the sitemap of the host it is
 served on**.
+
+**Every listed page says its own title, description and canonical**
+(2026-11-26, SEO pass): `/`, `/events` and `/results` through
+`sitePageMetadata` (`lib/site-metadata.ts`; main-site copy names fun runs, road
+races and the Philippines, a client's names the client; `/events?view=past`
+canonicalises to `/events`); event and results pages through
+`eventPageMetadata` (`lib/site-client.ts`; `/results/<slug>/full` reads
+"— Full Results", never the overview's title); `/contact`, `/privacy`,
+`/terms` and `/admin/register` canonicalise to the **main site's** copy, since
+they are served the same on every host. The main site's `/` also carries
+`Organization` + `WebSite` JSON-LD (`lib/site-structured-data.ts`).
 
 **`/sitemap.xml`** (`src/app/sitemap.ts`) lists the pages of the host it is
 asked on, each at its canonical URL (`eventOrigin`, as `eventPageMetadata`).
@@ -39,9 +52,11 @@ params, so both files are one route for every host and read the `Host` header
 (`parseSiteLabel`); a lens, never a permission. That makes them dynamic, so the
 sitemap's list is cached per site for **6 hours** (`unstable_cache`) over
 `publicDb` reads — a crawler never wakes Neon; robots reads no database at all.
-Listed: on the main site `/`, `/events`, `/results`, `/track`, `/privacy`,
-`/terms`; on a client's site `/events`, `/results`, `/track` (its `/` is a
-redirect, and the policies are the main site's); then every **published**
+Listed: on the main site `/`, `/events`, `/results`, `/admin/register`,
+`/contact`, `/privacy`, `/terms`; on a client's site `/events`, `/results` (its
+`/` is a redirect, and the policies are the main site's). **Never `/track`**:
+it is `noindex`, and Search Console flags a listed `noindex` page as an error
+(the cache key is `['sitemap', 'v2']` so no older list is served); then every **published**
 event on that host — `/events/<slug>` unless that page only redirects (a race
 over with results, a results-only race), and `/results/<slug>` plus `/full`
 when it has results. Never drafts or scheduled events, never one runner's own

@@ -1,4 +1,5 @@
 import React from 'react';
+import type { Metadata, ResolvingMetadata } from 'next';
 import type { Prisma } from '@prisma/client';
 import EventGrid from '@/components/EventGrid';
 import db, { publishCutoff } from '@/lib/public-db';
@@ -6,7 +7,8 @@ import { mostRecentFirst, soonestFirst, upcomingEvents } from '@/lib/event-sched
 import { publishedEvents } from '@/lib/event-visibility';
 import { PAST_CARD, pastEventsWhere, toPastCard } from '@/lib/past-events';
 import { forListing } from '@/lib/registration-gate';
-import { EVENT_SITE_CLIENT, eventLinkOrigin, getSiteClient } from '@/lib/site-client';
+import { EVENT_SITE_CLIENT, eventLinkOrigin, findSiteClient, getSiteClient, siteOrigin } from '@/lib/site-client';
+import { rootCard, sitePageMetadata } from '@/lib/site-metadata';
 import ClientSiteHero, { hasClientHero } from '@/components/ClientSiteHero';
 import { EventsTabSwitch } from './EventsTabs';
 import type { EventsView } from './events-view';
@@ -24,6 +26,15 @@ export const revalidate = 60;
 
 export function generateStaticParams() {
   return [];
+}
+
+/** Its own title, description and canonical URL (lib/site-metadata.ts). */
+export async function generateMetadata(
+  { params }: { params: Promise<{ site: string }> },
+  parent: ResolvingMetadata,
+): Promise<Metadata> {
+  const { site } = await params;
+  return sitePageMetadata(await findSiteClient(site), siteOrigin(site), 'events', await rootCard(parent));
 }
 
 export default async function EventsPage({ params }: { params: Promise<{ site: string }> }) {

@@ -213,7 +213,8 @@ export async function ensureEventHost(event: { client: SiteClientRef | null }): 
  *   could reach it.
  * - Title: the event's own, then the name of that site — the client's on a
  *   client's race (lib/site-metadata.ts brands the rest of its pages the same).
- *   A results page reads "<Event> — Official Results".
+ *   A results page reads "<Event> — Official Results", its full ranking
+ *   "<Event> — Full Results", so the two never share a title.
  * - Description: only facts the page itself shows — the day (a virtual run's
  *   window) with the start time when set, the venue, the distances and the
  *   lowest price of the options runners are shown (`shownToRunners`), never a
@@ -232,7 +233,7 @@ export async function eventPageMetadata(
   param: string,
   path: (slug: string) => string,
   parent: ResolvingMetadata,
-  page: 'event' | 'results' = 'event',
+  page: 'event' | 'results' | 'full' = 'event',
 ): Promise<Metadata> {
   const event = await publicDb.event.findFirst({
     // An unpublished event has no public page to point search engines at.
@@ -259,7 +260,12 @@ export async function eventPageMetadata(
 
   const url = `${eventOrigin(event, deploymentOrigin())}${path(event.slug)}`;
   const siteName = siteLabelOf(event.client) && event.client ? event.client.name : SITE_NAME;
-  const name = page === 'results' ? `${event.title} — Official Results` : event.title;
+  const name =
+    page === 'results'
+      ? `${event.title} — Official Results`
+      : page === 'full'
+        ? `${event.title} — Full Results`
+        : event.title;
   const title = `${name} | ${siteName}`;
 
   const facts = isVirtual(event)
@@ -272,7 +278,9 @@ export async function eventPageMetadata(
       ? `Registration closes ${formatEventInstantShort(event.registrationClosesAt)}`
       : '';
   const description =
-    page === 'results'
+    page === 'full'
+      ? `Every finisher's time and rank at ${event.title} · ${facts.filter(Boolean).join(' · ')}. Find yours by name or bib number.`
+      : page === 'results'
       ? `Official results of ${event.title} · ${facts.filter(Boolean).join(' · ')}. Find your time by name or bib number.`
       : [...facts.slice(0, 1), start, ...facts.slice(1), ...offerFacts(shownToRunners(event.categories)), closes]
           .filter(Boolean)

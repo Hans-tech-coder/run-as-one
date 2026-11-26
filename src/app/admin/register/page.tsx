@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
+import { MAIN_SITE } from '@/lib/site-host';
+import { siteOrigin } from '@/lib/site-client';
 import { SITE_NAME } from '@/lib/site-contact';
 import db, { publishCutoff } from '@/lib/public-db';
 import { publishedEvents } from '@/lib/event-visibility';
 import { pastEventsWhere } from '@/lib/past-events';
-import { FORM_SUBTITLE, FORM_TITLE } from './apply-steps';
+import { FORM_SUBTITLE } from './apply-steps';
 import RegisterClient from './RegisterClient';
 import SiteFrame from '@/app/SiteFrame';
 
@@ -15,8 +17,11 @@ import SiteFrame from '@/app/SiteFrame';
  * where a prospective client lands from the home page.
  */
 export const metadata: Metadata = {
-  title: `${FORM_TITLE} | ${SITE_NAME}`,
-  description: FORM_SUBTITLE,
+  // Worded for the search an organizer makes; the page's own heading stays FORM_TITLE.
+  title: `Online Race Registration & Timing for Organizers | ${SITE_NAME}`,
+  description: `Race organizers in the Philippines: ${FORM_SUBTITLE.charAt(0).toLowerCase()}${FORM_SUBTITLE.slice(1)}`,
+  // `/admin/**` answers on the main host alone (src/proxy.ts); robots.ts lets this one page be crawled.
+  alternates: { canonical: `${siteOrigin(MAIN_SITE)}/admin/register` },
 };
 
 /**

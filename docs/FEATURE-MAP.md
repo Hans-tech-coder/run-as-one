@@ -13,7 +13,7 @@ of searching for them. Generated from the tree, so it cannot drift.
 grep -n "promo" docs/FEATURE-MAP.md
 ```
 
-52 pages · 103 API routes · 179 modules in `src/lib` · 757 files · 130,415 lines
+52 pages · 103 API routes · 180 modules in `src/lib` · 758 files · 130,635 lines
 
 ---
 
@@ -358,6 +358,7 @@ the file itself.
 | [`site-look.ts`](../src/lib/site-look.ts) | **Which pages wear the Paper look** (site.css, docs/conventions.md §9). |
 | [`site-metadata.ts`](../src/lib/site-metadata.ts) | What a site's pages say about themselves to a link preview and a browser tab. |
 | [`site-settings.ts`](../src/lib/site-settings.ts) | The saved site-wide settings (server-only; reads the `SiteSettings` row). |
+| [`site-structured-data.ts`](../src/lib/site-structured-data.ts) | What the home page tells Google about Run As One itself (2026-11-26): `siteJsonLd(origin, socialLinks, email)`, schema.org `Organization` (name, ur… |
 | [`slot-holds.ts`](../src/lib/slot-holds.ts) | What holds a seat in a category, and how many each has taken. |
 | [`step-up-message.ts`](../src/lib/step-up-message.ts) | The answer the "Confirm with Google" popup hands back to the dialog that opened it (lib/step-up.ts, StepUpDialog). |
 | [`step-up.ts`](../src/lib/step-up.ts) | Step-up confirmation: a signed-in staff member proves it is still them right before a dangerous action (PAYMENT_CORRECTION_PLAN.md C2a, Batch 0). |
@@ -387,8 +388,8 @@ when a task touches one, split it before editing rather than after.
 | Lines | File |
 | --- | --- |
 | 2431 | [`src/app/admin/marketing/PromoCodesClient.tsx`](../src/app/admin/marketing/PromoCodesClient.tsx) |
+| 1873 | [`src/app/events/[slug]/register/BankTransferWizardClient.tsx`](../src/app/events/[slug]/register/BankTransferWizardClient.tsx) |
 | 1872 | [`src/app/events/[slug]/register/RegistrationWizardClient.tsx`](../src/app/events/[slug]/register/RegistrationWizardClient.tsx) |
-| 1867 | [`src/app/events/[slug]/register/BankTransferWizardClient.tsx`](../src/app/events/[slug]/register/BankTransferWizardClient.tsx) |
 | 1571 | [`src/lib/discount.ts`](../src/lib/discount.ts) |
 | 1179 | [`src/app/admin/settings/SettingsPanels.tsx`](../src/app/admin/settings/SettingsPanels.tsx) |
 | 1017 | [`src/app/admin/team/TeamClient.tsx`](../src/app/admin/team/TeamClient.tsx) |
@@ -429,9 +430,9 @@ when a task touches one, split it before editing rather than after.
 | 418 | [`src/app/admin/events/[id]/registrants/RegistrantDetailModal.tsx`](../src/app/admin/events/[id]/registrants/RegistrantDetailModal.tsx) |
 | 417 | [`src/lib/logistics-change-payment.ts`](../src/lib/logistics-change-payment.ts) |
 | 417 | [`src/lib/notification-store.ts`](../src/lib/notification-store.ts) |
+| 413 | [`src/app/events/[slug]/register/RunnerCard.tsx`](../src/app/events/[slug]/register/RunnerCard.tsx) |
 | 413 | [`src/lib/category-change.ts`](../src/lib/category-change.ts) |
 | 408 | [`src/lib/audit.ts`](../src/lib/audit.ts) |
-| 407 | [`src/app/events/[slug]/register/RunnerCard.tsx`](../src/app/events/[slug]/register/RunnerCard.tsx) |
 | 406 | [`src/app/events/[slug]/register/validation.ts`](../src/app/events/[slug]/register/validation.ts) |
 | 405 | [`src/app/admin/remittances/[eventId]/RecordRemittanceDialog.tsx`](../src/app/admin/remittances/[eventId]/RecordRemittanceDialog.tsx) |
 | 404 | [`src/app/admin/events/[id]/registrants/RunnerRefundModal.tsx`](../src/app/admin/events/[id]/registrants/RunnerRefundModal.tsx) |

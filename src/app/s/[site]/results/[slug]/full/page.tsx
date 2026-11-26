@@ -28,7 +28,7 @@ export async function generateMetadata(
   parent: ResolvingMetadata,
 ) {
   const { slug } = await params;
-  return eventPageMetadata(slug, eventSlug => `/results/${eventSlug}/full`, parent, 'results');
+  return eventPageMetadata(slug, eventSlug => `/results/${eventSlug}/full`, parent, 'full');
 }
 
 export default async function FullResultsPage({ 

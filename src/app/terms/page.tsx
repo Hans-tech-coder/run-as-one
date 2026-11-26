@@ -2,6 +2,8 @@ import React from 'react';
 import type { Metadata } from 'next';
 import { Scale } from 'lucide-react';
 import LegalPage, { type LegalSection } from '@/components/LegalPage';
+import { MAIN_SITE } from '@/lib/site-host';
+import { siteOrigin } from '@/lib/site-client';
 import { SITE_NAME } from '@/lib/site-contact';
 import { getContactEmail } from '@/lib/site-settings';
 import PageReveal from '@/components/PageReveal';
@@ -10,6 +12,8 @@ export const metadata: Metadata = {
   title: `Terms of Service | ${SITE_NAME}`,
   description:
     `The terms that apply when you register for a running event through ${SITE_NAME}, and the split of responsibilities between the platform and the event organizer.`,
+  // Served on every host, client subdomains too; the main site's copy is the one to index.
+  alternates: { canonical: `${siteOrigin(MAIN_SITE)}/terms` },
 };
 
 /**

@@ -28,9 +28,15 @@ import type { SiteClient } from './site-client';
  * with no site icon keeps it.
  */
 
-const TITLE = `${SITE_NAME} | Premium Running Event Registration`;
+/**
+ * The main site's default, which is also the home page's: what a search for a
+ * race in the Philippines should match — "fun run", "road race",
+ * "Philippines", results, e-certificate — because the hero's headline names
+ * only the provinces of the races on the calendar today.
+ */
+const TITLE = `${SITE_NAME} | Fun Runs & Road Races in the Philippines`;
 const DESCRIPTION =
-  'Join the best running events. Register, run, and track your results in one place.';
+  'Register online for fun runs and road races in the Philippines. Find upcoming running events, look up your race results and download your e-certificate.';
 
 const RAO_ICONS: Metadata['icons'] = {
   icon: [
@@ -84,5 +90,57 @@ export function siteMetadata(site: SiteClient | null, origin: string, card?: Car
       title,
       description,
     },
+  };
+}
+
+/** A site's own listing pages: each says its own title and canonical URL. */
+export type SitePage = 'home' | 'events' | 'results';
+
+const MAIN_PAGE_COPY: Record<SitePage, { title: string; description: string }> = {
+  home: { title: TITLE, description: DESCRIPTION },
+  events: {
+    title: `Upcoming Fun Runs & Road Races in the Philippines | ${SITE_NAME}`,
+    description:
+      "Running events in the Philippines open for registration. See each race's date, venue, distances and price, and register online in minutes.",
+  },
+  results: {
+    title: `Race Results & E-Certificates | ${SITE_NAME}`,
+    description:
+      `Official results of running events in the Philippines held with ${SITE_NAME}. Find your time by name or bib number and download your e-certificate.`,
+  },
+};
+
+function clientPageCopy(site: SiteClient, page: SitePage): { title: string; description: string } {
+  if (page === 'results') {
+    return {
+      title: `Race Results | ${site.name}`,
+      description: `Official results of ${site.name}'s races. Find your time by name or bib number and download your e-certificate. Powered by ${SITE_NAME}.`,
+    };
+  }
+  // A client's `/` is a redirect to its `/events` (src/proxy.ts), so both say this.
+  return {
+    title: `Upcoming Races | ${site.name}`,
+    description: `Register for ${site.name}'s upcoming races and look up your results. Powered by ${SITE_NAME}.`,
+  };
+}
+
+/**
+ * `siteMetadata` for one of a site's listing pages (`s/[site]`): its own
+ * title and description instead of the layout's, and `alternates.canonical`
+ * on the site's own origin, so `/events?view=past` and the bare `/events` are
+ * one page to a search engine. `openGraph` and `twitter` are restated whole,
+ * card included, since a child that names either replaces its parent's.
+ */
+export function sitePageMetadata(site: SiteClient | null, origin: string, page: SitePage, card?: Card): Metadata {
+  const { title, description } = site ? clientPageCopy(site, page) : MAIN_PAGE_COPY[page];
+  const url = page === 'home' ? origin : `${origin}/${page}`;
+  const base = siteMetadata(site, origin, card);
+  return {
+    ...base,
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: { ...base.openGraph, title, description, url },
+    twitter: { ...base.twitter, title, description, ...(card ? { images: card } : {}) },
   };
 }

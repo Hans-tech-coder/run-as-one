@@ -1,4 +1,5 @@
 import React from 'react';
+import type { Metadata, ResolvingMetadata } from 'next';
 import { publishedEvents } from '@/lib/event-visibility';
 import { RESULTS_EVENTS } from '@/lib/event-format';
 import Link from 'next/link';
@@ -6,7 +7,8 @@ import { ArrowRight, History, Trophy } from 'lucide-react';
 import db, { publishCutoff } from '@/lib/public-db';
 import EventGrid from '@/components/EventGrid';
 import { mostRecentFirst } from '@/lib/event-schedule';
-import { EVENT_SITE_CLIENT, eventLinkOrigin, getSiteClient } from '@/lib/site-client';
+import { EVENT_SITE_CLIENT, eventLinkOrigin, findSiteClient, getSiteClient, siteOrigin } from '@/lib/site-client';
+import { rootCard, sitePageMetadata } from '@/lib/site-metadata';
 import { pastWithoutResultsWhere } from '@/lib/past-events';
 import { PAST_EVENTS_HREF } from '../events/events-view';
 import PageReveal from '@/components/PageReveal';
@@ -22,6 +24,15 @@ export const revalidate = 60;
 
 export function generateStaticParams() {
   return [];
+}
+
+/** Its own title, description and canonical URL (lib/site-metadata.ts). */
+export async function generateMetadata(
+  { params }: { params: Promise<{ site: string }> },
+  parent: ResolvingMetadata,
+): Promise<Metadata> {
+  const { site } = await params;
+  return sitePageMetadata(await findSiteClient(site), siteOrigin(site), 'results', await rootCard(parent));
 }
 
 export default async function GlobalResultsPage({ params }: { params: Promise<{ site: string }> }) {

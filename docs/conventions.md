@@ -1236,8 +1236,9 @@
   **next race's poster whole across the content width** under a *Next Race* line
   (its date and place). **The headline is data:** the provinces the upcoming
   on-site races are in, most races first (`groupBy province` in the home page's
-  one `Promise.all`), "Road Races in Tarlac and Pangasinan" — two named, then
-  "and More"; none gives a plain fallback. No poster, no stage. The page closes
+  one `Promise.all`), "Road Races and Fun Runs in Tarlac and Pangasinan" — two
+  named, then "and More"; none gives a plain fallback. "Fun Runs" stays in up to
+  two provinces, since it is what runners search (2026-11-26). No poster, no stage. The page closes
   on an **Organizing a Race?** band → `/admin/register` (clients hire Run As
   One), replacing the three numbered "How it works" cards.
 - **A race's head is `components/RaceHeader`**: one step back, the race's name

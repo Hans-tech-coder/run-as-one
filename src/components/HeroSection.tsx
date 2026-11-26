@@ -54,8 +54,10 @@ export default function HeroSection({
         <h1 id="home-title" className="site-h1 lg:col-span-7 max-w-[15ch] lg:max-w-none">
           {headline(provinces)}
         </h1>
-        <div className="lg:col-span-5 xl:col-start-9 xl:col-span-4">
-          <p className="site-lead mb-6">
+        {/* Spaced by `gap`, not a margin on the lead: `.site-lead` sets
+            `margin: 0` unlayered, which beats a Tailwind `mb-*` (site.css). */}
+        <div className="flex flex-col gap-6 lg:col-span-5 lg:gap-7 lg:pb-1">
+          <p className="site-lead text-balance">
             Sign up your whole group in one checkout, pick up your race kit or
             have it delivered, and find your official time here after race day.
           </p>
@@ -109,13 +111,15 @@ export default function HeroSection({
 }
 
 /**
- * "Road Races in Tarlac and Pangasinan": the provinces the upcoming races are
- * in, so the headline is true the day it renders and changes by itself when
- * the calendar moves. Two named at most, then "and More".
+ * "Road Races and Fun Runs in Tarlac and Pangasinan": the provinces the
+ * upcoming races are in, so the headline is true the day it renders and
+ * changes by itself when the calendar moves. Two named at most, then "and
+ * More". "Fun Runs" stays in whenever it fits, because it is the words most
+ * runners here search with (2026-11-26 SEO pass).
  */
 function headline(provinces: string[]): string {
   if (provinces.length === 0) return 'Road Races and Fun Runs in the Philippines';
   if (provinces.length === 1) return `Road Races and Fun Runs in ${provinces[0]}`;
-  if (provinces.length === 2) return `Road Races in ${provinces[0]} and ${provinces[1]}`;
+  if (provinces.length === 2) return `Road Races and Fun Runs in ${provinces[0]} and ${provinces[1]}`;
   return `Road Races in ${provinces[0]}, ${provinces[1]} and More`;
 }

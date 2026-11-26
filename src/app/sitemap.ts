@@ -33,11 +33,14 @@ import { EVENT_SITE_CLIENT, findSiteClient, siteOrigin } from '@/lib/site-client
  *   runner's own page is left out: those are found by searching a name, and a
  *   sitemap of thousands of names is not something the runners asked for.
  * - Drafts and scheduled events never (`publishedEvents`).
- * - The site's own pages: on the main site `/`, `/events`, `/results`,
- *   `/track`, `/contact`, `/privacy` and `/terms`; on a client's site `/events`,
- *   `/results` and `/track` (its `/` is a redirect to `/events`, and the
- *   policies are Run As One's, served the same on every host, so they belong
- *   to the main site's list alone).
+ * - The site's own pages: on the main site `/`, `/events`, `/results`, the
+ *   services inquiry (`/admin/register`, the one public page under `/admin`
+ *   robots.ts lets crawlers read), `/contact`, `/privacy` and `/terms`; on a
+ *   client's site `/events` and `/results` (its `/` is a redirect to
+ *   `/events`, and the policies are Run As One's, served the same on every
+ *   host, so they belong to the main site's list alone).
+ * - Never `/track`: it is `noindex` (app/track/page.tsx, next.config.ts), and a
+ *   sitemap that lists a `noindex` page is an error in Search Console.
  * - Nothing on a label no live client holds: every page there sends the
  *   visitor to the main site.
  */
@@ -45,8 +48,8 @@ import { EVENT_SITE_CLIENT, findSiteClient, siteOrigin } from '@/lib/site-client
 /** Six hours: a new race reaching Google a few hours late costs nothing. */
 const SITEMAP_SECONDS = 6 * 60 * 60;
 
-const MAIN_PAGES = ['/', '/events', '/results', '/track', '/contact', '/privacy', '/terms'];
-const CLIENT_PAGES = ['/events', '/results', '/track'];
+const MAIN_PAGES = ['/', '/events', '/results', '/admin/register', '/contact', '/privacy', '/terms'];
+const CLIENT_PAGES = ['/events', '/results'];
 
 const siteEntries = unstable_cache(
   async (site: string): Promise<MetadataRoute.Sitemap> => {
@@ -89,7 +92,9 @@ const siteEntries = unstable_cache(
     }
     return pages;
   },
-  ['sitemap'],
+  // Versioned with what the list holds, so a copy cached before `/track` left
+  // it (and the services page joined) is never served again.
+  ['sitemap', 'v2'],
   { revalidate: SITEMAP_SECONDS },
 );
 

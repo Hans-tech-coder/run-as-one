@@ -3,7 +3,8 @@ import type { Metadata } from 'next';
 import ContactForm from './ContactForm';
 import { SITE_NAME, supportMailto } from '@/lib/site-contact';
 import { getContactEmail } from '@/lib/site-settings';
-import { requestSiteClient } from '@/lib/site-client';
+import { requestSiteClient, siteOrigin } from '@/lib/site-client';
+import { MAIN_SITE } from '@/lib/site-host';
 import { contactRaces } from '@/lib/contact-races';
 import PageReveal from '@/components/PageReveal';
 
@@ -11,6 +12,8 @@ export const metadata: Metadata = {
   title: `Contact Us | ${SITE_NAME}`,
   description:
     'Questions about a registration, a payment, your race kit, results or organizing a race? Send Run As One a message and a real person will reply by email.',
+  // Served on every host, client subdomains too; the main site's copy is the one to index.
+  alternates: { canonical: `${siteOrigin(MAIN_SITE)}/contact` },
 };
 
 /**
